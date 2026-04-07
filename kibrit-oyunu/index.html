@@ -426,14 +426,14 @@ const PZ={easy:find1(1),medium:[...find1(2),...find2(1).slice(0,50)],hard:find2(
 // ════════════════════════════════════════
 //  STATE
 // ════════════════════════════════════════
-let S={diff:'easy',score:0,streak:0,best:0,puzzle:null,segs:[],held:[],movesUsed:0,solved:false,fb:null,justPlaced:null};
+let S={diff:'easy',score:0,streak:0,best:0,puzzle:null,segs:[],held:[],movesUsed:0,solved:false,failed:false,fb:null,justPlaced:null};
 
 function pick(){const p=PZ[S.diff];return p[Math.floor(Math.random()*p.length)]}
 
 function newGame(){
   S.puzzle=pick();
   S.segs=S.puzzle.from.map(d=>[...SEG[d]]);
-  S.held=[];S.movesUsed=0;S.solved=false;S.fb=null;S.justPlaced=null;
+  S.held=[];S.movesUsed=0;S.solved=false;S.failed=false;S.fb=null;S.justPlaced=null;
   SFX.newRound();
   render();
 }
@@ -441,7 +441,7 @@ function curNums(){return S.segs.map(s=>{for(let d=0;d<=9;d++)if(SEG[d].every((v
 function isSolved(){const c=curNums();return c.length===S.puzzle.to.length&&c.every((d,i)=>d===S.puzzle.to[i])}
 
 function pickMatch(di,si){
-  if(S.solved||S.segs[di][si]!==1)return;
+  if(S.solved||S.failed||S.segs[di][si]!==1)return;
   if(S.held.length>=S.puzzle.moves)return;
   S.segs[di][si]=0;S.held.push({di,si});S.justPlaced=null;
   SFX.pick();
@@ -449,48 +449,38 @@ function pickMatch(di,si){
 }
 
 function placeMatch(di,si){
-  if(S.solved||S.segs[di][si]!==0||!S.held.length)return;
+  if(S.solved||S.failed||S.segs[di][si]!==0||!S.held.length)return;
   S.segs[di][si]=1;S.held.pop();S.movesUsed++;S.justPlaced=`${di}-${si}`;
   SFX.place();
-  if(!S.held.length&&isSolved()){
-    S.solved=true;
-    const pts=S.diff==='easy'?10:S.diff==='medium'?25:50;
-    S.score+=pts;S.streak++;if(S.streak>S.best)S.best=S.streak;
-    S.fb={ok:true,msg:'Süpersin! 🎉',sub:`+${pts} puan kazandın!`};
-    setTimeout(()=>{ S.streak>=3?SFX.streak():SFX.win(); },180);
-    doConfetti();doCelebrate();
+  if(!S.held.length){
+    if(isSolved()){
+      S.solved=true;
+      const pts=S.diff==='easy'?10:S.diff==='medium'?25:50;
+      S.score+=pts;S.streak++;if(S.streak>S.best)S.best=S.streak;
+      S.fb={ok:true,msg:'Süpersin! 🎉',sub:`+${pts} puan kazandın!`};
+      setTimeout(()=>{ S.streak>=3?SFX.streak():SFX.win(); },180);
+      doConfetti();doCelebrate();
+    } else {
+      S.failed=true;S.streak=0;
+      S.fb={ok:false,msg:'Başarısız! 😔',sub:`Doğru cevap: ${S.puzzle.to.join('')}`};
+      setTimeout(()=>SFX.fail(),180);
+    }
   }
   render();
 }
 
 function returnMatch(i){
-  if(S.solved)return;
+  if(S.solved||S.failed)return;
   const m=S.held[i];S.segs[m.di][m.si]=1;S.held.splice(i,1);S.justPlaced=null;
   SFX.undo();
   render();
 }
 
 function resetPuzzle(){
+  if(S.failed)return;
   S.segs=S.puzzle.from.map(d=>[...SEG[d]]);
-  S.held=[];S.movesUsed=0;S.solved=false;S.fb=null;S.justPlaced=null;
+  S.held=[];S.movesUsed=0;S.solved=false;S.failed=false;S.fb=null;S.justPlaced=null;
   SFX.reset();
-  render();
-}
-
-function checkAnswer(){
-  SFX.click();
-  if(S.held.length){S.fb={ok:false,msg:'Önce kibritleri yerleştir! ☝️',sub:''};SFX.warn();render();return}
-  if(isSolved()){
-    S.solved=true;
-    const pts=S.diff==='easy'?10:S.diff==='medium'?25:50;
-    S.score+=pts;S.streak++;if(S.streak>S.best)S.best=S.streak;
-    S.fb={ok:true,msg:'Süpersin! 🎉',sub:`+${pts} puan kazandın!`};
-    setTimeout(()=>{ S.streak>=3?SFX.streak():SFX.win(); },180);
-    doConfetti();doCelebrate();
-  } else {
-    S.streak=0;S.fb={ok:false,msg:'Daha olmadı 🤔',sub:'Kibritleri taşımaya devam et!'};
-    SFX.fail();
-  }
   render();
 }
 
@@ -606,10 +596,9 @@ function render(){
         </div>
         <div class="moves-row"><span class="moves-label">Hamle: </span>${dots}</div>
         <div class="btn-row">
-          ${S.solved?
+          ${S.solved||S.failed?
             `<button class="btn btn-next" onclick="newGame()">Sonraki Bulmaca 🚀</button>`:
-            `<button class="btn btn-go" onclick="checkAnswer()">✅ Kontrol Et</button>
-             <button class="btn btn-reset" onclick="resetPuzzle()">↺ Sıfırla</button>
+            `<button class="btn btn-reset" onclick="resetPuzzle()">↺ Sıfırla</button>
              <button class="btn btn-skip" onclick="newGame()">Atla ⏭️</button>`}
         </div>
         <div class="feedback">
