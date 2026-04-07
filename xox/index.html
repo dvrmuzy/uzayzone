@@ -288,6 +288,8 @@
       <button class="option-btn" data-val="5">5×5</button>
       <button class="option-btn" data-val="6">6×6</button>
       <button class="option-btn" data-val="7">7×7</button>
+      <button class="option-btn" data-val="9">9×9</button>
+      <button class="option-btn" data-val="11">11×11</button>
     </div>
   </div>
 
@@ -476,7 +478,7 @@ bindOptionGroup('mode-options', 'mode');
 bindOptionGroup('diff-options', 'diff');
 
 // Açıklamayı seçilen boyuta göre güncelle
-const streakLabels = { 3: "3'ü", 4: "4'ü", 5: "5'i", 6: "5'i", 7: "5'i" };
+const streakLabels = { 3: "3'ü", 4: "4'ü", 5: "5'i", 6: "5'i", 7: "5'i", 9: "5'i", 11: "5'i" };
 document.getElementById('size-options').addEventListener('click', e => {
   const btn = e.target.closest('.option-btn');
   if (!btn) return;
@@ -532,11 +534,14 @@ function newRound() {
 function buildBoard() {
   const board = document.getElementById('board');
   const viewW = Math.min(window.innerWidth - 40, 640);
-  const cellSize = Math.max(44, Math.floor((viewW - (state.size - 1) * 5) / state.size));
-  const fontSize = Math.max(16, Math.floor(cellSize * 0.48));
+  const gap = state.size > 7 ? 3 : 5;
+  const minCell = state.size > 7 ? 32 : 44;
+  const cellSize = Math.max(minCell, Math.floor((viewW - (state.size - 1) * gap) / state.size));
+  const fontSize = Math.max(14, Math.floor(cellSize * 0.48));
 
   board.style.setProperty('--cell-size', cellSize + 'px');
   board.style.setProperty('--cell-font', fontSize + 'px');
+  board.style.gap = gap + 'px';
   board.style.gridTemplateColumns = `repeat(${state.size}, ${cellSize}px)`;
 
   board.innerHTML = '';
