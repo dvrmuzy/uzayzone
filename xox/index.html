@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XOX - Tic Tac Toe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 20px;
+      color: #fff;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: 4px;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #e94560, #0f3460, #e94560);
+      background-size: 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shimmer 3s infinite linear;
+    }
+    @keyframes shimmer {
+      0%   { background-position: 0% }
+      100% { background-position: 200% }
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #aaa;
+      margin-bottom: 24px;
+      letter-spacing: 1px;
+    }
+
+    /* ── SETUP SCREEN ── */
+    #setup {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 32px 40px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .setup-section label {
+      display: block;
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 10px;
+    }
+
+    .option-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .option-btn {
+      flex: 1;
+      min-width: 60px;
+      padding: 10px 0;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: transparent;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-btn:hover  { border-color: #e94560; color: #e94560; }
+    .option-btn.selected {
+      background: #e94560;
+      border-color: #e94560;
+      color: #fff;
+      box-shadow: 0 0 16px rgba(233,69,96,0.5);
+    }
+
+    #start-btn {
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(90deg, #e94560, #c62a47);
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 6px 20px rgba(233,69,96,0.4);
+    }
+    #start-btn:hover  { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(233,69,96,0.6); }
+    #start-btn:active { transform: translateY(0); }
+
+    /* ── GAME SCREEN ── */
+    #game { display: none; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      min-width: 300px;
+      justify-content: center;
+    }
+
+    .player-indicator {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 900;
+      transition: background 0.3s;
+    }
+    .x-indicator { background: #e94560; }
+    .o-indicator { background: #0f9b8e; }
+
+    #score-board { display: flex; gap: 12px; }
+    .score-box {
+      background: rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 8px 20px;
+      text-align: center;
+      min-width: 90px;
+    }
+    .score-box .score-label { font-size: 0.72rem; color: #aaa; letter-spacing: 1px; text-transform: uppercase; }
+    .score-box .score-val   { font-size: 1.6rem; font-weight: 900; }
+    .score-x { color: #e94560; }
+    .score-o { color: #0f9b8e; }
+    .score-d { color: #f5a623; }
+
+    /* ── BOARD ── */
+    #board-wrap { position: relative; overflow: auto; max-width: 100%; }
+
+    #board { display: grid; gap: 5px; }
+
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      background: rgba(255,255,255,0.07);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--cell-font);
+      font-weight: 900;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      border: 2px solid rgba(255,255,255,0.08);
+      user-select: none;
+    }
+    .cell:hover:not(.taken) { background: rgba(255,255,255,0.15); transform: scale(1.04); }
+    .cell.taken { cursor: default; }
+    .cell.x { color: #e94560; }
+    .cell.o { color: #0f9b8e; }
+    .cell.win-cell {
+      background: rgba(255,215,0,0.2) !important;
+      border-color: gold !important;
+      animation: pulse 0.6s ease infinite alternate;
+    }
+    @keyframes pulse {
+      from { box-shadow: 0 0 6px gold; }
+      to   { box-shadow: 0 0 20px gold; }
+    }
+
+    /* ── OVERLAY ── */
+    #overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    #overlay.show { display: flex; }
+
+    .overlay-box {
+      background: #16213e;
+      border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 24px;
+      padding: 40px 50px;
+      text-align: center;
+      max-width: 360px;
+      width: 90%;
+    }
+    .overlay-box .result-icon { font-size: 4rem; margin-bottom: 10px; }
+    .overlay-box h2  { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; }
+    .overlay-box p   { color: #aaa; font-size: 0.95rem; margin-bottom: 24px; }
+
+    .overlay-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+    .overlay-btns button {
+      flex: 1;
+      padding: 12px 0;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .overlay-btns button:hover { transform: translateY(-2px); }
+    .btn-again { background: #e94560; color: #fff; }
+    .btn-menu  { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2) !important; }
+
+    /* ── BOTTOM BTNS ── */
+    .game-actions { display: flex; gap: 10px; }
+    .game-actions button {
+      padding: 9px 22px;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      background: transparent;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .game-actions button:hover { border-color: #e94560; color: #e94560; }
+
+    /* ── THINKING ── */
+    #thinking { font-size: 0.85rem; color: #aaa; letter-spacing: 1px; height: 20px; }
+
+    /* ── HOW TO PLAY ── */
+    .how-to-play {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 11px 14px;
+      opacity: 0.6;
+    }
+    .htp-title { font-size: 0.68rem; letter-spacing: 1.5px; text-transform: uppercase; color: #888; margin-bottom: 7px; }
+    .htp-rows  { display: flex; flex-direction: column; gap: 4px; }
+    .htp-row   { display: flex; align-items: flex-start; gap: 7px; font-size: 0.78rem; color: #bbb; line-height: 1.35; }
+    .htp-icon  { flex-shrink: 0; font-size: 0.82rem; margin-top: 1px; }
+    .htp-row b { color: #ddd; }
+
+    @media (max-width: 500px) {
+      h1     { font-size: 2rem; }
+      #setup { padding: 22px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>XOX</h1>
+<p class="subtitle">Tic Tac Toe &mdash; Oyna ve Eğlen!</p>
+
+<!-- ══ SETUP SCREEN ══ -->
+<div id="setup">
+
+  <div class="how-to-play">
+    <div class="htp-title">Nasıl Oynanır?</div>
+    <div class="htp-rows">
+      <div class="htp-row"><span class="htp-icon">🎯</span><span id="htp-streak">Sırayla <b>X</b> veya <b>O</b> koy, <b>3'ü yan yana</b> getir — kazandın!</span></div>
+      <div class="htp-row"><span class="htp-icon">🤖</span><span>Bilgisayara Karşı: sen <b>X</b>, bilgisayar <b>O</b>.</span></div>
+      <div class="htp-row"><span class="htp-icon">👥</span><span>İki Oyuncu: sırayla aynı ekranda oynayın.</span></div>
+      <div class="htp-row"><span class="htp-icon">📐</span><span>Büyük tahtalarda daha fazla sembol yan yana gelmeli (max 5).</span></div>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <label>Tahta Boyutu</label>
+    <div class="option-row" id="size-options">
+      <button class="option-btn selected" data-val="3">3×3</button>
+      <button class="option-btn" data-val="4">4×4</button>
+      <button class="option-btn" data-val="5">5×5</button>
+      <button class="option-btn" data-val="6">6×6</button>
+      <button class="option-btn" data-val="7">7×7</button>
+    </div>
+  </div>
+
+  <div class="setup-section">
+    <label>Oyun Modu</label>
+    <div class="option-row" id="mode-options">
+      <button class="option-btn selected" data-val="pvc">🤖 Bilgisayara Karşı</button>
+      <button class="option-btn" data-val="pvp">👥 İki Oyuncu</button>
+    </div>
+  </div>
+
+  <div class="setup-section" id="diff-section">
+    <label>Zorluk Seviyesi</label>
+    <div class="option-row" id="diff-options">
+      <button class="option-btn selected" data-val="easy">😊 Kolay</button>
+      <button class="option-btn" data-val="medium">😐 Orta</button>
+      <button class="option-btn" data-val="hard">😈 Zor</button>
+    </div>
+  </div>
+
+  <button id="start-btn">OYUNA BAŞLA ▶</button>
+</div>
+
+<!-- ══ GAME SCREEN ══ -->
+<div id="game">
+
+  <div id="score-board">
+    <div class="score-box">
+      <div class="score-label" id="p1-label">Oyuncu X</div>
+      <div class="score-val score-x" id="score-x">0</div>
+    </div>
+    <div class="score-box">
+      <div class="score-label">Berabere</div>
+      <div class="score-val score-d" id="score-d">0</div>
+    </div>
+    <div class="score-box">
+      <div class="score-label" id="p2-label">Oyuncu O</div>
+      <div class="score-val score-o" id="score-o">0</div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="player-indicator x-indicator" id="turn-icon">X</div>
+    <span id="status-text">Oyuncu X'in sırası</span>
+  </div>
+
+  <div id="thinking"></div>
+
+  <div id="board-wrap">
+    <div id="board"></div>
+  </div>
+
+  <div class="game-actions">
+    <button id="restart-btn">🔄 Yeniden Başla</button>
+    <button id="menu-btn">🏠 Menü</button>
+  </div>
+</div>
+
+<!-- ══ RESULT OVERLAY ══ -->
+<div id="overlay">
+  <div class="overlay-box">
+    <div class="result-icon" id="result-icon">🎉</div>
+    <h2 id="result-title">Oyuncu X Kazandı!</h2>
+    <p id="result-sub">Harika bir oyundu!</p>
+    <div class="overlay-btns">
+      <button class="btn-again" id="overlay-again">Tekrar Oyna</button>
+      <button class="btn-menu"  id="overlay-menu">Menü</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  SOUNDS  (Web Audio API — hiç dosya gerekmez)
+// ══════════════════════════════════════════════
+let _actx = null;
+function actx() {
+  if (!_actx) _actx = new (window.AudioContext || window.webkitAudioContext)();
+  if (_actx.state === 'suspended') _actx.resume();
+  return _actx;
+}
+
+function _tone(freq, type, startOff, dur, vol = 0.22) {
+  const c = actx();
+  const osc  = c.createOscillator();
+  const gain = c.createGain();
+  osc.connect(gain);
+  gain.connect(c.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, c.currentTime + startOff);
+  gain.gain.setValueAtTime(vol, c.currentTime + startOff);
+  gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + startOff + dur);
+  osc.start(c.currentTime + startOff);
+  osc.stop(c.currentTime + startOff + dur + 0.02);
+}
+
+function _sweep(f1, f2, type, startOff, dur, vol = 0.2) {
+  const c = actx();
+  const osc  = c.createOscillator();
+  const gain = c.createGain();
+  osc.connect(gain);
+  gain.connect(c.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(f1, c.currentTime + startOff);
+  osc.frequency.exponentialRampToValueAtTime(f2, c.currentTime + startOff + dur);
+  gain.gain.setValueAtTime(vol, c.currentTime + startOff);
+  gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + startOff + dur);
+  osc.start(c.currentTime + startOff);
+  osc.stop(c.currentTime + startOff + dur + 0.02);
+}
+
+// Başlangıç çanı — dört artan sinüs notası
+function sndStart() {
+  _tone(1047, 'sine', 0,    0.45, 0.28);
+  _tone(1319, 'sine', 0.2,  0.35, 0.22);
+  _tone(1568, 'sine', 0.38, 0.4,  0.24);
+  _tone(2093, 'sine', 0.55, 0.65, 0.2);
+}
+
+// Taşa basma sesi — kısa tık
+function sndPlace(isX) {
+  _tone(isX ? 520 : 340, 'square', 0, 0.06, 0.15);
+}
+
+// Kazanma fanfarı — komik tırmanma + boing
+function sndWin() {
+  _tone(523,  'square', 0,    0.11, 0.22);
+  _tone(659,  'square', 0.1,  0.11, 0.22);
+  _tone(784,  'square', 0.2,  0.11, 0.22);
+  _tone(1047, 'square', 0.31, 0.4,  0.26);
+  // komik boing
+  _sweep(180, 900, 'sine', 0.72, 0.18, 0.2);
+  _sweep(900, 200, 'sine', 0.9,  0.25, 0.18);
+}
+
+// Bilgisayar kazanınca — robot sesi
+function sndPCWin() {
+  _tone(880, 'square', 0,    0.09, 0.2);
+  _tone(440, 'square', 0.11, 0.09, 0.2);
+  _tone(660, 'square', 0.22, 0.09, 0.2);
+  _tone(330, 'square', 0.33, 0.35, 0.2);
+  _sweep(300, 150, 'sawtooth', 0.7, 0.3, 0.15);
+}
+
+// Berabere — trombon üzüntüsü (wah wah waaah)
+function sndDraw() {
+  _sweep(466, 440, 'sawtooth', 0,    0.22, 0.2);
+  _sweep(440, 415, 'sawtooth', 0.22, 0.22, 0.2);
+  _sweep(415, 370, 'sawtooth', 0.44, 0.22, 0.2);
+  _sweep(370, 220, 'sawtooth', 0.66, 0.45, 0.22);
+}
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+const state = {
+  size: 3,
+  mode: 'pvc',
+  diff: 'easy',
+  board: [],
+  current: 'X',
+  over: false,
+  scores: { X: 0, O: 0, D: 0 },
+};
+
+function winStreak(size) { return Math.min(size, 5); }
+
+// ══════════════════════════════════════════════
+//  SETUP UI
+// ══════════════════════════════════════════════
+function bindOptionGroup(groupId, stateKey) {
+  document.getElementById(groupId).addEventListener('click', e => {
+    const btn = e.target.closest('.option-btn');
+    if (!btn) return;
+    document.querySelectorAll(`#${groupId} .option-btn`).forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    state[stateKey] = btn.dataset.val;
+    if (stateKey === 'mode') {
+      document.getElementById('diff-section').style.display = state.mode === 'pvc' ? '' : 'none';
+    }
+  });
+}
+
+bindOptionGroup('size-options', 'size');
+bindOptionGroup('mode-options', 'mode');
+bindOptionGroup('diff-options', 'diff');
+
+// Açıklamayı seçilen boyuta göre güncelle
+const streakLabels = { 3: "3'ü", 4: "4'ü", 5: "5'i", 6: "5'i", 7: "5'i" };
+document.getElementById('size-options').addEventListener('click', e => {
+  const btn = e.target.closest('.option-btn');
+  if (!btn) return;
+  const n = parseInt(btn.dataset.val, 10);
+  document.getElementById('htp-streak').innerHTML =
+    `Sırayla <b>X</b> veya <b>O</b> koy, <b>${streakLabels[n]} yan yana</b> getir — kazandın!`;
+});
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', restartRound);
+document.getElementById('menu-btn').addEventListener('click', showMenu);
+document.getElementById('overlay-again').addEventListener('click', () => { hideOverlay(); restartRound(); });
+document.getElementById('overlay-menu').addEventListener('click', () => { hideOverlay(); showMenu(); });
+
+// ══════════════════════════════════════════════
+//  GAME FLOW
+// ══════════════════════════════════════════════
+function startGame() {
+  state.size = parseInt(state.size, 10);
+  state.scores = { X: 0, O: 0, D: 0 };
+  updateScores();
+  document.getElementById('p1-label').textContent = 'Oyuncu X';
+  document.getElementById('p2-label').textContent = state.mode === 'pvc' ? 'Bilgisayar' : 'Oyuncu O';
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  buildBoard();
+  newRound();
+  sndStart();
+}
+
+function showMenu() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('setup').style.display = 'flex';
+}
+
+function restartRound() {
+  newRound();
+  sndStart();
+}
+
+function newRound() {
+  state.board = Array(state.size * state.size).fill('');
+  state.current = 'X';
+  state.over = false;
+  renderBoard();
+  setStatus('Oyuncu X\'in sırası', 'X');
+  setThinking('');
+}
+
+// ══════════════════════════════════════════════
+//  BOARD BUILD & RENDER
+// ══════════════════════════════════════════════
+function buildBoard() {
+  const board = document.getElementById('board');
+  const viewW = Math.min(window.innerWidth - 40, 640);
+  const cellSize = Math.max(44, Math.floor((viewW - (state.size - 1) * 5) / state.size));
+  const fontSize = Math.max(16, Math.floor(cellSize * 0.48));
+
+  board.style.setProperty('--cell-size', cellSize + 'px');
+  board.style.setProperty('--cell-font', fontSize + 'px');
+  board.style.gridTemplateColumns = `repeat(${state.size}, ${cellSize}px)`;
+
+  board.innerHTML = '';
+  for (let i = 0; i < state.size * state.size; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.idx = i;
+    cell.addEventListener('click', onCellClick);
+    board.appendChild(cell);
+  }
+}
+
+function renderBoard(winCells = []) {
+  document.querySelectorAll('.cell').forEach((cell, i) => {
+    const val = state.board[i];
+    cell.textContent = val;
+    cell.className = 'cell' + (val ? ' taken ' + val.toLowerCase() : '');
+    if (winCells.includes(i)) cell.classList.add('win-cell');
+  });
+}
+
+// ══════════════════════════════════════════════
+//  CLICK HANDLER
+// ══════════════════════════════════════════════
+function onCellClick(e) {
+  if (state.over) return;
+  if (state.mode === 'pvc' && state.current === 'O') return;
+  const idx = parseInt(e.currentTarget.dataset.idx, 10);
+  if (state.board[idx]) return;
+  makeMove(idx);
+}
+
+function makeMove(idx) {
+  state.board[idx] = state.current;
+  sndPlace(state.current === 'X');
+
+  const result = checkResult();
+  renderBoard(result ? result.cells : []);
+
+  if (result) { handleEnd(result); return; }
+
+  state.current = state.current === 'X' ? 'O' : 'X';
+  const isPC = state.mode === 'pvc' && state.current === 'O';
+  const name = isPC ? 'Bilgisayar' : `Oyuncu ${state.current}`;
+  setStatus(`${name}'${turkishPossessive(name)} sırası`, state.current);
+
+  if (isPC) {
+    state.over = true;
+    setThinking('Bilgisayar düşünüyor... 🤔');
+    setTimeout(() => {
+      state.over = false;
+      setThinking('');
+      makeMove(pickPCMove());
+    }, 520);
+  }
+}
+
+// Türkçe iyelik eki (Oyuncu X'in / Bilgisayar'ın)
+function turkishPossessive(name) {
+  if (name === 'Bilgisayar') return 'ın';
+  // "Oyuncu X" → "Oyuncu X'in"
+  return '\'in';
+}
+
+// ══════════════════════════════════════════════
+//  WIN CHECK
+// ══════════════════════════════════════════════
+function checkResult() {
+  const n = state.size, streak = winStreak(n), b = state.board;
+  for (const line of getLines(n, streak)) {
+    const first = b[line[0]];
+    if (first && line.every(i => b[i] === first)) return { winner: first, cells: line };
+  }
+  if (b.every(v => v)) return { winner: 'draw', cells: [] };
+  return null;
+}
+
+function getLines(n, streak) {
+  const lines = [];
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c <= n - streak; c++) {
+      const l = []; for (let k = 0; k < streak; k++) l.push(r * n + c + k); lines.push(l);
+    }
+  for (let c = 0; c < n; c++)
+    for (let r = 0; r <= n - streak; r++) {
+      const l = []; for (let k = 0; k < streak; k++) l.push((r+k)*n+c); lines.push(l);
+    }
+  for (let r = 0; r <= n - streak; r++)
+    for (let c = 0; c <= n - streak; c++) {
+      const l = []; for (let k = 0; k < streak; k++) l.push((r+k)*n+c+k); lines.push(l);
+    }
+  for (let r = streak - 1; r < n; r++)
+    for (let c = 0; c <= n - streak; c++) {
+      const l = []; for (let k = 0; k < streak; k++) l.push((r-k)*n+c+k); lines.push(l);
+    }
+  return lines;
+}
+
+// ══════════════════════════════════════════════
+//  END HANDLING
+// ══════════════════════════════════════════════
+const winSubs = [
+  'Süpersin! 🚀', 'Muhteşem bir hamle! 🌟',
+  'Sen bir dahisin! 🧠', 'İnanılmaz! 🎯',
+  'Efsane oyun! 👑'
+];
+const pcWinSubs = [
+  'Bilgisayar bu sefer daha iyi! 😅',
+  'Daha çok pratik yapmak gerek! 💪',
+  'Bir daha dene, yapabilirsin! 🔥'
+];
+const drawSubs = [
+  'Bu sefer kimse kazanamadı. Tekrar dene!',
+  'Çok yakındı... Bir daha!',
+  'Berabere! Daha dikkatli oyna 😄'
+];
+
+function handleEnd(result) {
+  state.over = true;
+
+  if (result.winner === 'draw') {
+    state.scores.D++;
+    updateScores();
+    setStatus('Berabere! 🤝', null);
+    sndDraw();
+    const sub = drawSubs[Math.floor(Math.random() * drawSubs.length)];
+    setTimeout(() => showOverlay('🤝', 'Berabere!', sub), 600);
+  } else {
+    const isPC = state.mode === 'pvc' && result.winner === 'O';
+    state.scores[result.winner]++;
+    updateScores();
+    const name = isPC ? 'Bilgisayar' : `Oyuncu ${result.winner}`;
+    setStatus(`${name} kazandı! 🎉`, result.winner);
+
+    if (isPC) {
+      sndPCWin();
+      const sub = pcWinSubs[Math.floor(Math.random() * pcWinSubs.length)];
+      setTimeout(() => showOverlay('🤖', 'Bilgisayar Kazandı!', sub), 700);
+    } else {
+      sndWin();
+      const icon = result.winner === 'X' ? '🎉' : '🏆';
+      const sub  = winSubs[Math.floor(Math.random() * winSubs.length)];
+      setTimeout(() => showOverlay(icon, `Oyuncu ${result.winner} Kazandı!`, sub), 700);
+    }
+  }
+}
+
+// ══════════════════════════════════════════════
+//  PC AI
+// ══════════════════════════════════════════════
+function pickPCMove() {
+  const diff  = state.diff;
+  const empty = state.board.map((v, i) => v === '' ? i : -1).filter(i => i >= 0);
+
+  if (diff === 'easy') {
+    if (Math.random() < 0.7) return empty[Math.floor(Math.random() * empty.length)];
+    return bestHeuristicMove('O');
+  }
+  if (diff === 'medium') {
+    const block = findWinningMove('X');
+    if (block !== -1 && Math.random() < 0.75) return block;
+    const win = findWinningMove('O');
+    if (win !== -1) return win;
+    return empty[Math.floor(Math.random() * empty.length)];
+  }
+  const win   = findWinningMove('O'); if (win   !== -1) return win;
+  const block = findWinningMove('X'); if (block !== -1) return block;
+  return bestHeuristicMove('O');
+}
+
+function findWinningMove(player) {
+  const n = state.size, streak = winStreak(n);
+  for (const line of getLines(n, streak)) {
+    const empty  = line.filter(i => state.board[i] === '');
+    const filled = line.filter(i => state.board[i] === player);
+    if (filled.length === streak - 1 && empty.length === 1) return empty[0];
+  }
+  return -1;
+}
+
+function bestHeuristicMove(player) {
+  const n = state.size, streak = winStreak(n);
+  const scores = Array(n * n).fill(0);
+  for (const line of getLines(n, streak)) {
+    const vals = line.map(i => state.board[i]);
+    if (vals.includes(player === 'O' ? 'X' : 'O')) continue;
+    const myCount = vals.filter(v => v === player).length;
+    const weight  = Math.pow(10, myCount);
+    for (const i of line) if (state.board[i] === '') scores[i] += weight;
+  }
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++) {
+      const i = r * n + c;
+      if (state.board[i] !== '') continue;
+      scores[i] += (Math.min(r, n-1-r) + Math.min(c, n-1-c)) * 2;
+    }
+  const empty = state.board.map((v, i) => v === '' ? i : -1).filter(i => i >= 0);
+  return empty.reduce((best, i) => scores[i] > scores[best] ? i : best, empty[0]);
+}
+
+// ══════════════════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════════════════
+function setStatus(text, player) {
+  document.getElementById('status-text').textContent = text;
+  const icon = document.getElementById('turn-icon');
+  if (player === 'X') {
+    icon.textContent = 'X'; icon.className = 'player-indicator x-indicator';
+  } else if (player === 'O') {
+    icon.textContent = 'O'; icon.className = 'player-indicator o-indicator';
+  } else {
+    icon.textContent = '–'; icon.className = 'player-indicator'; icon.style.background = '#555';
+  }
+}
+
+function setThinking(msg) { document.getElementById('thinking').textContent = msg; }
+
+function updateScores() {
+  document.getElementById('score-x').textContent = state.scores.X;
+  document.getElementById('score-o').textContent = state.scores.O;
+  document.getElementById('score-d').textContent = state.scores.D;
+}
+
+function showOverlay(icon, title, sub) {
+  document.getElementById('result-icon').textContent  = icon;
+  document.getElementById('result-title').textContent = title;
+  document.getElementById('result-sub').textContent   = sub;
+  document.getElementById('overlay').classList.add('show');
+}
+
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+</script>
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#e8e0f0;font-family:'Segoe UI',Arial,sans-serif;font-size:0.85rem;font-weight:600;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+</body>
+</html>
