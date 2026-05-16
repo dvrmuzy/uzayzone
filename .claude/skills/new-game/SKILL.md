@@ -21,7 +21,7 @@ Kullanıcının `$ARGUMENTS` ile verdiği açıklamadan şunları çıkar veya g
 
 ## Adım 2: Oyun Klasörünü ve Dosyasını Oluştur
 
-`D:/uzay_projects/` altında yeni klasör oluştur ve içine `index.html` yaz.
+`D:/uzay_projects/uzayzone` altında yeni klasör oluştur ve içine `index.html` yaz.
 
 Oyun dosyası şu kurallara uymalı:
 - **Tek dosya**: Tüm CSS ve JS inline olmalı (harici dosya yok)
@@ -43,7 +43,7 @@ Butonun `color` ve `font-family` değerlerini oyunun kendi temasına göre ayarl
 
 ## Adım 3: Ana Sayfaya Kart Ekle
 
-`D:/uzay_projects/index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle.
+`D:/uzay_projects/uzayzone/index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle.
 
 Mevcut array yapısı şu formatta:
 
