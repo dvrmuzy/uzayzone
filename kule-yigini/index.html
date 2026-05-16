@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Kule Yığını</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+  body {
+    background: linear-gradient(180deg, #0a0a2a 0%, #1a1040 55%, #2a1858 100%);
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #canvas { display: block; width: 100%; height: 100%; cursor: pointer; position: fixed; top: 0; left: 0; }
+
+  .hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    pointer-events: none;
+    z-index: 10;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .score {
+    font-size: 5rem;
+    font-weight: 900;
+    text-shadow: 0 4px 24px rgba(0,0,0,0.55), 0 0 35px rgba(125, 249, 255, 0.35);
+    letter-spacing: 0.03em;
+    color: #fff;
+    margin-top: 70px;
+    line-height: 1;
+    display: inline-block;
+  }
+  .score.pulse { animation: scorePulse 0.35s ease; }
+  @keyframes scorePulse {
+    0%   { transform: scale(1); color: #fff; }
+    45%  { transform: scale(1.18); color: #7df9ff; }
+    100% { transform: scale(1); color: #fff; }
+  }
+
+  .combo {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin-top: 10px;
+    color: #ffeb3b;
+    text-shadow: 0 0 14px rgba(255, 235, 59, 0.75);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .combo.show { opacity: 1; transform: translateY(0); }
+
+  .start-screen, .game-over {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10,10,42,0.94) 0%, rgba(26,16,64,0.94) 60%, rgba(42,24,88,0.94) 100%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .start-screen.hidden, .game-over.hidden { display: none; }
+
+  .title {
+    font-size: 4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #7df9ff, #ff7df9, #7df9ff);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titleShimmer 3.5s ease infinite;
+    margin-bottom: 18px;
+    letter-spacing: 0.06em;
+  }
+  @keyframes titleShimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: #b6c8ee;
+    margin-bottom: 36px;
+    max-width: 380px;
+    line-height: 1.55;
+  }
+
+  .btn {
+    font-family: inherit;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg, #4a8bff, #7d4aff);
+    border: none;
+    border-radius: 60px;
+    padding: 16px 52px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 8px 32px rgba(77, 75, 255, 0.55);
+    letter-spacing: 0.1em;
+  }
+  .btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 14px 42px rgba(125, 100, 255, 0.75); }
+  .btn:active { transform: scale(0.97); }
+
+  .diff-label {
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.3em;
+    color: #8aa3d0;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+  }
+
+  .diff-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .diff-pick {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    color: #aab8d8;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 40px;
+    padding: 11px 26px;
+    cursor: pointer;
+    transition: color 0.25s, border-color 0.25s, background 0.25s, transform 0.2s, box-shadow 0.25s;
+    text-transform: uppercase;
+  }
+  .diff-pick:hover { color: #fff; border-color: rgba(255,255,255,0.35); transform: translateY(-1px); }
+
+  .diff-pick.active {
+    color: #050518;
+    border-color: transparent;
+    transform: translateY(-1px);
+  }
+  .diff-pick.active[data-diff="kolay"] { background: linear-gradient(135deg, #00ff9d, #00c8ff); box-shadow: 0 6px 24px rgba(0,255,157,0.4); }
+  .diff-pick.active[data-diff="orta"]  { background: linear-gradient(135deg, #ffaa00, #ff6b35); box-shadow: 0 6px 24px rgba(255,170,0,0.4); }
+  .diff-pick.active[data-diff="zor"]   { background: linear-gradient(135deg, #ff3366, #a855f7); box-shadow: 0 6px 24px rgba(255,51,102,0.4); }
+
+  .final-score {
+    font-size: 5rem;
+    font-weight: 900;
+    color: #7df9ff;
+    text-shadow: 0 0 32px rgba(125, 249, 255, 0.65);
+    margin: 14px 0 4px;
+    line-height: 1;
+  }
+  .best-score {
+    font-size: 0.95rem;
+    color: #aac3ee;
+    margin-bottom: 32px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .new-best {
+    color: #ffeb3b;
+    text-shadow: 0 0 14px rgba(255, 235, 59, 0.8);
+    margin-bottom: 8px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    font-size: 0.95rem;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .new-best.show { opacity: 1; }
+
+  .hint {
+    position: fixed;
+    bottom: 36px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.95rem;
+    color: rgba(200, 220, 255, 0.65);
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    animation: hintPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes hintPulse {
+    0%, 100% { opacity: 0.55; }
+    50%      { opacity: 1; }
+  }
+  .hint.hidden { display: none; }
+
+  .diff-tag {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 50;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    padding: 6px 14px;
+    border-radius: 30px;
+    backdrop-filter: blur(0);
+  }
+  .diff-tag.kolay { background: rgba(0,255,157,0.18); color: #00ff9d; border: 1px solid rgba(0,255,157,0.4); }
+  .diff-tag.orta  { background: rgba(255,170,0,0.18); color: #ffaa00; border: 1px solid rgba(255,170,0,0.4); }
+  .diff-tag.zor   { background: rgba(255,51,102,0.18); color: #ff3366; border: 1px solid rgba(255,51,102,0.4); }
+
+  @media (max-width: 480px) {
+    .score { font-size: 4rem; margin-top: 60px; }
+    .title { font-size: 2.8rem; }
+    .subtitle { font-size: 0.95rem; }
+    .final-score { font-size: 4rem; }
+    .btn { font-size: 1.05rem; padding: 14px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div class="hud">
+  <div><span class="score" id="score">0</span></div>
+  <div class="combo" id="combo">MÜKEMMEL!</div>
+</div>
+
+<div class="hint hidden" id="hint">▶ DOKUN / TIKLA / BOŞLUK</div>
+
+<div class="diff-tag" id="diffTag"></div>
+
+<div class="start-screen" id="startScreen">
+  <h1 class="title">KULE YIĞINI</h1>
+  <p class="subtitle">Hareket eden blokları üst üste mükemmel hizala. Bir yere dokun ya da tıkla — taşan kısımlar düşüp gider, kuleyi ne kadar yüksek inşa edebilirsin?</p>
+  <div class="diff-label">ZORLUK SEÇ</div>
+  <div class="diff-selector" id="diffSelector">
+    <button class="diff-pick" data-diff="kolay">Kolay</button>
+    <button class="diff-pick active" data-diff="orta">Orta</button>
+    <button class="diff-pick" data-diff="zor">Zor</button>
+  </div>
+  <button class="btn" id="startBtn">OYUNA BAŞLA</button>
+</div>
+
+<div class="game-over hidden" id="gameOver">
+  <h1 class="title" style="font-size: 2.6rem;">OYUN BİTTİ</h1>
+  <div class="new-best" id="newBest">★ YENİ REKOR ★</div>
+  <div class="final-score" id="finalScore">0</div>
+  <div class="best-score" id="bestScore">EN İYİ: 0</div>
+  <div class="diff-label">YENİ ZORLUK</div>
+  <div class="diff-selector" id="diffSelector2">
+    <button class="diff-pick" data-diff="kolay">Kolay</button>
+    <button class="diff-pick active" data-diff="orta">Orta</button>
+    <button class="diff-pick" data-diff="zor">Zor</button>
+  </div>
+  <button class="btn" id="restartBtn">TEKRAR OYNA</button>
+</div>
+
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#7df9ff;font-family:'Segoe UI',sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ─── DOM ───
+const canvas        = document.getElementById('canvas');
+const scoreEl       = document.getElementById('score');
+const comboEl       = document.getElementById('combo');
+const hintEl        = document.getElementById('hint');
+const startScreen   = document.getElementById('startScreen');
+const gameOverScr   = document.getElementById('gameOver');
+const finalScoreEl  = document.getElementById('finalScore');
+const bestScoreEl   = document.getElementById('bestScore');
+const newBestEl     = document.getElementById('newBest');
+const startBtn      = document.getElementById('startBtn');
+const restartBtn    = document.getElementById('restartBtn');
+const diffTagEl     = document.getElementById('diffTag');
+
+// ─── Three.js setup ───
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x1a1040, 35, 90);
+
+const camera = new THREE.OrthographicCamera();
+const VIEW_SIZE = 26;
+function updateCamera() {
+  const aspect = window.innerWidth / window.innerHeight;
+  camera.left   = -aspect * VIEW_SIZE / 2;
+  camera.right  =  aspect * VIEW_SIZE / 2;
+  camera.top    =  VIEW_SIZE / 2;
+  camera.bottom = -VIEW_SIZE / 2;
+  camera.near   = 1;
+  camera.far    = 200;
+  camera.updateProjectionMatrix();
+}
+updateCamera();
+camera.position.set(22, 22, 22);
+camera.lookAt(0, 0, 0);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Lights
+scene.add(new THREE.AmbientLight(0x9999cc, 0.55));
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 1.15);
+dirLight.position.set(18, 38, 14);
+dirLight.castShadow = true;
+dirLight.shadow.mapSize.width  = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.left   = -22;
+dirLight.shadow.camera.right  =  22;
+dirLight.shadow.camera.top    =  60;
+dirLight.shadow.camera.bottom = -22;
+dirLight.shadow.camera.near = 1;
+dirLight.shadow.camera.far  = 120;
+scene.add(dirLight);
+
+const rimLight = new THREE.DirectionalLight(0x7d4aff, 0.5);
+rimLight.position.set(-12, 8, -10);
+scene.add(rimLight);
+
+// ─── Difficulty presets ───
+const DIFFICULTY_PRESETS = {
+  kolay: { initSize: 7.5, speedStart: 0.06, speedMax: 0.20, speedInc: 0.0030, label: 'KOLAY' },
+  orta:  { initSize: 6.0, speedStart: 0.09, speedMax: 0.30, speedInc: 0.0045, label: 'ORTA'  },
+  zor:   { initSize: 5.0, speedStart: 0.13, speedMax: 0.38, speedInc: 0.0065, label: 'ZOR'   }
+};
+
+let currentDiffKey = localStorage.getItem('kuleYiginiDiff') || 'orta';
+if (!DIFFICULTY_PRESETS[currentDiffKey]) currentDiffKey = 'orta';
+let PRESET = DIFFICULTY_PRESETS[currentDiffKey];
+
+// ─── Constants ───
+const BLOCK_HEIGHT      = 1.4;
+let   INITIAL_SIZE      = PRESET.initSize;
+let   SPEED_START       = PRESET.speedStart;
+let   SPEED_MAX         = PRESET.speedMax;
+let   SPEED_INCREMENT   = PRESET.speedInc;
+const SPAWN_DISTANCE    = 13;
+const PERFECT_THRESHOLD = 0.18;
+
+function applyDifficulty(key) {
+  if (!DIFFICULTY_PRESETS[key]) key = 'orta';
+  currentDiffKey = key;
+  PRESET = DIFFICULTY_PRESETS[key];
+  INITIAL_SIZE    = PRESET.initSize;
+  SPEED_START     = PRESET.speedStart;
+  SPEED_MAX       = PRESET.speedMax;
+  SPEED_INCREMENT = PRESET.speedInc;
+  try { localStorage.setItem('kuleYiginiDiff', key); } catch (e) {}
+  // Update tag
+  diffTagEl.className = 'diff-tag ' + key;
+  diffTagEl.textContent = PRESET.label;
+  // Sync both selectors
+  document.querySelectorAll('.diff-pick').forEach(b => {
+    b.classList.toggle('active', b.dataset.diff === key);
+  });
+}
+
+// ─── State ───
+let blocks = [];        // stable tower (foundation + landed)
+let fallingBlocks = []; // animated falling chunks
+let currentBlock = null;
+let score = 0;
+let bestScore = parseInt(localStorage.getItem('kuleYiginiBest') || '0', 10);
+let running = false;
+let camYTarget = 0;
+let camYCurrent = 0;
+let perfectCombo = 0;
+let cameraShake = 0;
+
+// ─── Audio (Web Audio API) ───
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playTone(freq, duration, type = 'sine', volume = 0.12) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration + 0.02);
+  } catch (e) {}
+}
+function soundDrop() {
+  const base = 280 + Math.min(700, blocks.length * 22);
+  playTone(base, 0.10, 'square', 0.08);
+}
+function soundPerfect(combo) {
+  const base = 760 + combo * 60;
+  playTone(base, 0.13, 'sine', 0.14);
+  setTimeout(() => playTone(base * 1.5, 0.18, 'sine', 0.13), 70);
+}
+function soundCut() {
+  playTone(180, 0.22, 'sawtooth', 0.07);
+}
+function soundGameOver() {
+  playTone(260, 0.28, 'triangle', 0.13);
+  setTimeout(() => playTone(200, 0.30, 'triangle', 0.13), 160);
+  setTimeout(() => playTone(150, 0.55, 'triangle', 0.13), 340);
+}
+
+// ─── Color helper ───
+function blockColor(index) {
+  const hue = (200 + index * 14) % 360;
+  return new THREE.Color(`hsl(${hue}, 72%, 60%)`);
+}
+
+function makeMaterial(color) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.42,
+    metalness: 0.12,
+    emissive: color.clone().multiplyScalar(0.18)
+  });
+}
+
+// ─── Blocks ───
+function addBlock(x, y, z, sizeX, sizeZ, axis, moving) {
+  const geo = new THREE.BoxGeometry(sizeX, BLOCK_HEIGHT, sizeZ);
+  const mat = makeMaterial(blockColor(blocks.length));
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  const speed = SPEED_START + Math.min(SPEED_MAX - SPEED_START, blocks.length * SPEED_INCREMENT);
+  const block = { mesh, sizeX, sizeZ, axis, moving, direction: blocks.length % 2 === 0 ? 1 : -1, speed };
+  blocks.push(block);
+  return block;
+}
+
+function addFallingChunk(x, y, z, sizeX, sizeZ, vx, vz, color) {
+  const geo = new THREE.BoxGeometry(sizeX, BLOCK_HEIGHT, sizeZ);
+  const mat = makeMaterial(color.clone());
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  scene.add(mesh);
+  fallingBlocks.push({
+    mesh,
+    vy: 0.05,
+    vx,
+    vz,
+    rotX: (Math.random() - 0.5) * 0.08,
+    rotZ: (Math.random() - 0.5) * 0.08,
+    life: 2.5
+  });
+}
+
+function disposeMesh(mesh) {
+  scene.remove(mesh);
+  if (mesh.geometry) mesh.geometry.dispose();
+  if (mesh.material) mesh.material.dispose();
+}
+
+// ─── Game lifecycle ───
+function initGame() {
+  for (const b of blocks)        disposeMesh(b.mesh);
+  for (const f of fallingBlocks) disposeMesh(f.mesh);
+  blocks = [];
+  fallingBlocks = [];
+  score = 0;
+  perfectCombo = 0;
+  camYTarget = 0;
+  camYCurrent = 0;
+  cameraShake = 0;
+  currentBlock = null;
+
+  // Foundation
+  addBlock(0, 0, 0, INITIAL_SIZE, INITIAL_SIZE, null, false);
+  spawnNextBlock();
+
+  updateScore();
+}
+
+function spawnNextBlock() {
+  const prev = blocks[blocks.length - 1];
+  const axis = (blocks.length % 2 === 1) ? 'x' : 'z';
+  let x = prev.mesh.position.x;
+  let z = prev.mesh.position.z;
+  if (axis === 'x') x -= SPAWN_DISTANCE;
+  else              z -= SPAWN_DISTANCE;
+  const y = prev.mesh.position.y + BLOCK_HEIGHT;
+  currentBlock = addBlock(x, y, z, prev.sizeX, prev.sizeZ, axis, true);
+  currentBlock.direction = 1;
+  camYTarget = Math.max(0, (blocks.length - 4) * BLOCK_HEIGHT * 0.85);
+}
+
+function dropBlock() {
+  if (!running || !currentBlock || !currentBlock.moving) return;
+
+  const cur  = currentBlock;
+  const prev = blocks[blocks.length - 2];
+  cur.moving = false;
+
+  const axis     = cur.axis;
+  const curPos   = axis === 'x' ? cur.mesh.position.x  : cur.mesh.position.z;
+  const prevPos  = axis === 'x' ? prev.mesh.position.x : prev.mesh.position.z;
+  const curSize  = axis === 'x' ? cur.sizeX            : cur.sizeZ;
+  const prevSize = axis === 'x' ? prev.sizeX           : prev.sizeZ;
+
+  const delta    = curPos - prevPos;
+  const absDelta = Math.abs(delta);
+  const overlap  = Math.min(curSize, prevSize) - absDelta;
+
+  // No overlap → game over
+  if (overlap <= 0) {
+    fallingBlocks.push({
+      mesh: cur.mesh,
+      vy: 0,
+      vx: axis === 'x' ? Math.sign(delta) * 0.12 : (Math.random() - 0.5) * 0.05,
+      vz: axis === 'z' ? Math.sign(delta) * 0.12 : (Math.random() - 0.5) * 0.05,
+      rotX: (Math.random() - 0.5) * 0.1,
+      rotZ: (Math.random() - 0.5) * 0.1,
+      life: 3
+    });
+    blocks.pop();
+    soundGameOver();
+    endGame();
+    return;
+  }
+
+  const curColor = cur.mesh.material.color.clone();
+
+  // Perfect placement → snap & bonus
+  if (absDelta < PERFECT_THRESHOLD) {
+    if (axis === 'x') cur.mesh.position.x = prev.mesh.position.x;
+    else              cur.mesh.position.z = prev.mesh.position.z;
+    cur.sizeX = prev.sizeX;
+    cur.sizeZ = prev.sizeZ;
+    perfectCombo++;
+    const bonus = 1 + Math.min(5, perfectCombo);
+    score += bonus;
+    showCombo(perfectCombo > 1 ? `MÜKEMMEL x${perfectCombo}! +${bonus}` : `MÜKEMMEL! +${bonus}`);
+    soundPerfect(perfectCombo);
+    cameraShake = 0.15;
+  } else {
+    perfectCombo = 0;
+    score += 1;
+
+    // Compute overlap region & chunk
+    const curStart   = curPos  - curSize  / 2;
+    const curEnd     = curPos  + curSize  / 2;
+    const prevStart  = prevPos - prevSize / 2;
+    const prevEnd    = prevPos + prevSize / 2;
+    const overlapStart = Math.max(curStart, prevStart);
+    const overlapEnd   = Math.min(curEnd,   prevEnd);
+    const newCenter    = (overlapStart + overlapEnd) / 2;
+    const newSize      = overlap;
+
+    // Rebuild trimmed top block
+    disposeMesh(cur.mesh);
+    if (axis === 'x') cur.sizeX = newSize;
+    else              cur.sizeZ = newSize;
+
+    const geo = new THREE.BoxGeometry(cur.sizeX, BLOCK_HEIGHT, cur.sizeZ);
+    const mat = makeMaterial(curColor);
+    cur.mesh = new THREE.Mesh(geo, mat);
+    cur.mesh.castShadow = true;
+    cur.mesh.receiveShadow = true;
+    if (axis === 'x') {
+      cur.mesh.position.set(newCenter, prev.mesh.position.y + BLOCK_HEIGHT, prev.mesh.position.z);
+    } else {
+      cur.mesh.position.set(prev.mesh.position.x, prev.mesh.position.y + BLOCK_HEIGHT, newCenter);
+    }
+    scene.add(cur.mesh);
+
+    // Falling chunk
+    const chunkSize   = absDelta;
+    const chunkCenter = delta > 0 ? overlapEnd + chunkSize / 2 : overlapStart - chunkSize / 2;
+    const chunkY      = prev.mesh.position.y + BLOCK_HEIGHT;
+    if (axis === 'x') {
+      addFallingChunk(chunkCenter, chunkY, prev.mesh.position.z, chunkSize, cur.sizeZ,
+                      Math.sign(delta) * 0.08, 0, curColor);
+    } else {
+      addFallingChunk(prev.mesh.position.x, chunkY, chunkCenter, cur.sizeX, chunkSize,
+                      0, Math.sign(delta) * 0.08, curColor);
+    }
+    soundDrop();
+    soundCut();
+  }
+
+  updateScore();
+  spawnNextBlock();
+}
+
+// ─── HUD helpers ───
+let comboTimer = null;
+function showCombo(text) {
+  comboEl.textContent = text;
+  comboEl.classList.add('show');
+  clearTimeout(comboTimer);
+  comboTimer = setTimeout(() => comboEl.classList.remove('show'), 900);
+}
+
+function updateScore() {
+  scoreEl.textContent = score;
+  scoreEl.classList.remove('pulse');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('pulse');
+}
+
+function endGame() {
+  running = false;
+  const isNewBest = score > bestScore;
+  if (isNewBest) {
+    bestScore = score;
+    try { localStorage.setItem('kuleYiginiBest', String(bestScore)); } catch (e) {}
+  }
+  finalScoreEl.textContent = score;
+  bestScoreEl.textContent  = `EN İYİ: ${bestScore}`;
+  newBestEl.classList.toggle('show', isNewBest);
+  setTimeout(() => gameOverScr.classList.remove('hidden'), 900);
+}
+
+function startGame() {
+  ensureAudio();
+  initGame();
+  running = true;
+  startScreen.classList.add('hidden');
+  gameOverScr.classList.add('hidden');
+  hintEl.classList.remove('hidden');
+  setTimeout(() => hintEl.classList.add('hidden'), 2600);
+}
+
+// ─── Loop ───
+const clock = new THREE.Clock();
+function loop() {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, clock.getDelta());
+
+  // Move active block
+  if (running && currentBlock && currentBlock.moving) {
+    const cb   = currentBlock;
+    const prev = blocks[blocks.length - 2];
+    const range = SPAWN_DISTANCE - 1;
+    if (cb.axis === 'x') {
+      cb.mesh.position.x += cb.direction * cb.speed;
+      if (cb.mesh.position.x >  prev.mesh.position.x + range) { cb.mesh.position.x =  prev.mesh.position.x + range; cb.direction = -1; }
+      if (cb.mesh.position.x <  prev.mesh.position.x - range) { cb.mesh.position.x =  prev.mesh.position.x - range; cb.direction =  1; }
+    } else {
+      cb.mesh.position.z += cb.direction * cb.speed;
+      if (cb.mesh.position.z >  prev.mesh.position.z + range) { cb.mesh.position.z =  prev.mesh.position.z + range; cb.direction = -1; }
+      if (cb.mesh.position.z <  prev.mesh.position.z - range) { cb.mesh.position.z =  prev.mesh.position.z - range; cb.direction =  1; }
+    }
+  }
+
+  // Falling chunks
+  for (let i = fallingBlocks.length - 1; i >= 0; i--) {
+    const f = fallingBlocks[i];
+    f.vy -= 0.04;
+    f.mesh.position.y += f.vy;
+    f.mesh.position.x += f.vx;
+    f.mesh.position.z += f.vz;
+    f.mesh.rotation.x += f.rotX;
+    f.mesh.rotation.z += f.rotZ;
+    f.life -= dt;
+    if (f.mesh.position.y < -40 || f.life <= 0) {
+      disposeMesh(f.mesh);
+      fallingBlocks.splice(i, 1);
+    }
+  }
+
+  // Camera follow + shake
+  camYCurrent += (camYTarget - camYCurrent) * 0.06;
+  let shakeX = 0, shakeY = 0;
+  if (cameraShake > 0) {
+    shakeX = (Math.random() - 0.5) * cameraShake;
+    shakeY = (Math.random() - 0.5) * cameraShake;
+    cameraShake *= 0.85;
+    if (cameraShake < 0.005) cameraShake = 0;
+  }
+  camera.position.set(22 + shakeX, 22 + camYCurrent + shakeY, 22 + shakeX);
+  camera.lookAt(0, camYCurrent, 0);
+
+  renderer.render(scene, camera);
+}
+
+// ─── Events ───
+function onDrop(e) {
+  if (e) e.preventDefault();
+  if (running) dropBlock();
+}
+canvas.addEventListener('click', onDrop);
+canvas.addEventListener('touchstart', onDrop, { passive: false });
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); onDrop(); }
+});
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+
+// Difficulty pickers (both start and game-over screens)
+document.querySelectorAll('.diff-selector').forEach(sel => {
+  sel.addEventListener('click', (e) => {
+    const btn = e.target.closest('.diff-pick');
+    if (!btn) return;
+    applyDifficulty(btn.dataset.diff);
+  });
+});
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  updateCamera();
+});
+
+// ─── Boot ───
+applyDifficulty(currentDiffKey);  // initialize tag + selector state
+initGame();                       // build idle tower preview behind start screen
+running = false;
+loop();
+</script>
+
+</body>
+</html>
