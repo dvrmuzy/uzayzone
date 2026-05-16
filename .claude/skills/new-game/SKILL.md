@@ -21,7 +21,7 @@ Kullanıcının `$ARGUMENTS` ile verdiği açıklamadan şunları çıkar veya g
 
 ## Adım 2: Oyun Klasörünü ve Dosyasını Oluştur
 
-`D:/uzay_projects/` altında yeni klasör oluştur ve içine `index.html` yaz.
+`uzayzone` altında yeni klasör oluştur ve içine `index.html` yaz.
 
 Oyun dosyası şu kurallara uymalı:
 - **Tek dosya**: Tüm CSS ve JS inline olmalı (harici dosya yok)
@@ -43,7 +43,7 @@ Butonun `color` ve `font-family` değerlerini oyunun kendi temasına göre ayarl
 
 ## Adım 3: Ana Sayfaya Kart Ekle
 
-`D:/uzay_projects/index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle.
+`uzayzone/index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle.
 
 Mevcut array yapısı şu formatta:
 
@@ -80,7 +80,7 @@ Bitirdikten sonra şunları kontrol et:
 1. Yeni klasör ve `index.html` dosyası oluşturuldu mu
 2. Oyun tarayıcıda açılıp çalışıyor mu (mantık hatası yok mu)
 3. Ana sayfaya dön butonu oyunun içinde görünüyor mu
-4. `D:/uzay_projects/index.html`'deki GAMES array'ine yeni kart eklendi mi
+4. `uzayzone/index.html`'deki GAMES array'ine yeni kart eklendi mi
 5. Kullanıcıya oyunu tarayıcıda test etmesini söyle
 
 ## Önemli Notlar
