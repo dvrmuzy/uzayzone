@@ -1,0 +1,2161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bilgi Yarışı - Araba Oyunu</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@600;700;800;900&display=swap');
+
+body {
+  background: #0a0a1a;
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  user-select: none;
+}
+
+canvas {
+  display: block;
+}
+
+/* ─── Menu Screens ─── */
+.screen {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  background: linear-gradient(135deg, #0a0a2e, #1a0a3e, #0a1a2e);
+  transition: opacity 0.5s;
+}
+
+.screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.menu-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.8rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff6b35, #ffaa00, #ff6b35);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease infinite;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.menu-subtitle {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: #888;
+  letter-spacing: 0.3em;
+  margin-bottom: 40px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.menu-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.menu-section h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  color: #ffaa00;
+  margin-bottom: 16px;
+}
+
+.btn-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  max-width: 500px;
+}
+
+.btn {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 12px 24px;
+  border: 2px solid rgba(255,170,0,0.3);
+  border-radius: 12px;
+  background: rgba(255,170,0,0.08);
+  color: #ffcc66;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 70px;
+}
+
+.btn:hover {
+  background: rgba(255,170,0,0.2);
+  border-color: #ffaa00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255,170,0,0.2);
+}
+
+.btn.selected {
+  background: rgba(255,170,0,0.3);
+  border-color: #ffaa00;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255,170,0,0.3);
+}
+
+.btn-start {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 16px 50px;
+  border: 2px solid #ff6b35;
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(255,107,53,0.2), rgba(255,170,0,0.2));
+  color: #ffaa00;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 0.15em;
+  margin-top: 10px;
+}
+
+.btn-start:hover {
+  background: linear-gradient(135deg, #ff6b35, #ffaa00);
+  color: #0a0a2e;
+  transform: scale(1.05);
+  box-shadow: 0 0 40px rgba(255,107,53,0.4);
+}
+
+.btn-start:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ─── HUD ─── */
+#hud {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.8), transparent);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+#hud.hidden { display: none; }
+
+.hud-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-label { color: #888; font-size: 0.65rem; letter-spacing: 0.1em; }
+.hud-value { color: #ffaa00; font-weight: 700; }
+
+.fuel-bar-bg {
+  width: 100px;
+  height: 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.fuel-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff3333, #ffaa00, #33ff33);
+  border-radius: 5px;
+  transition: width 0.3s;
+}
+
+.hearts { font-size: 1.1rem; letter-spacing: 2px; }
+
+/* ─── Question Modal ─── */
+.question-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.7);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  backdrop-filter: blur(4px);
+}
+
+.question-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.question-box {
+  background: linear-gradient(135deg, #1a1a3e, #2a1a4e);
+  border: 2px solid rgba(255,170,0,0.3);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  transform: scale(0.8);
+  transition: transform 0.3s;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.question-overlay.active .question-box {
+  transform: scale(1);
+}
+
+.q-type-badge {
+  display: inline-block;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.q-type-badge.normal {
+  background: rgba(0,200,255,0.15);
+  color: #00c8ff;
+  border: 1px solid rgba(0,200,255,0.3);
+}
+
+.q-type-badge.fuel {
+  background: rgba(255,60,60,0.15);
+  color: #ff5555;
+  border: 1px solid rgba(255,60,60,0.3);
+}
+
+.q-text {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 24px;
+  line-height: 1.6;
+  color: #fff;
+}
+
+.q-timer {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffaa00;
+  margin-bottom: 20px;
+}
+
+.q-timer.urgent { color: #ff3333; animation: pulse 0.5s ease infinite; }
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.q-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.q-option {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 14px 12px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  color: #ddd;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.q-option:hover {
+  border-color: #ffaa00;
+  background: rgba(255,170,0,0.1);
+  color: #fff;
+}
+
+.q-option.correct {
+  border-color: #33ff77;
+  background: rgba(51,255,119,0.2);
+  color: #33ff77;
+}
+
+.q-option.wrong {
+  border-color: #ff3333;
+  background: rgba(255,51,51,0.2);
+  color: #ff3333;
+}
+
+/* ─── Game Over ─── */
+.gameover-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+.gameover-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.go-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 3rem;
+  font-weight: 900;
+  color: #ff3333;
+  margin-bottom: 10px;
+  text-shadow: 0 0 40px rgba(255,51,51,0.5);
+}
+
+.go-score {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  color: #ffaa00;
+  margin-bottom: 8px;
+}
+
+.go-info {
+  color: #888;
+  margin-bottom: 30px;
+}
+
+.go-buttons {
+  display: flex;
+  gap: 16px;
+}
+
+.go-btn {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 14px 32px;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s;
+  letter-spacing: 0.1em;
+}
+
+.go-btn.retry {
+  border: 2px solid #ffaa00;
+  background: rgba(255,170,0,0.15);
+  color: #ffaa00;
+}
+
+.go-btn.retry:hover {
+  background: #ffaa00;
+  color: #0a0a2e;
+}
+
+.go-btn.menu {
+  border: 2px solid #888;
+  background: transparent;
+  color: #888;
+}
+
+.go-btn.menu:hover {
+  border-color: #fff;
+  color: #fff;
+}
+
+/* ─── Result Flash ─── */
+.result-flash {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 900;
+  z-index: 250;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.result-flash.show { opacity: 1; animation: flashUp 1s ease forwards; }
+
+@keyframes flashUp {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -60%) scale(1); opacity: 0; }
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  .menu-title { font-size: 1.8rem; }
+  .btn { font-size: 0.85rem; padding: 10px 16px; min-width: 55px; }
+  .q-text { font-size: 1rem; }
+  .q-options { grid-template-columns: 1fr; }
+  .q-option { padding: 12px; }
+  #hud { font-size: 0.7rem; padding: 8px 12px; }
+  .fuel-bar-bg { width: 60px; }
+  .go-title { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Menu Screen -->
+<div class="screen" id="menuScreen">
+  <div class="menu-title">BILGI YARISI</div>
+  <div class="menu-subtitle">ARABA OYUNU</div>
+
+  <div class="menu-section">
+    <h3>SINIFINI SEC</h3>
+    <div class="btn-group" id="gradeGroup">
+      <button class="btn" data-grade="1">1. Sinif</button>
+      <button class="btn" data-grade="2">2. Sinif</button>
+      <button class="btn" data-grade="3">3. Sinif</button>
+      <button class="btn" data-grade="4">4. Sinif</button>
+      <button class="btn" data-grade="5">5. Sinif</button>
+      <button class="btn" data-grade="6">6. Sinif</button>
+      <button class="btn" data-grade="7">7. Sinif</button>
+      <button class="btn" data-grade="8">8. Sinif</button>
+    </div>
+  </div>
+
+  <div class="menu-section">
+    <h3>ZORLUK SEVIYESI</h3>
+    <div class="btn-group" id="diffGroup">
+      <button class="btn" data-diff="easy">Kolay</button>
+      <button class="btn" data-diff="medium">Orta</button>
+      <button class="btn" data-diff="hard">Zor</button>
+    </div>
+  </div>
+
+  <button class="btn-start" id="btnStart" disabled>BASLA</button>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div class="hud-item">
+    <button id="exitBtn" style="font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;padding:6px 14px;border:1.5px solid #ff5555;border-radius:20px;background:rgba(255,50,50,0.15);color:#ff7777;cursor:pointer;letter-spacing:0.08em;pointer-events:all;transition:all 0.3s;" onmouseover="this.style.background='rgba(255,50,50,0.4)'" onmouseout="this.style.background='rgba(255,50,50,0.15)'">✕ CIK</button>
+  </div>
+  <div class="hud-item">
+    <span class="hearts" id="hearts"></span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">SKOR</span>
+    <span class="hud-value" id="score">0</span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">BENZIN</span>
+    <div class="fuel-bar-bg">
+      <div class="fuel-bar" id="fuelBar" style="width:100%"></div>
+    </div>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">HIZ</span>
+    <span class="hud-value" id="speedVal">0</span>
+  </div>
+  <div class="hud-item">
+    <span class="hud-label">KM</span>
+    <span class="hud-value" id="distance">0</span>
+  </div>
+</div>
+
+<!-- Question Overlay -->
+<div class="question-overlay" id="questionOverlay">
+  <div class="question-box">
+    <div class="q-type-badge normal" id="qBadge">SORU</div>
+    <div class="q-text" id="qText"></div>
+    <div class="q-timer" id="qTimer">15</div>
+    <div class="q-options" id="qOptions"></div>
+  </div>
+</div>
+
+<!-- Result Flash -->
+<div class="result-flash" id="resultFlash"></div>
+
+<!-- Game Over -->
+<div class="gameover-overlay" id="gameoverOverlay">
+  <div class="go-title">OYUN BITTI</div>
+  <div class="go-score" id="goScore"></div>
+  <div class="go-info" id="goInfo"></div>
+  <div class="go-buttons">
+    <button class="go-btn retry" id="goRetry">TEKRAR OYNA</button>
+    <button class="go-btn menu" id="goMenu">ANA MENU</button>
+  </div>
+</div>
+
+<!-- Game Canvas -->
+<canvas id="gameCanvas"></canvas>
+
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#ffcc66;font-family:'Orbitron',sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'" id="homeBtn">&#8592; Ana Sayfa</a>
+
+<script>
+// ═══════════════════════════════════════════
+// SOUND ENGINE (Web Audio API)
+// ═══════════════════════════════════════════
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+
+function initAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playTone(freq, duration, type = 'square', vol = 0.15) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function sfxCorrect() {
+  playTone(523, 0.1, 'square', 0.12);
+  setTimeout(() => playTone(659, 0.1, 'square', 0.12), 100);
+  setTimeout(() => playTone(784, 0.2, 'square', 0.12), 200);
+}
+
+function sfxWrong() {
+  playTone(200, 0.2, 'sawtooth', 0.15);
+  setTimeout(() => playTone(150, 0.3, 'sawtooth', 0.15), 150);
+}
+
+function sfxExplosion() {
+  if (!audioCtx) return;
+  // Longer, deeper explosion
+  const bufferSize = audioCtx.sampleRate * 0.8;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    const t = i / bufferSize;
+    // Mix of noise + low freq rumble
+    const noise = (Math.random() * 2 - 1) * (1 - t);
+    const rumble = Math.sin(i * 0.01) * (1 - t) * 0.5;
+    data[i] = (noise + rumble) * (1 - t * t);
+  }
+  const source = audioCtx.createBufferSource();
+  source.buffer = buffer;
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+  source.connect(gain);
+  gain.connect(audioCtx.destination);
+  source.start();
+  // Sub-bass thump
+  const osc = audioCtx.createOscillator();
+  const oscGain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.4);
+  oscGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+  osc.connect(oscGain);
+  oscGain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.5);
+}
+
+function sfxFuel() {
+  playTone(330, 0.1, 'sine', 0.1);
+  setTimeout(() => playTone(440, 0.1, 'sine', 0.1), 80);
+  setTimeout(() => playTone(550, 0.15, 'sine', 0.1), 160);
+}
+
+function sfxEngine() {
+  playTone(80, 0.15, 'sawtooth', 0.04);
+}
+
+function sfxHit() {
+  playTone(120, 0.15, 'square', 0.2);
+  setTimeout(() => playTone(80, 0.1, 'sawtooth', 0.15), 50);
+}
+
+function sfxGameOver() {
+  playTone(440, 0.2, 'square', 0.12);
+  setTimeout(() => playTone(370, 0.2, 'square', 0.12), 200);
+  setTimeout(() => playTone(311, 0.2, 'square', 0.12), 400);
+  setTimeout(() => playTone(261, 0.5, 'square', 0.12), 600);
+}
+
+// ═══════════════════════════════════════════
+// QUESTION DATABASE
+// ═══════════════════════════════════════════
+function getQuestions(grade, diff) {
+  const g = parseInt(grade);
+  const questions = [];
+
+  // Matematik soruları
+  const mathQs = generateMathQuestions(g, diff);
+  questions.push(...mathQs);
+
+  // Genel Kültür soruları
+  const gkQs = getGeneralQuestions(g, diff);
+  questions.push(...gkQs);
+
+  // Fen soruları
+  const fenQs = getScienceQuestions(g, diff);
+  questions.push(...fenQs);
+
+  return questions;
+}
+
+function generateMathQuestions(grade, diff) {
+  const qs = [];
+  const count = 15;
+
+  for (let i = 0; i < count; i++) {
+    let q, answer, options;
+
+    if (grade <= 2) {
+      if (diff === 'easy') {
+        const a = rand(1, 10), b = rand(1, 10);
+        answer = a + b;
+        q = `${a} + ${b} = ?`;
+      } else if (diff === 'medium') {
+        const a = rand(5, 20), b = rand(1, a);
+        if (Math.random() > 0.5) { answer = a + b; q = `${a} + ${b} = ?`; }
+        else { answer = a - b; q = `${a} - ${b} = ?`; }
+      } else {
+        const a = rand(10, 30), b = rand(5, 20);
+        if (Math.random() > 0.5) { answer = a + b; q = `${a} + ${b} = ?`; }
+        else { const mx = Math.max(a,b), mn = Math.min(a,b); answer = mx - mn; q = `${mx} - ${mn} = ?`; }
+      }
+    } else if (grade <= 4) {
+      if (diff === 'easy') {
+        const a = rand(2, 9), b = rand(2, 9);
+        answer = a * b;
+        q = `${a} x ${b} = ?`;
+      } else if (diff === 'medium') {
+        const a = rand(3, 12), b = rand(2, 9);
+        if (Math.random() > 0.5) { answer = a * b; q = `${a} x ${b} = ?`; }
+        else { const prod = a * b; answer = a; q = `${prod} / ${b} = ?`; }
+      } else {
+        const a = rand(12, 25), b = rand(3, 12);
+        answer = a * b;
+        q = `${a} x ${b} = ?`;
+      }
+    } else if (grade <= 6) {
+      if (diff === 'easy') {
+        const a = rand(10, 50), b = rand(5, 30);
+        answer = a + b;
+        q = `${a} + ${b} = ?`;
+        if (Math.random() > 0.6) { const x = rand(2,9), y = rand(2,9); answer = x*y; q = `${x} x ${y} = ?`; }
+      } else if (diff === 'medium') {
+        const ops = [
+          () => { const a = rand(2,15), b = rand(2,15); return { q: `${a} x ${b} + ${rand(1,20)} = ?`, a: a*b+parseInt(q) }; },
+        ];
+        const a = rand(5, 20), b = rand(2, 10), c = rand(1, 15);
+        answer = a * b + c;
+        q = `${a} x ${b} + ${c} = ?`;
+      } else {
+        const a = rand(10, 30), b = rand(2, 10), c = rand(2, 10);
+        answer = a * b - c;
+        q = `${a} x ${b} - ${c} = ?`;
+      }
+    } else {
+      if (diff === 'easy') {
+        const a = rand(5, 25), b = rand(2, 12);
+        answer = a * b;
+        q = `${a} x ${b} = ?`;
+      } else if (diff === 'medium') {
+        const base = rand(2, 10);
+        answer = base * base;
+        q = `${base}² = ?`;
+      } else {
+        const a = rand(2, 8), b = rand(2, 8), c = rand(1, 20);
+        answer = a * a + b * b + c;
+        q = `${a}² + ${b}² + ${c} = ?`;
+      }
+    }
+
+    options = generateOptions(answer);
+    qs.push({ question: q, options, correctIndex: options.indexOf(answer), category: 'Matematik' });
+  }
+  return qs;
+}
+
+function getGeneralQuestions(grade, diff) {
+  const pool = [];
+
+  // Genel kültür soruları - sınıfa göre
+  if (grade <= 3) {
+    pool.push(
+      { question: "Turkiye'nin baskenti neresidir?", options: ["Istanbul", "Ankara", "Izmir", "Bursa"], correctIndex: 1 },
+      { question: "Bir yilda kac ay vardir?", options: ["10", "11", "12", "13"], correctIndex: 2 },
+      { question: "Gunes hangi yonden dogar?", options: ["Bati", "Kuzey", "Guney", "Dogu"], correctIndex: 3 },
+      { question: "Su kac derecede kaynar?", options: ["50°C", "80°C", "100°C", "120°C"], correctIndex: 2 },
+      { question: "Gokkusaginda kac renk vardir?", options: ["5", "6", "7", "8"], correctIndex: 2 },
+      { question: "Hangi hayvan miyavlar?", options: ["Kopek", "Kedi", "Kus", "Balik"], correctIndex: 1 },
+      { question: "Bir haftada kac gun vardir?", options: ["5", "6", "7", "8"], correctIndex: 2 },
+      { question: "Hangi mevsimde kar yagar?", options: ["Yaz", "Ilkbahar", "Sonbahar", "Kis"], correctIndex: 3 },
+      { question: "Dunya'nin uydusu nedir?", options: ["Gunes", "Ay", "Mars", "Yildiz"], correctIndex: 1 },
+      { question: "Bir gunun kac saati vardir?", options: ["12", "20", "24", "30"], correctIndex: 2 },
+      { question: "Portakal hangi renktir?", options: ["Kirmizi", "Turuncu", "Sari", "Yesil"], correctIndex: 1 },
+      { question: "En buyuk gezegen hangisidir?", options: ["Mars", "Venüs", "Jupiter", "Satürn"], correctIndex: 2 },
+    );
+  } else if (grade <= 5) {
+    pool.push(
+      { question: "Turkiye'nin en uzun nehri hangisidir?", options: ["Firat", "Kizilirmak", "Sakarya", "Dicle"], correctIndex: 1 },
+      { question: "Ilk Turk devleti hangisidir?", options: ["Osmanli", "Selcuklu", "Gokturk", "Hun"], correctIndex: 3 },
+      { question: "Hangi gezegenin halkasi vardir?", options: ["Mars", "Jupiter", "Saturn", "Venus"], correctIndex: 2 },
+      { question: "Vucudumuzdaki en buyuk organ hangisidir?", options: ["Kalp", "Beyin", "Ciger", "Deri"], correctIndex: 3 },
+      { question: "Ataturk hangi yil dogdu?", options: ["1879", "1881", "1883", "1885"], correctIndex: 1 },
+      { question: "Turkiye kac bolgeye ayrilir?", options: ["5", "6", "7", "8"], correctIndex: 2 },
+      { question: "Dunyanin en yuksek dagi hangisidir?", options: ["Agri", "Everest", "Kilimanjaro", "Alpler"], correctIndex: 1 },
+      { question: "Kan hangi organda temizlenir?", options: ["Kalp", "Bobrek", "Ciger", "Dalak"], correctIndex: 1 },
+      { question: "Hangi vitamin gunes isinlariyla uretilir?", options: ["A", "B", "C", "D"], correctIndex: 3 },
+      { question: "Cumhuriyet hangi yil ilan edildi?", options: ["1920", "1921", "1922", "1923"], correctIndex: 3 },
+      { question: "Istanbul Bogazi hangi iki denizi birlestirir?", options: ["Akdeniz-Ege", "Karadeniz-Marmara", "Ege-Marmara", "Karadeniz-Akdeniz"], correctIndex: 1 },
+      { question: "DNA'nin acilimi nedir?", options: ["Deoksi Nükleik Asit", "Demir Nitrat Asit", "Direk Nükleer Asit", "Dijital Nano Asit"], correctIndex: 0 },
+    );
+  } else {
+    pool.push(
+      { question: "E=mc² formulunu kim buldu?", options: ["Newton", "Einstein", "Tesla", "Curie"], correctIndex: 1 },
+      { question: "Isik hizi saniyede yaklasik kac km'dir?", options: ["100.000", "200.000", "300.000", "400.000"], correctIndex: 2 },
+      { question: "Periyodik tabloda kac element vardir? (yaklasik)", options: ["92", "108", "118", "126"], correctIndex: 2 },
+      { question: "Suyun kimyasal formulu nedir?", options: ["HO", "H2O", "H2O2", "OH2"], correctIndex: 1 },
+      { question: "Hangi element sembolü 'Fe' dir?", options: ["Fluor", "Fosfor", "Demir", "Fermiyum"], correctIndex: 2 },
+      { question: "Dunyanin Gunes etrafindaki donusu ne kadar surer?", options: ["365 gun", "30 gun", "24 saat", "7 gun"], correctIndex: 0 },
+      { question: "Pi sayisinin ilk 3 basamagi nedir?", options: ["3.12", "3.14", "3.16", "3.18"], correctIndex: 1 },
+      { question: "Istanbul hangi yil fethedildi?", options: ["1453", "1461", "1071", "1299"], correctIndex: 0 },
+      { question: "Fotosentez icin gerekli olmayan nedir?", options: ["Isik", "Su", "CO2", "Oksijen"], correctIndex: 3 },
+      { question: "Newton'un 2. hareket yasasi nedir?", options: ["F=ma", "E=mc²", "V=IR", "P=IV"], correctIndex: 0 },
+      { question: "Hangi gezegen 'Kizil Gezegen' olarak bilinir?", options: ["Venus", "Mars", "Jupiter", "Merkur"], correctIndex: 1 },
+      { question: "Maddenin 4. hali nedir?", options: ["Buz", "Buhar", "Plazma", "Gaz"], correctIndex: 2 },
+    );
+  }
+
+  pool.forEach(p => p.category = 'Genel Kultur');
+
+  // Difficulty'ye göre karıştır ve sayı ayarla
+  shuffle(pool);
+  return pool.slice(0, 10);
+}
+
+function getScienceQuestions(grade, diff) {
+  const pool = [];
+
+  if (grade <= 3) {
+    pool.push(
+      { question: "Bitkilerin buyumesi icin ne gereklidir?", options: ["Karanlik", "Su ve Gunes", "Buz", "Ruzgar"], correctIndex: 1 },
+      { question: "Hangi duyu organiyla duyariz?", options: ["Goz", "Burun", "Kulak", "El"], correctIndex: 2 },
+      { question: "Su hangi halde bulunmaz?", options: ["Kati", "Sivi", "Gaz", "Plazma"], correctIndex: 3 },
+      { question: "Gunes bir nedir?", options: ["Gezegen", "Uydu", "Yildiz", "Asteroid"], correctIndex: 2 },
+      { question: "Kemiklerimiz ne ise yarar?", options: ["Yemek yemeye", "Vucut destegi", "Gorme", "Duyma"], correctIndex: 1 },
+      { question: "Kelebekler once ne olarak dogar?", options: ["Kelebek", "Tirtil", "Yumurta", "Koza"], correctIndex: 2 },
+    );
+  } else if (grade <= 5) {
+    pool.push(
+      { question: "Bitkiler havaya ne verir?", options: ["Karbondioksit", "Oksijen", "Azot", "Hidrojen"], correctIndex: 1 },
+      { question: "Hangi organ kani pompalar?", options: ["Beyin", "Bobrek", "Kalp", "Akciger"], correctIndex: 2 },
+      { question: "Isik en hizli nerede yayilir?", options: ["Suda", "Havada", "Boslukta", "Camda"], correctIndex: 2 },
+      { question: "Sindirim sistemi nerede baslar?", options: ["Midede", "Agizda", "Barsakta", "Yemek Borusu"], correctIndex: 1 },
+      { question: "Ses boslukta yayilir mi?", options: ["Evet", "Hayir", "Bazen", "Sadece isikla"], correctIndex: 1 },
+      { question: "Dunyanin kac katmani vardir?", options: ["2", "3", "4", "5"], correctIndex: 2 },
+    );
+  } else {
+    pool.push(
+      { question: "Hücrenin enerji santrali nedir?", options: ["Çekirdek", "Mitokondri", "Ribozom", "Lizozom"], correctIndex: 1 },
+      { question: "pH 7 olan bir çözelti nedir?", options: ["Asit", "Baz", "Nötr", "Tuz"], correctIndex: 2 },
+      { question: "Elektrik akiminin birimi nedir?", options: ["Volt", "Amper", "Ohm", "Watt"], correctIndex: 1 },
+      { question: "Atomun merkezi nedir?", options: ["Elektron", "Proton", "Cekirdek", "Notron"], correctIndex: 2 },
+      { question: "Hangi gaz yanmayi destekler?", options: ["Azot", "Hidrojen", "Oksijen", "Karbondioksit"], correctIndex: 2 },
+      { question: "DNA'nin yapisi neye benzer?", options: ["Duz cizgi", "Cift sarmal", "Ucgen", "Kare"], correctIndex: 1 },
+    );
+  }
+
+  pool.forEach(p => p.category = 'Fen');
+  shuffle(pool);
+  return pool.slice(0, 8);
+}
+
+function generateOptions(correct) {
+  const opts = new Set([correct]);
+  while (opts.size < 4) {
+    let offset = rand(-5, 5);
+    if (offset === 0) offset = rand(1, 8);
+    const val = correct + offset;
+    if (val >= 0) opts.add(val);
+  }
+  const arr = [...opts];
+  shuffle(arr);
+  return arr;
+}
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = rand(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } }
+
+// ═══════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════
+let state = {
+  grade: null,
+  diff: null,
+  lives: 3,
+  score: 0,
+  fuel: 100,
+  distance: 0,
+  speed: 2,
+  questions: [],
+  qIndex: 0,
+  isPlaying: false,
+  isPaused: false,
+  carX: 0,
+  carY: 0,
+  carLane: 1, // 0, 1, 2
+  roadOffset: 0,
+  particles: [],
+  explosionParticles: [],
+  isExploding: false,
+  explosionTimer: 0,
+  nextQuestionAt: 0,
+  nextFuelAt: 0,
+  questionActive: false,
+  isFuelQuestion: false,
+  engineTimer: 0,
+  trees: [],
+  buildings: [],
+  clouds: [],
+  fuelStationY: -999,
+  showFuelStation: false,
+  streakCount: 0,
+};
+
+// ═══════════════════════════════════════════
+// MENU LOGIC
+// ═══════════════════════════════════════════
+const menuScreen = document.getElementById('menuScreen');
+const btnStart = document.getElementById('btnStart');
+const gradeGroup = document.getElementById('gradeGroup');
+const diffGroup = document.getElementById('diffGroup');
+
+let selectedGrade = null, selectedDiff = null;
+
+gradeGroup.addEventListener('click', e => {
+  if (e.target.dataset.grade) {
+    gradeGroup.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+    e.target.classList.add('selected');
+    selectedGrade = e.target.dataset.grade;
+    checkReady();
+  }
+});
+
+diffGroup.addEventListener('click', e => {
+  if (e.target.dataset.diff) {
+    diffGroup.querySelectorAll('.btn').forEach(b => b.classList.remove('selected'));
+    e.target.classList.add('selected');
+    selectedDiff = e.target.dataset.diff;
+    checkReady();
+  }
+});
+
+function checkReady() {
+  btnStart.disabled = !(selectedGrade && selectedDiff);
+}
+
+btnStart.addEventListener('click', () => {
+  initAudio();
+  startGame(selectedGrade, selectedDiff);
+});
+
+// ═══════════════════════════════════════════
+// CANVAS SETUP
+// ═══════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ═══════════════════════════════════════════
+// GAME INIT
+// ═══════════════════════════════════════════
+function startGame(grade, diff) {
+  state = {
+    grade: parseInt(grade),
+    diff,
+    lives: 3,
+    score: 0,
+    fuel: 100,
+    distance: 0,
+    baseSpeed: diff === 'easy' ? 4 : diff === 'medium' ? 5.5 : 7,
+    speed: diff === 'easy' ? 4 : diff === 'medium' ? 5.5 : 7,
+    boosting: false,
+    questions: getQuestions(grade, diff),
+    qIndex: 0,
+    isPlaying: true,
+    isPaused: false,
+    carX: W / 2,
+    carY: H - 140,
+    carLane: 1,
+    roadOffset: 0,
+    particles: [],
+    explosionParticles: [],
+    isExploding: false,
+    explosionTimer: 0,
+    disasterType: null,
+    disasterObjects: [],
+    nextQuestionAt: 150 + rand(80, 150),
+    nextFuelAt: 600 + rand(100, 300),
+    questionActive: false,
+    isFuelQuestion: false,
+    engineTimer: 0,
+    trees: initTrees(),
+    buildings: initBuildings(),
+    clouds: initClouds(),
+    fuelStationY: -999,
+    showFuelStation: false,
+    streakCount: 0,
+    obstacles: [],
+    nextObstacleAt: 10 + rand(5, 15),
+    hitCooldown: 0,
+  };
+
+  menuScreen.classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('gameoverOverlay').classList.remove('active');
+  document.getElementById('homeBtn').style.display = 'none';
+  updateHUD();
+}
+
+function initTrees() {
+  const trees = [];
+  for (let i = 0; i < 15; i++) {
+    trees.push({
+      x: Math.random() > 0.5 ? rand(0, W * 0.2) : rand(W * 0.8, W),
+      y: rand(-H, H),
+      size: rand(20, 40),
+      color: `hsl(${rand(100,140)}, ${rand(40,70)}%, ${rand(20,40)}%)`
+    });
+  }
+  return trees;
+}
+
+function initBuildings() {
+  const buildings = [];
+  for (let i = 0; i < 8; i++) {
+    buildings.push({
+      x: Math.random() > 0.5 ? rand(-60, W * 0.15) : rand(W * 0.85, W + 60),
+      y: rand(-H, H),
+      w: rand(40, 70),
+      h: rand(60, 120),
+      color: `hsl(${rand(200,260)}, ${rand(20,40)}%, ${rand(15,25)}%)`
+    });
+  }
+  return buildings;
+}
+
+function initClouds() {
+  const clouds = [];
+  for (let i = 0; i < 5; i++) {
+    clouds.push({ x: rand(0, W), y: rand(0, H * 0.3), size: rand(40, 80), speed: Math.random() * 0.3 + 0.1 });
+  }
+  return clouds;
+}
+
+// ═══════════════════════════════════════════
+// HUD UPDATE
+// ═══════════════════════════════════════════
+function updateHUD() {
+  let h = '';
+  for (let i = 0; i < 3; i++) h += i < state.lives ? '❤️' : '🖤';
+  document.getElementById('hearts').innerHTML = h;
+  document.getElementById('score').textContent = state.score;
+  document.getElementById('fuelBar').style.width = state.fuel + '%';
+  document.getElementById('speedVal').textContent = Math.floor(state.speed * 30) + ' km/h';
+  document.getElementById('distance').textContent = Math.floor(state.distance);
+
+  // Fuel bar color
+  const fb = document.getElementById('fuelBar');
+  if (state.fuel > 50) fb.style.background = 'linear-gradient(90deg, #33cc33, #66ff66)';
+  else if (state.fuel > 25) fb.style.background = 'linear-gradient(90deg, #ffaa00, #ffcc44)';
+  else fb.style.background = 'linear-gradient(90deg, #ff3333, #ff6644)';
+}
+
+// ═══════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.key] = true; });
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// Touch controls
+let touchStartX = 0;
+document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchmove', e => {
+  if (state.questionActive) return;
+  const dx = e.touches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 30) {
+    if (dx > 0) state.carLane = Math.min(2, state.carLane + 1);
+    else state.carLane = Math.max(0, state.carLane - 1);
+    touchStartX = e.touches[0].clientX;
+  }
+});
+
+// ═══════════════════════════════════════════
+// QUESTION SYSTEM
+// ═══════════════════════════════════════════
+const qOverlay = document.getElementById('questionOverlay');
+const qText = document.getElementById('qText');
+const qOptions = document.getElementById('qOptions');
+const qTimer = document.getElementById('qTimer');
+const qBadge = document.getElementById('qBadge');
+
+let questionTimerId = null;
+let questionTimeLeft = 0;
+
+function showQuestion(isFuel = false) {
+  if (state.qIndex >= state.questions.length) {
+    // Re-generate questions
+    state.questions = getQuestions(state.grade, state.diff);
+    state.qIndex = 0;
+  }
+
+  state.questionActive = true;
+  state.isFuelQuestion = isFuel;
+  state.isPaused = true;
+
+  const q = state.questions[state.qIndex];
+
+  qBadge.textContent = isFuel ? '⛽ BENZIN SORUSU' : `📚 ${q.category}`;
+  qBadge.className = 'q-type-badge ' + (isFuel ? 'fuel' : 'normal');
+  qText.textContent = q.question;
+
+  qOptions.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'q-option';
+    btn.textContent = typeof opt === 'number' ? opt : opt;
+    btn.addEventListener('click', () => answerQuestion(i));
+    qOptions.appendChild(btn);
+  });
+
+  // Timer
+  const baseTime = state.diff === 'easy' ? 20 : state.diff === 'medium' ? 15 : 10;
+  questionTimeLeft = isFuel ? baseTime - 3 : baseTime;
+  qTimer.textContent = questionTimeLeft;
+  qTimer.classList.remove('urgent');
+
+  clearInterval(questionTimerId);
+  questionTimerId = setInterval(() => {
+    questionTimeLeft--;
+    qTimer.textContent = questionTimeLeft;
+    if (questionTimeLeft <= 5) qTimer.classList.add('urgent');
+    if (questionTimeLeft <= 0) {
+      clearInterval(questionTimerId);
+      answerQuestion(-1); // timeout = wrong
+    }
+  }, 1000);
+
+  qOverlay.classList.add('active');
+}
+
+function answerQuestion(chosenIndex) {
+  clearInterval(questionTimerId);
+  const q = state.questions[state.qIndex];
+  const isCorrect = chosenIndex === q.correctIndex;
+
+  // Highlight correct/wrong
+  const btns = qOptions.querySelectorAll('.q-option');
+  btns.forEach((btn, i) => {
+    btn.style.pointerEvents = 'none';
+    if (i === q.correctIndex) btn.classList.add('correct');
+    if (i === chosenIndex && !isCorrect) btn.classList.add('wrong');
+  });
+
+  setTimeout(() => {
+    qOverlay.classList.remove('active');
+    state.questionActive = false;
+    state.isPaused = false;
+    state.qIndex++;
+
+    if (isCorrect) {
+      sfxCorrect();
+      state.streakCount++;
+      const bonus = state.isFuelQuestion ? 20 : 10;
+      const streakBonus = Math.min(state.streakCount, 5) * 2;
+      state.score += bonus + streakBonus;
+
+      if (state.isFuelQuestion) {
+        state.fuel = Math.min(100, state.fuel + 40);
+        sfxFuel();
+        showFlash('+40 BENZIN!', '#33ff77');
+      } else {
+        showFlash(`+${bonus + streakBonus} PUAN!`, '#ffaa00');
+      }
+    } else {
+      sfxWrong();
+      state.streakCount = 0;
+
+      if (state.isFuelQuestion) {
+        // Fuel question wrong - lose fuel but not life
+        state.fuel = Math.max(0, state.fuel - 15);
+        showFlash('BENZIN DOLMADI!', '#ff5555');
+      } else {
+        // Normal question wrong - disaster!
+        triggerDisaster();
+      }
+    }
+
+    // Set next question distance
+    const interval = state.diff === 'easy' ? rand(200, 350) : state.diff === 'medium' ? rand(150, 250) : rand(100, 180);
+    state.nextQuestionAt = state.distance + interval;
+
+    updateHUD();
+  }, 800);
+}
+
+function showFlash(text, color) {
+  const flash = document.getElementById('resultFlash');
+  flash.textContent = text;
+  flash.style.color = color;
+  flash.style.textShadow = `0 0 30px ${color}`;
+  flash.classList.remove('show');
+  void flash.offsetWidth;
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 1000);
+}
+
+// ═══════════════════════════════════════════
+// DISASTER SYSTEM
+// ═══════════════════════════════════════════
+function triggerDisaster() {
+  state.lives--;
+  state.isExploding = true;
+  state.explosionTimer = 120;
+  state.shockwaveRadius = 0;
+  state.screenShake = 25;
+  state.disasterObjects = state.disasterObjects || [];
+
+  // Pick a random disaster type
+  const disasterTypes = ['explosion', 'rocks', 'hole', 'fire', 'lightning'];
+  state.disasterType = disasterTypes[rand(0, disasterTypes.length - 1)];
+
+  state.explosionParticles = [];
+
+  if (state.disasterType === 'explosion') {
+    sfxExplosion();
+    setTimeout(() => sfxExplosion(), 150);
+    // Big fire + smoke + sparks
+    for (let i = 0; i < 80; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 10 + 3;
+      state.explosionParticles.push({
+        x: state.carX, y: state.carY,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        life: 1, size: rand(4, 14),
+        color: ['#ff4400', '#ff8800', '#ffcc00', '#ff2200', '#ffffff', '#ff6600'][rand(0, 5)],
+        type: 'fire'
+      });
+    }
+    for (let i = 0; i < 30; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3 + 0.5;
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 30,
+        y: state.carY + (Math.random() - 0.5) * 30,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1.5,
+        life: 1, size: rand(12, 30), color: '#444', type: 'smoke'
+      });
+    }
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 12 + 4;
+      state.explosionParticles.push({
+        x: state.carX, y: state.carY,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 3,
+        life: 1, size: rand(2, 5),
+        color: ['#ffee00', '#ffffff', '#ff8800'][rand(0, 2)], type: 'spark'
+      });
+    }
+    showFlash('💥 PATLAMA!', '#ff3333');
+
+  } else if (state.disasterType === 'rocks') {
+    sfxHit();
+    setTimeout(() => sfxExplosion(), 300);
+    state.screenShake = 30;
+    // Spawn falling rocks
+    for (let i = 0; i < 6; i++) {
+      state.disasterObjects.push({
+        type: 'rock',
+        x: state.carX + (Math.random() - 0.5) * 200,
+        y: -rand(20, 200),
+        vy: rand(2, 5),
+        size: rand(15, 35),
+        rotation: Math.random() * Math.PI * 2,
+        timer: 120,
+        color: ['#666', '#888', '#555', '#777'][rand(0, 3)]
+      });
+    }
+    // Impact dust
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 4 + 1;
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 40,
+        y: state.carY + (Math.random() - 0.5) * 40,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+        life: 1, size: rand(5, 15), color: '#99776644', type: 'smoke'
+      });
+    }
+    // Some sparks from impact
+    for (let i = 0; i < 25; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 8 + 2;
+      state.explosionParticles.push({
+        x: state.carX, y: state.carY,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 4,
+        life: 1, size: rand(2, 4),
+        color: ['#ffee00', '#ff8800', '#ffaa44'][rand(0, 2)], type: 'spark'
+      });
+    }
+    showFlash('🪨 KAYA DUSTU!', '#aa8855');
+
+  } else if (state.disasterType === 'hole') {
+    sfxHit();
+    playTone(60, 0.5, 'sine', 0.2);
+    state.screenShake = 35;
+    // Dark hole under car
+    state.disasterObjects.push({
+      type: 'hole',
+      x: state.carX,
+      y: state.carY + 10,
+      scale: 0,
+      timer: 120
+    });
+    // Dirt/debris flying up
+    for (let i = 0; i < 50; i++) {
+      const angle = -Math.PI / 2 + (Math.random() - 0.5) * 1.5;
+      const speed = Math.random() * 8 + 3;
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 30,
+        y: state.carY + 20,
+        vx: Math.cos(angle) * speed * 0.5, vy: -Math.abs(Math.sin(angle) * speed),
+        life: 1, size: rand(3, 10),
+        color: ['#553322', '#774433', '#665544', '#443322', '#886644'][rand(0, 4)],
+        type: 'fire'
+      });
+    }
+    showFlash('🕳️ CUKURA DUSTUN!', '#553322');
+
+  } else if (state.disasterType === 'fire') {
+    sfxExplosion();
+    state.screenShake = 20;
+    // Persistent fire objects around car
+    for (let i = 0; i < 8; i++) {
+      state.disasterObjects.push({
+        type: 'fire',
+        x: state.carX + (Math.random() - 0.5) * 80,
+        y: state.carY + (Math.random() - 0.5) * 60,
+        size: rand(15, 30),
+        life: 1,
+        timer: 120
+      });
+    }
+    // Fire particles
+    for (let i = 0; i < 60; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 6 + 1;
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 60,
+        y: state.carY + (Math.random() - 0.5) * 40,
+        vx: Math.cos(angle) * speed * 0.5, vy: -Math.abs(Math.sin(angle) * speed) - 1,
+        life: 1, size: rand(5, 15),
+        color: ['#ff2200', '#ff6600', '#ffaa00', '#ff4400', '#ffcc00'][rand(0, 4)],
+        type: 'fire'
+      });
+    }
+    for (let i = 0; i < 20; i++) {
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 60,
+        y: state.carY + (Math.random() - 0.5) * 40,
+        vx: (Math.random() - 0.5) * 2, vy: -Math.random() * 3 - 1,
+        life: 1, size: rand(10, 25), color: '#333', type: 'smoke'
+      });
+    }
+    showFlash('🔥 YANGIN!', '#ff4400');
+
+  } else if (state.disasterType === 'lightning') {
+    playTone(1000, 0.05, 'square', 0.3);
+    setTimeout(() => playTone(800, 0.1, 'square', 0.25), 60);
+    setTimeout(() => sfxExplosion(), 100);
+    state.screenShake = 35;
+    state.explosionTimer = 100;
+    // Bright flash
+    // Electric sparks
+    for (let i = 0; i < 50; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 10 + 3;
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 20,
+        y: state.carY + (Math.random() - 0.5) * 20,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        life: 1, size: rand(1, 4),
+        color: ['#aaccff', '#ffffff', '#88aaff', '#ccddff'][rand(0, 3)],
+        type: 'spark'
+      });
+    }
+    // Smoke
+    for (let i = 0; i < 15; i++) {
+      state.explosionParticles.push({
+        x: state.carX + (Math.random() - 0.5) * 30,
+        y: state.carY + (Math.random() - 0.5) * 30,
+        vx: (Math.random() - 0.5) * 2, vy: -Math.random() * 2,
+        life: 1, size: rand(8, 20), color: '#555', type: 'smoke'
+      });
+    }
+    showFlash('⚡ YILDIRIM CARPTI!', '#aaccff');
+  }
+
+  updateHUD();
+
+  if (state.lives <= 0) {
+    setTimeout(() => gameOver(), 1800);
+  }
+}
+
+// ═══════════════════════════════════════════
+// GAME OVER
+// ═══════════════════════════════════════════
+function gameOver() {
+  state.isPlaying = false;
+  sfxGameOver();
+
+  document.getElementById('goScore').textContent = `Skor: ${state.score}`;
+  document.getElementById('goInfo').textContent = `${Math.floor(state.distance)} km yol kat ettin!`;
+  document.getElementById('gameoverOverlay').classList.add('active');
+}
+
+document.getElementById('goRetry').addEventListener('click', () => {
+  initAudio();
+  startGame(state.grade, state.diff);
+});
+
+document.getElementById('goMenu').addEventListener('click', () => {
+  document.getElementById('gameoverOverlay').classList.remove('active');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('homeBtn').style.display = '';
+  menuScreen.classList.remove('hidden');
+  state.isPlaying = false;
+});
+
+document.getElementById('exitBtn').addEventListener('click', () => {
+  clearInterval(questionTimerId);
+  qOverlay.classList.remove('active');
+  document.getElementById('gameoverOverlay').classList.remove('active');
+  document.getElementById('hud').classList.add('hidden');
+  document.getElementById('homeBtn').style.display = '';
+  menuScreen.classList.remove('hidden');
+  state.isPlaying = false;
+  state.isPaused = false;
+  state.questionActive = false;
+});
+
+// ═══════════════════════════════════════════
+// DRAWING FUNCTIONS
+// ═══════════════════════════════════════════
+function drawRoad() {
+  const roadW = Math.min(W * 0.5, 300);
+  const roadL = W / 2 - roadW / 2;
+  const roadR = W / 2 + roadW / 2;
+
+  // Road surface
+  ctx.fillStyle = '#333340';
+  ctx.fillRect(roadL, 0, roadW, H);
+
+  // Road edges
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillRect(roadL - 4, 0, 4, H);
+  ctx.fillRect(roadR, 0, 4, H);
+
+  // Lane markings (dashed)
+  ctx.strokeStyle = '#ffffff55';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([30, 30]);
+  const offset = state.roadOffset % 60;
+
+  for (let lane = 1; lane <= 2; lane++) {
+    const x = roadL + (roadW / 3) * lane;
+    ctx.beginPath();
+    for (let y = -60 + offset; y < H + 60; y += 60) {
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y + 30);
+    }
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Sidewalk
+  ctx.fillStyle = '#2a2a35';
+  ctx.fillRect(roadL - 40, 0, 36, H);
+  ctx.fillRect(roadR + 4, 0, 36, H);
+
+  return { roadL, roadR, roadW };
+}
+
+function drawScenery(road) {
+  // Buildings
+  state.buildings.forEach(b => {
+    ctx.fillStyle = b.color;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+    // Windows
+    ctx.fillStyle = 'rgba(255,200,50,0.3)';
+    for (let wy = b.y + 10; wy < b.y + b.h - 10; wy += 20) {
+      for (let wx = b.x + 8; wx < b.x + b.w - 8; wx += 15) {
+        if (Math.random() > 0.3) ctx.fillRect(wx, wy, 8, 10);
+      }
+    }
+  });
+
+  // Trees
+  state.trees.forEach(t => {
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(t.x + t.size / 2 - 3, t.y + t.size * 0.6, 6, t.size * 0.5);
+    ctx.fillStyle = t.color;
+    ctx.beginPath();
+    ctx.arc(t.x + t.size / 2, t.y + t.size * 0.4, t.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+function drawCar(x, y) {
+  if (state.isExploding && state.explosionTimer > 60) return; // hide during peak explosion
+
+  const shake = state.isExploding ? (Math.random() - 0.5) * 8 : 0;
+  const cx = x + shake;
+  const cy = y + shake;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 30, 22, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Car body
+  ctx.fillStyle = state.isExploding ? '#ff4400' : '#ff3355';
+  ctx.beginPath();
+  ctx.roundRect(cx - 18, cy - 15, 36, 50, 6);
+  ctx.fill();
+
+  // Car top
+  ctx.fillStyle = state.isExploding ? '#cc2200' : '#cc1133';
+  ctx.beginPath();
+  ctx.roundRect(cx - 14, cy - 5, 28, 25, 4);
+  ctx.fill();
+
+  // Windshield
+  ctx.fillStyle = '#4488cc';
+  ctx.beginPath();
+  ctx.roundRect(cx - 11, cy - 2, 22, 10, 3);
+  ctx.fill();
+
+  // Rear window
+  ctx.fillStyle = '#336699';
+  ctx.beginPath();
+  ctx.roundRect(cx - 10, cy + 18, 20, 8, 2);
+  ctx.fill();
+
+  // Headlights
+  ctx.fillStyle = '#ffee88';
+  ctx.beginPath();
+  ctx.arc(cx - 12, cy - 14, 3, 0, Math.PI * 2);
+  ctx.arc(cx + 12, cy - 14, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Light beams
+  ctx.fillStyle = 'rgba(255,238,136,0.05)';
+  ctx.beginPath();
+  ctx.moveTo(cx - 15, cy - 16);
+  ctx.lineTo(cx - 30, cy - 80);
+  ctx.lineTo(cx, cy - 80);
+  ctx.lineTo(cx - 9, cy - 16);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 15, cy - 16);
+  ctx.lineTo(cx + 30, cy - 80);
+  ctx.lineTo(cx, cy - 80);
+  ctx.lineTo(cx + 9, cy - 16);
+  ctx.fill();
+
+  // Tail lights
+  ctx.fillStyle = '#ff0000';
+  ctx.fillRect(cx - 16, cy + 32, 6, 3);
+  ctx.fillRect(cx + 10, cy + 32, 6, 3);
+
+  // Wheels
+  ctx.fillStyle = '#222';
+  ctx.fillRect(cx - 20, cy - 8, 5, 14);
+  ctx.fillRect(cx + 15, cy - 8, 5, 14);
+  ctx.fillRect(cx - 20, cy + 18, 5, 14);
+  ctx.fillRect(cx + 15, cy + 18, 5, 14);
+}
+
+function drawFuelStation(road) {
+  if (!state.showFuelStation) return;
+  const y = state.fuelStationY;
+  if (y < -100 || y > H + 100) return;
+
+  const cx = road.roadL + road.roadW / 2;
+
+  // Station building
+  ctx.fillStyle = '#2a4a2a';
+  ctx.fillRect(cx - 40, y - 30, 80, 50);
+
+  // Roof
+  ctx.fillStyle = '#1a3a1a';
+  ctx.fillRect(cx - 50, y - 35, 100, 10);
+
+  // Pump
+  ctx.fillStyle = '#cc3333';
+  ctx.fillRect(cx - 8, y - 20, 16, 30);
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillRect(cx - 5, y - 15, 10, 10);
+
+  // Text
+  ctx.fillStyle = '#00ff44';
+  ctx.font = 'bold 10px Orbitron, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('BENZIN', cx, y + 5);
+
+  // ⛽ icon
+  ctx.font = '20px sans-serif';
+  ctx.fillText('⛽', cx, y - 40);
+}
+
+function drawExplosion() {
+  if (!state.isExploding) return;
+
+  // Shockwave ring
+  if (state.shockwaveRadius < 250) {
+    const alpha = Math.max(0, 1 - state.shockwaveRadius / 250);
+    ctx.strokeStyle = `rgba(255,150,50,${alpha * 0.6})`;
+    ctx.lineWidth = 4 + (1 - alpha) * 8;
+    ctx.beginPath();
+    ctx.arc(state.carX, state.carY, state.shockwaveRadius, 0, Math.PI * 2);
+    ctx.stroke();
+    // Inner glow
+    ctx.strokeStyle = `rgba(255,255,200,${alpha * 0.3})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(state.carX, state.carY, state.shockwaveRadius * 0.7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Core glow (big bright center)
+  if (state.explosionTimer > 80) {
+    const glowAlpha = (state.explosionTimer - 80) / 40;
+    const glowSize = 60 + (120 - state.explosionTimer) * 2;
+    const grd = ctx.createRadialGradient(state.carX, state.carY, 0, state.carX, state.carY, glowSize);
+    grd.addColorStop(0, `rgba(255,255,200,${glowAlpha * 0.8})`);
+    grd.addColorStop(0.3, `rgba(255,150,50,${glowAlpha * 0.5})`);
+    grd.addColorStop(1, `rgba(255,50,0,0)`);
+    ctx.fillStyle = grd;
+    ctx.fillRect(state.carX - glowSize, state.carY - glowSize, glowSize * 2, glowSize * 2);
+  }
+
+  // Draw particles by type
+  state.explosionParticles.forEach(p => {
+    if (p.type === 'smoke') {
+      ctx.globalAlpha = p.life * 0.4;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (2 - p.life), 0, Math.PI * 2);
+      ctx.fill();
+    } else if (p.type === 'spark') {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      // Draw as line/streak
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.vx * 2, p.y - p.vy * 2);
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size * p.life;
+      ctx.stroke();
+    } else {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      // Fire glow
+      ctx.globalAlpha = p.life * 0.3;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1;
+
+  // Screen flash based on disaster type
+  if (state.disasterType === 'lightning') {
+    // White/blue lightning flash
+    if (state.explosionTimer > 85) {
+      const flashAlpha = (state.explosionTimer - 85) / 15;
+      ctx.fillStyle = `rgba(200,220,255,${flashAlpha * 0.7})`;
+      ctx.fillRect(0, 0, W, H);
+      // Draw lightning bolt
+      if (flashAlpha > 0.3) {
+        ctx.strokeStyle = `rgba(180,200,255,${flashAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        let lx = state.carX + (Math.random() - 0.5) * 10;
+        let ly = 0;
+        ctx.moveTo(lx, ly);
+        while (ly < state.carY) {
+          lx += (Math.random() - 0.5) * 40;
+          ly += rand(20, 50);
+          ctx.lineTo(lx, ly);
+        }
+        ctx.stroke();
+        // Glow
+        ctx.strokeStyle = `rgba(150,180,255,${flashAlpha * 0.5})`;
+        ctx.lineWidth = 8;
+        ctx.stroke();
+      }
+    }
+  } else if (state.disasterType === 'hole') {
+    // Dark brownish flash
+    if (state.explosionTimer > 95) {
+      const flashAlpha = (state.explosionTimer - 95) / 25;
+      ctx.fillStyle = `rgba(60,30,10,${flashAlpha * 0.4})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (state.disasterType === 'fire') {
+    // Orange/red flickering
+    if (state.explosionTimer > 60) {
+      const flicker = Math.sin(Date.now() * 0.03) * 0.1 + 0.1;
+      const vigAlpha = ((state.explosionTimer - 60) / 60) * flicker;
+      const grd = ctx.createRadialGradient(W/2, H/2, H * 0.2, W/2, H/2, H * 0.7);
+      grd.addColorStop(0, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, `rgba(255,60,0,${vigAlpha})`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else {
+    // Default explosion flash
+    if (state.explosionTimer > 95) {
+      const flashAlpha = (state.explosionTimer - 95) / 25;
+      ctx.fillStyle = `rgba(255,60,0,${flashAlpha * 0.5})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    else if (state.explosionTimer > 30) {
+      const vigAlpha = (state.explosionTimer - 30) / 200;
+      const grd = ctx.createRadialGradient(W/2, H/2, H * 0.3, W/2, H/2, H * 0.8);
+      grd.addColorStop(0, 'rgba(0,0,0,0)');
+      grd.addColorStop(1, `rgba(255,0,0,${vigAlpha})`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+}
+
+function drawObstacles(road) {
+  state.obstacles.forEach(ob => {
+    const x = ob.x, y = ob.y;
+    if (ob.type === 'cone') {
+      // Orange traffic cone
+      ctx.fillStyle = '#ff6600';
+      ctx.beginPath();
+      ctx.moveTo(x, y - 16);
+      ctx.lineTo(x - 10, y + 10);
+      ctx.lineTo(x + 10, y + 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x - 7, y - 2, 14, 3);
+      ctx.fillRect(x - 5, y - 10, 10, 3);
+    } else if (ob.type === 'rock') {
+      ctx.fillStyle = '#777';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 14, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#555';
+      ctx.beginPath();
+      ctx.ellipse(x - 3, y - 2, 8, 6, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (ob.type === 'barrier') {
+      ctx.fillStyle = '#cc0000';
+      ctx.fillRect(x - 18, y - 6, 36, 12);
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x - 14, y - 3, 10, 6);
+      ctx.fillRect(x + 4, y - 3, 10, 6);
+    } else if (ob.type === 'pothole') {
+      ctx.fillStyle = '#1a1a25';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 16, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else if (ob.type === 'oil') {
+      ctx.fillStyle = 'rgba(30,30,50,0.7)';
+      ctx.beginPath();
+      ctx.ellipse(x, y, 18, 10, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Rainbow sheen
+      ctx.fillStyle = 'rgba(100,50,200,0.15)';
+      ctx.beginPath();
+      ctx.ellipse(x + 3, y - 2, 12, 6, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function drawDisasterObjects() {
+  (state.disasterObjects || []).forEach(d => {
+    if (d.type === 'rock') {
+      ctx.save();
+      ctx.translate(d.x, d.y);
+      ctx.rotate(d.rotation || 0);
+      ctx.fillStyle = d.color || '#777';
+      ctx.beginPath();
+      // Jagged rock shape
+      const s = d.size;
+      ctx.moveTo(-s * 0.5, -s * 0.3);
+      ctx.lineTo(-s * 0.2, -s * 0.6);
+      ctx.lineTo(s * 0.3, -s * 0.5);
+      ctx.lineTo(s * 0.5, -s * 0.1);
+      ctx.lineTo(s * 0.3, s * 0.4);
+      ctx.lineTo(-s * 0.2, s * 0.5);
+      ctx.lineTo(-s * 0.5, s * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#444';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    } else if (d.type === 'hole') {
+      const s = d.scale || 0;
+      ctx.fillStyle = '#0a0a0a';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, 50 * s, 25 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Cracked edges
+      ctx.strokeStyle = '#443322';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y, 52 * s, 27 * s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner shadow
+      ctx.fillStyle = '#050505';
+      ctx.beginPath();
+      ctx.ellipse(d.x, d.y + 3 * s, 35 * s, 15 * s, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (d.type === 'fire') {
+      const life = d.life || 0;
+      const flicker = Math.sin(Date.now() * 0.02 + d.x) * 5;
+      // Fire glow
+      const grd = ctx.createRadialGradient(d.x, d.y, 0, d.x, d.y, d.size + flicker);
+      grd.addColorStop(0, `rgba(255,200,50,${life * 0.6})`);
+      grd.addColorStop(0.4, `rgba(255,80,0,${life * 0.4})`);
+      grd.addColorStop(1, `rgba(255,0,0,0)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y - flicker * 0.5, d.size + flicker, 0, Math.PI * 2);
+      ctx.fill();
+      // Inner bright
+      ctx.fillStyle = `rgba(255,255,150,${life * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y - flicker, d.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+function drawSky() {
+  // Night sky gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0a0a2e');
+  grad.addColorStop(0.5, '#151535');
+  grad.addColorStop(1, '#1a1a40');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 60; i++) {
+    const sx = (i * 137.5 + state.distance * 0.02) % W;
+    const sy = (i * 97.3) % (H * 0.4);
+    const sr = Math.sin(Date.now() * 0.001 + i) * 0.5 + 1;
+    ctx.globalAlpha = Math.sin(Date.now() * 0.002 + i * 2) * 0.3 + 0.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Moon
+  ctx.fillStyle = '#dde8f0';
+  ctx.beginPath();
+  ctx.arc(W * 0.85, 60, 25, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#0a0a2e';
+  ctx.beginPath();
+  ctx.arc(W * 0.85 + 8, 55, 22, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawExhaust() {
+  // Exhaust particles
+  if (!state.isExploding && state.isPlaying && !state.isPaused) {
+    if (state.boosting) {
+      // Boost flames!
+      for (let i = 0; i < 3; i++) {
+        state.particles.push({
+          x: state.carX + (Math.random() - 0.5) * 12,
+          y: state.carY + 35,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: Math.random() * 4 + 3,
+          life: 1,
+          size: rand(3, 8),
+          isSpark: true
+        });
+      }
+    } else if (Math.random() > 0.3) {
+      state.particles.push({
+        x: state.carX + (Math.random() - 0.5) * 8,
+        y: state.carY + 35,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: Math.random() * 1.5 + 1,
+        life: 1,
+        size: rand(2, 5)
+      });
+    }
+  }
+
+  state.particles.forEach(p => {
+    if (p.isSpark) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = `hsl(${30 + p.life * 30}, 100%, ${50 + p.life * 30}%)`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.globalAlpha = p.life * 0.3;
+      ctx.fillStyle = '#888';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+  ctx.globalAlpha = 1;
+}
+
+// ═══════════════════════════════════════════
+// MAIN GAME LOOP
+// ═══════════════════════════════════════════
+function update() {
+  if (!state.isPlaying || state.isPaused) return;
+
+  // ── Acceleration (Up arrow / W) ──
+  state.boosting = !!(keys['ArrowUp'] || keys['w'] || keys['W']);
+  if (state.boosting) {
+    state.speed = Math.min(state.baseSpeed * 3.5, state.speed + 0.25);
+  } else {
+    state.speed = Math.max(state.baseSpeed, state.speed - 0.1);
+  }
+  // Down arrow = brake
+  if (keys['ArrowDown'] || keys['s'] || keys['S']) {
+    state.speed = Math.max(state.baseSpeed * 0.4, state.speed - 0.2);
+  }
+
+  // Update road
+  state.roadOffset += state.speed;
+  state.distance += state.speed * 0.05;
+
+  // Car lane movement
+  const roadW = Math.min(W * 0.5, 300);
+  const roadL = W / 2 - roadW / 2;
+  const laneW = roadW / 3;
+  const targetX = roadL + laneW * state.carLane + laneW / 2;
+  state.carX += (targetX - state.carX) * 0.15;
+
+  // Keyboard lane switch
+  if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+    keys['ArrowLeft'] = false; keys['a'] = false;
+    state.carLane = Math.max(0, state.carLane - 1);
+  }
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+    keys['ArrowRight'] = false; keys['d'] = false;
+    state.carLane = Math.min(2, state.carLane + 1);
+  }
+
+  // ── Fuel depletion (faster when boosting) ──
+  let fuelRate = state.diff === 'easy' ? 0.015 : state.diff === 'medium' ? 0.025 : 0.035;
+  if (state.boosting) fuelRate *= 2.5;
+  state.fuel -= fuelRate;
+  state.fuel = Math.max(0, state.fuel);
+
+  // Fuel empty -> trigger fuel station
+  if (state.fuel <= 0 && !state.showFuelStation && !state.questionActive) {
+    triggerFuelStation();
+  }
+
+  // Check if fuel station reached
+  if (state.showFuelStation) {
+    state.fuelStationY += state.speed;
+    if (state.fuelStationY > state.carY - 40 && state.fuelStationY < state.carY + 40 && !state.questionActive) {
+      state.showFuelStation = false;
+      showQuestion(true);
+    }
+    if (state.fuelStationY > H + 100) {
+      state.showFuelStation = false;
+    }
+  }
+
+  // Question trigger
+  if (state.distance >= state.nextQuestionAt && !state.questionActive && !state.showFuelStation && !state.isExploding) {
+    showQuestion(false);
+  }
+
+  // ── Obstacle spawning ──
+  if (state.distance >= state.nextObstacleAt && !state.questionActive && !state.isExploding) {
+    spawnObstacle();
+    const gap = state.diff === 'easy' ? rand(15, 30) : state.diff === 'medium' ? rand(10, 20) : rand(5, 12);
+    state.nextObstacleAt = state.distance + gap;
+  }
+
+  // ── Obstacle update & collision ──
+  if (state.hitCooldown > 0) state.hitCooldown--;
+  state.obstacles = state.obstacles.filter(ob => {
+    ob.y += state.speed;
+    // Check collision with car
+    if (state.hitCooldown <= 0 && !state.isExploding) {
+      const dx = Math.abs(ob.x - state.carX);
+      const dy = Math.abs(ob.y - state.carY);
+      if (dx < 25 && dy < 35) {
+        triggerObstacleHit(ob);
+      }
+    }
+    return ob.y < H + 60;
+  });
+
+  // Scenery scroll
+  state.trees.forEach(t => {
+    t.y += state.speed * 0.8;
+    if (t.y > H + 50) {
+      t.y = -50;
+      t.x = Math.random() > 0.5 ? rand(0, W * 0.18) : rand(W * 0.82, W);
+    }
+  });
+  state.buildings.forEach(b => {
+    b.y += state.speed * 0.6;
+    if (b.y > H + 150) {
+      b.y = -150;
+      b.x = Math.random() > 0.5 ? rand(-60, W * 0.12) : rand(W * 0.88, W + 60);
+    }
+  });
+
+  // Particles update
+  state.particles = state.particles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.isSpark) { p.vy += 0.1; p.life -= 0.03; }
+    else p.life -= 0.02;
+    return p.life > 0;
+  });
+
+  // ── Disaster objects update (rocks falling, fire, holes) ──
+  state.disasterObjects = (state.disasterObjects || []).filter(d => {
+    d.timer--;
+    if (d.type === 'rock') { d.y += d.vy; d.vy += 0.3; d.rotation += 0.05; }
+    if (d.type === 'fire') { d.life -= 0.015; }
+    if (d.type === 'hole') { d.scale = Math.min(1, d.scale + 0.04); }
+    return d.timer > 0 && (d.life === undefined || d.life > 0);
+  });
+
+  // Explosion update
+  if (state.isExploding) {
+    state.explosionTimer--;
+    state.shockwaveRadius = (state.shockwaveRadius || 0) + 6;
+    state.screenShake = Math.max(0, (state.screenShake || 0) * 0.94);
+    if (state.screenShake < 0.3) state.screenShake = 0;
+    state.explosionParticles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.type === 'smoke') {
+        p.vy -= 0.03;
+        p.vx *= 0.98;
+        p.life -= 0.008;
+      } else if (p.type === 'spark') {
+        p.vy += 0.2;
+        p.life -= 0.02;
+      } else {
+        p.vy += 0.08;
+        p.vx *= 0.98;
+        p.life -= 0.012;
+      }
+    });
+    state.explosionParticles = state.explosionParticles.filter(p => p.life > 0);
+    if (state.explosionTimer <= 0) {
+      state.isExploding = false;
+      state.explosionParticles = [];
+      state.screenShake = 0;
+      state.disasterType = null;
+    }
+  }
+
+  // Screen shake decay (always, independent of explosion)
+  if (!state.isExploding && state.screenShake > 0) {
+    state.screenShake = Math.max(0, state.screenShake * 0.92);
+    if (state.screenShake < 0.3) state.screenShake = 0;
+  }
+
+  // Engine sound
+  state.engineTimer++;
+  const engineInterval = state.boosting ? 8 : 20;
+  if (state.engineTimer % engineInterval === 0) sfxEngine();
+
+  // Speed increase over time
+  state.baseSpeed += 0.0008;
+
+  updateHUD();
+}
+
+// ── OBSTACLE SYSTEM ──
+function spawnObstacle() {
+  const roadW = Math.min(W * 0.5, 300);
+  const roadL = W / 2 - roadW / 2;
+  const laneW = roadW / 3;
+  const lane = rand(0, 2);
+  const types = ['cone', 'rock', 'barrier', 'pothole', 'oil'];
+  const type = types[rand(0, types.length - 1)];
+  state.obstacles.push({
+    x: roadL + laneW * lane + laneW / 2,
+    y: -40,
+    lane,
+    type,
+  });
+}
+
+function triggerObstacleHit(ob) {
+  state.hitCooldown = 60;
+  state.screenShake = 25;
+  state.score = Math.max(0, state.score - 5);
+
+  // Collision sparks
+  for (let i = 0; i < 20; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    state.particles.push({
+      x: state.carX,
+      y: state.carY - 10,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      size: rand(2, 6),
+      isSpark: true
+    });
+  }
+
+  sfxHit();
+  showFlash('💥 CARPMA!', '#ff8800');
+
+  // Slow down on hit
+  state.speed = Math.max(state.baseSpeed * 0.3, state.speed * 0.4);
+}
+
+function triggerFuelStation() {
+  state.showFuelStation = true;
+  state.fuelStationY = -100;
+  state.fuel = 5; // give tiny amount to reach station
+  sfxFuel();
+  showFlash('⛽ BENZIN BITTI!', '#ff5555');
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Screen shake
+  const shake = state.screenShake || 0;
+  if (shake > 0) {
+    ctx.save();
+    ctx.translate((Math.random() - 0.5) * shake * 2, (Math.random() - 0.5) * shake * 2);
+  }
+
+  drawSky();
+
+  const road = drawRoad();
+  drawScenery(road);
+  drawFuelStation(road);
+  drawObstacles(road);
+  drawDisasterObjects();
+  drawExhaust();
+  drawCar(state.carX, state.carY);
+  drawExplosion();
+
+  if (shake > 0) {
+    ctx.restore();
+  }
+}
+
+function gameLoop() {
+  if (state.isPlaying) {
+    update();
+    draw();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+// ═══════════════════════════════════════════
+// POLYFILL for roundRect
+// ═══════════════════════════════════════════
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (typeof r === 'number') r = [r, r, r, r];
+    this.moveTo(x + r[0], y);
+    this.lineTo(x + w - r[1], y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r[1]);
+    this.lineTo(x + w, y + h - r[2]);
+    this.quadraticCurveTo(x + w, y + h, x + w - r[2], y + h);
+    this.lineTo(x + r[3], y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r[3]);
+    this.lineTo(x, y + r[0]);
+    this.quadraticCurveTo(x, y, x + r[0], y);
+    this.closePath();
+    return this;
+  };
+}
+</script>
+</body>
+</html>
