@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Uzay Kaçışı</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #02020a;
+  font-family: 'Orbitron', sans-serif;
+  color: #d8eaff;
+  user-select: none;
+  touch-action: none;
+}
+
+#game {
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+.hud {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hud-block { display: flex; flex-direction: column; gap: 4px; }
+.hud-right { align-items: flex-end; }
+.hud-label { font-size: 0.62rem; color: #6a7ba8; letter-spacing: 0.22em; }
+.hud-value {
+  font-size: 1.3rem;
+  color: #7df9ff;
+  text-shadow: 0 0 14px rgba(125,249,255,0.6);
+}
+.hud-value.warn { color: #ff7df9; text-shadow: 0 0 14px rgba(255,125,249,0.6); }
+
+.speed-bar {
+  position: fixed;
+  bottom: 30px; left: 50%;
+  transform: translateX(-50%);
+  width: 200px; height: 6px;
+  border-radius: 3px;
+  background: rgba(125,249,255,0.12);
+  border: 1px solid rgba(125,249,255,0.3);
+  overflow: hidden;
+  z-index: 10;
+  pointer-events: none;
+}
+.speed-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #7df9ff, #b44eff, #ff4f8a);
+  transition: width 0.2s;
+  width: 0%;
+}
+.speed-label {
+  position: fixed;
+  bottom: 46px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.62rem;
+  color: #6a7ba8;
+  letter-spacing: 0.22em;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(2,2,15,0.82);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+
+.panel {
+  text-align: center;
+  padding: 36px 44px;
+  max-width: 90%;
+}
+.panel h1 {
+  font-size: 2.8rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: linear-gradient(135deg, #7df9ff, #b44eff, #ff4f8a);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s ease infinite;
+  margin-bottom: 8px;
+}
+.panel .tag {
+  font-size: 0.74rem;
+  letter-spacing: 0.3em;
+  color: #8ea9ff;
+  margin-bottom: 28px;
+}
+.panel .instr {
+  font-size: 0.85rem;
+  line-height: 1.9;
+  color: #aab8d8;
+  margin-bottom: 28px;
+  letter-spacing: 0.05em;
+}
+.panel .instr b { color: #7df9ff; }
+.panel .stats {
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  margin-bottom: 28px;
+}
+.stat-block { display: flex; flex-direction: column; gap: 4px; }
+.stat-block .stat-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  color: #6a7ba8;
+}
+.stat-block .stat-val {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: #7df9ff;
+  text-shadow: 0 0 14px rgba(125,249,255,0.5);
+}
+
+.btn {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  color: #7df9ff;
+  background: transparent;
+  border: 2px solid #7df9ff;
+  border-radius: 30px;
+  padding: 14px 42px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+}
+.btn:hover {
+  background: #7df9ff;
+  color: #02030a;
+  box-shadow: 0 0 30px rgba(125,249,255,0.6);
+  transform: scale(1.05);
+}
+
+.boost-pill {
+  position: fixed;
+  bottom: 60px; left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(142,255,182,0.12);
+  border: 1px solid rgba(142,255,182,0.4);
+  color: #8effb6;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  pointer-events: none;
+  display: none;
+  animation: pulseGlow 0.8s ease-in-out infinite;
+}
+.boost-pill.show { display: block; }
+
+.diff-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.diff-btn {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: #8ea9ff;
+  background: transparent;
+  border: 2px solid rgba(142,169,255,0.4);
+  border-radius: 20px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.diff-btn:hover { border-color: #7df9ff; color: #7df9ff; transform: translateY(-1px); }
+.diff-btn.active { transform: scale(1.08); font-weight: 900; }
+.diff-btn.active.easy { background: #8effb6; border-color: #8effb6; color: #02020a; box-shadow: 0 0 24px rgba(142,255,182,0.7); }
+.diff-btn.active.medium { background: #7df9ff; border-color: #7df9ff; color: #02020a; box-shadow: 0 0 24px rgba(125,249,255,0.7); }
+.diff-btn.active.hard { background: #ff4f8a; border-color: #ff4f8a; color: #02020a; box-shadow: 0 0 24px rgba(255,79,138,0.7); }
+.diff-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  color: #6a7ba8;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 8px currentColor; opacity: 0.9; }
+  50% { box-shadow: 0 0 22px currentColor; opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (max-width: 640px) {
+  .panel h1 { font-size: 2rem; }
+  .panel .instr { font-size: 0.74rem; }
+  .panel .stats { gap: 22px; }
+  .stat-block .stat-val { font-size: 1.35rem; }
+  .hud-value { font-size: 1.05rem; }
+  .speed-bar { width: 140px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="game"></canvas>
+
+<div class="hud">
+  <div class="hud-block">
+    <div class="hud-label">MESAFE</div>
+    <div class="hud-value" id="dist">0</div>
+  </div>
+  <div class="hud-block hud-right">
+    <div class="hud-label">REKOR</div>
+    <div class="hud-value" id="best">0</div>
+  </div>
+</div>
+
+<div class="speed-label">HIZ</div>
+<div class="speed-bar"><div class="speed-bar-fill" id="speedFill"></div></div>
+<div class="boost-pill" id="boostPill">★ BOOST ★</div>
+
+<div class="overlay show" id="startOverlay">
+  <div class="panel">
+    <h1>UZAY KAÇIŞI</h1>
+    <div class="tag">3D ASTEROİD DODGER</div>
+    <div class="instr">
+      Uzay gemini <b>FARE</b> veya <b>PARMAĞINLA</b> yönlendir.<br>
+      Asteroidlerden kaç, <b>yıldız halkalardan</b> geç bonus al.<br>
+      Hız sürekli artar — dikkat et!
+    </div>
+    <div class="diff-label">ZORLUK SEÇ</div>
+    <div class="diff-row">
+      <button class="diff-btn easy" data-diff="easy">KOLAY</button>
+      <button class="diff-btn medium active" data-diff="medium">ORTA</button>
+      <button class="diff-btn hard" data-diff="hard">ZOR</button>
+    </div>
+    <button class="btn" id="startBtn">FIRLAT</button>
+  </div>
+</div>
+
+<div class="overlay" id="endOverlay">
+  <div class="panel">
+    <h1>ÇARPIŞMA</h1>
+    <div class="tag" id="endTag">UZAY DERİN VE SOĞUK</div>
+    <div class="stats">
+      <div class="stat-block">
+        <div class="stat-label">MESAFE</div>
+        <div class="stat-val" id="endDist">0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">HALKA</div>
+        <div class="stat-val" id="endRings">0</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">REKOR</div>
+        <div class="stat-val" id="endBest">0</div>
+      </div>
+    </div>
+    <div class="diff-label">ZORLUK</div>
+    <div class="diff-row">
+      <button class="diff-btn easy" data-diff="easy">KOLAY</button>
+      <button class="diff-btn medium active" data-diff="medium">ORTA</button>
+      <button class="diff-btn hard" data-diff="hard">ZOR</button>
+    </div>
+    <button class="btn" id="restartBtn">TEKRAR FIRLAT</button>
+  </div>
+</div>
+
+<a href="../index.html" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(2,3,15,0.7);color:#7df9ff;font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.15em;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(125,249,255,0.3);transition:all 0.3s;" onmouseover="this.style.background='rgba(125,249,255,0.2)';this.style.transform='translateX(-50%) scale(1.05)'" onmouseout="this.style.background='rgba(2,3,15,0.7)';this.style.transform='translateX(-50%) scale(1)'">← ANA SAYFA</a>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// ─── Three.js Setup ───
+const canvas = document.getElementById('game');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05041a, 0.012);
+
+const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 600);
+camera.position.set(0, 1.2, 8);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x05041a, 1);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ─── Lights ───
+const ambient = new THREE.AmbientLight(0x6a7ba8, 0.6);
+scene.add(ambient);
+const dir = new THREE.DirectionalLight(0xb4d8ff, 1.0);
+dir.position.set(4, 6, 8);
+scene.add(dir);
+const purpleLight = new THREE.PointLight(0xb44eff, 1.4, 40);
+purpleLight.position.set(-6, 2, 4);
+scene.add(purpleLight);
+const cyanLight = new THREE.PointLight(0x7df9ff, 1.2, 40);
+cyanLight.position.set(6, -2, 4);
+scene.add(cyanLight);
+
+// ─── Starfield (background) ───
+function createStarfield(count, range, sizeMul) {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = (Math.random() - 0.5) * range;
+    positions[i * 3 + 1] = (Math.random() - 0.5) * range * 0.6;
+    positions[i * 3 + 2] = -Math.random() * range * 0.8 - 20;
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xcfdbff,
+    size: 0.8 * sizeMul,
+    sizeAttenuation: true,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false
+  });
+  return new THREE.Points(geo, mat);
+}
+const stars = createStarfield(800, 400, 1);
+const farStars = createStarfield(400, 600, 0.5);
+scene.add(stars);
+scene.add(farStars);
+
+// ─── Player Ship ───
+const shipGroup = new THREE.Group();
+{
+  // Body (cone tipped forward = negative Z)
+  const bodyGeo = new THREE.ConeGeometry(0.45, 1.4, 8);
+  bodyGeo.rotateX(-Math.PI / 2);
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: 0x7df9ff,
+    emissive: 0x1a3a5e,
+    metalness: 0.7,
+    roughness: 0.25
+  });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  shipGroup.add(body);
+
+  // Wings
+  const wingGeo = new THREE.BoxGeometry(1.6, 0.08, 0.5);
+  const wingMat = new THREE.MeshStandardMaterial({
+    color: 0xb44eff,
+    emissive: 0x3a1858,
+    metalness: 0.6,
+    roughness: 0.3
+  });
+  const wing = new THREE.Mesh(wingGeo, wingMat);
+  wing.position.set(0, -0.05, 0.2);
+  shipGroup.add(wing);
+
+  // Cockpit
+  const cockpitGeo = new THREE.SphereGeometry(0.22, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  const cockpitMat = new THREE.MeshStandardMaterial({
+    color: 0xffd24f,
+    emissive: 0x4f3a18,
+    metalness: 0.4,
+    roughness: 0.1,
+    transparent: true,
+    opacity: 0.85
+  });
+  const cockpit = new THREE.Mesh(cockpitGeo, cockpitMat);
+  cockpit.position.set(0, 0.18, -0.1);
+  shipGroup.add(cockpit);
+
+  // Engine glow (back)
+  const engineGeo = new THREE.SphereGeometry(0.18, 12, 8);
+  const engineMat = new THREE.MeshBasicMaterial({
+    color: 0x7df9ff,
+    transparent: true,
+    opacity: 0.9
+  });
+  const engineL = new THREE.Mesh(engineGeo, engineMat);
+  engineL.position.set(-0.55, -0.05, 0.6);
+  shipGroup.add(engineL);
+  const engineR = engineL.clone();
+  engineR.position.x = 0.55;
+  shipGroup.add(engineR);
+  shipGroup.userData.engineL = engineL;
+  shipGroup.userData.engineR = engineR;
+}
+shipGroup.position.set(0, 0, 5);
+scene.add(shipGroup);
+
+// Engine trail particles
+const TRAIL_COUNT = 60;
+const trailGeo = new THREE.BufferGeometry();
+const trailPos = new Float32Array(TRAIL_COUNT * 3);
+const trailLife = new Float32Array(TRAIL_COUNT);
+for (let i = 0; i < TRAIL_COUNT; i++) trailLife[i] = 0;
+trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
+const trailMat = new THREE.PointsMaterial({
+  color: 0x7df9ff,
+  size: 0.4,
+  transparent: true,
+  opacity: 0.8,
+  sizeAttenuation: true,
+  depthWrite: false,
+  blending: THREE.AdditiveBlending
+});
+const trail = new THREE.Points(trailGeo, trailMat);
+scene.add(trail);
+let trailIdx = 0;
+
+// ─── Asteroid pool ───
+const ASTEROID_COUNT = 28;
+const asteroids = [];
+function makeAsteroidGeo() {
+  const geo = new THREE.IcosahedronGeometry(1, 1);
+  const pos = geo.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const n = 0.25 * (Math.sin(x * 3) + Math.cos(y * 4) + Math.sin(z * 5));
+    const len = Math.sqrt(x * x + y * y + z * z);
+    const f = 1 + n * 0.18;
+    pos.setXYZ(i, x * f, y * f, z * f);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+const sharedAsteroidGeo = makeAsteroidGeo();
+for (let i = 0; i < ASTEROID_COUNT; i++) {
+  const hue = 0.06 + Math.random() * 0.08;
+  const col = new THREE.Color().setHSL(hue, 0.35, 0.4);
+  const mat = new THREE.MeshStandardMaterial({
+    color: col,
+    roughness: 0.95,
+    metalness: 0.1,
+    flatShading: true
+  });
+  const mesh = new THREE.Mesh(sharedAsteroidGeo, mat);
+  mesh.userData = {
+    rotSpeed: new THREE.Vector3(
+      (Math.random() - 0.5) * 0.04,
+      (Math.random() - 0.5) * 0.04,
+      (Math.random() - 0.5) * 0.04
+    ),
+    active: false,
+    radius: 1
+  };
+  mesh.visible = false;
+  asteroids.push(mesh);
+  scene.add(mesh);
+}
+
+function spawnAsteroid() {
+  for (const a of asteroids) {
+    if (!a.userData.active) {
+      const scale = 0.8 + Math.random() * 1.8;
+      a.scale.setScalar(scale);
+      a.userData.radius = scale * 1.0;
+      a.userData.active = true;
+      a.visible = true;
+      a.position.set(
+        (Math.random() - 0.5) * 18,
+        (Math.random() - 0.5) * 10,
+        -180 - Math.random() * 60
+      );
+      a.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      return;
+    }
+  }
+}
+
+// ─── Ring (bonus collectible) pool ───
+const RING_COUNT = 6;
+const rings = [];
+const ringGeo = new THREE.TorusGeometry(1.6, 0.12, 12, 28);
+for (let i = 0; i < RING_COUNT; i++) {
+  const mat = new THREE.MeshStandardMaterial({
+    color: 0xffd24f,
+    emissive: 0xffd24f,
+    emissiveIntensity: 1.2,
+    metalness: 0.5,
+    roughness: 0.3
+  });
+  const mesh = new THREE.Mesh(ringGeo, mat);
+  mesh.userData = { active: false, rotSpeed: 0.03 };
+  mesh.visible = false;
+  rings.push(mesh);
+  scene.add(mesh);
+}
+function spawnRing() {
+  for (const r of rings) {
+    if (!r.userData.active) {
+      r.userData.active = true;
+      r.visible = true;
+      r.position.set(
+        (Math.random() - 0.5) * 12,
+        (Math.random() - 0.5) * 6,
+        -180 - Math.random() * 30
+      );
+      r.rotation.set(0, 0, 0);
+      return;
+    }
+  }
+}
+
+// ─── Tunnel rings (visual depth markers) ───
+const tunnelRings = [];
+const tunnelRingGeo = new THREE.TorusGeometry(14, 0.05, 6, 32);
+for (let i = 0; i < 8; i++) {
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0xb44eff,
+    transparent: true,
+    opacity: 0.25
+  });
+  const mesh = new THREE.Mesh(tunnelRingGeo, mat);
+  mesh.position.set(0, 0, -20 - i * 25);
+  scene.add(mesh);
+  tunnelRings.push(mesh);
+}
+
+// ─── Audio ───
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTone(freq, dur, type = 'sine', vol = 0.15) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + dur);
+}
+function sndRing() {
+  playTone(660, 0.08, 'triangle', 0.18);
+  setTimeout(() => playTone(990, 0.12, 'triangle', 0.18), 70);
+}
+function sndCrash() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(220, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.6);
+  g.gain.setValueAtTime(0.28, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + 0.6);
+}
+
+// ─── Difficulty ───
+const DIFF = {
+  easy:   { startSpeed: 0.4, maxSpeed: 1.9, ramp: 0.0005, spawnMul: 1.5,  doubleSpawnThresh: 1.7, hitR: 0.55 },
+  medium: { startSpeed: 0.5, maxSpeed: 2.6, ramp: 0.0008, spawnMul: 1.0,  doubleSpawnThresh: 1.4, hitR: 0.6 },
+  hard:   { startSpeed: 0.7, maxSpeed: 3.4, ramp: 0.0014, spawnMul: 0.7,  doubleSpawnThresh: 1.1, hitR: 0.65 }
+};
+let difficulty = localStorage.getItem('uzayKacisiDiff') || 'medium';
+
+// ─── State ───
+const STATE = {
+  running: false,
+  speed: 0.5,
+  baseSpeed: 0.5,
+  maxSpeed: 2.6,
+  ramp: 0.0008,
+  hitR: 0.6,
+  distance: 0,
+  ringsCollected: 0,
+  best: parseInt(localStorage.getItem('uzayKacisiBest') || '0', 10),
+  shake: 0,
+  boostUntil: 0,
+  spawnTimer: 0,
+  ringTimer: 120
+};
+
+document.getElementById('best').textContent = STATE.best;
+
+// ─── Input ───
+let targetX = 0, targetY = 0;
+function setPointer(cx, cy) {
+  const nx = (cx / window.innerWidth) * 2 - 1;
+  const ny = -((cy / window.innerHeight) * 2 - 1);
+  targetX = nx * 7;
+  targetY = ny * 4 + 0.5;
+}
+window.addEventListener('mousemove', e => setPointer(e.clientX, e.clientY));
+window.addEventListener('touchstart', e => {
+  ensureAudio();
+  e.preventDefault();
+  setPointer(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+window.addEventListener('touchmove', e => {
+  e.preventDefault();
+  setPointer(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+// ─── Difficulty buttons ───
+function syncDiffButtons() {
+  document.querySelectorAll('.diff-btn').forEach(b => {
+    if (b.dataset.diff === difficulty) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+}
+function handleDiffClick(e) {
+  const btn = e.target.closest('.diff-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  difficulty = btn.dataset.diff;
+  try { localStorage.setItem('uzayKacisiDiff', difficulty); } catch (_) {}
+  syncDiffButtons();
+}
+document.addEventListener('click', handleDiffClick, true);
+document.addEventListener('touchstart', handleDiffClick, { capture: true, passive: false });
+syncDiffButtons();
+
+// ─── Game flow ───
+function start() {
+  ensureAudio();
+  const d = DIFF[difficulty];
+  STATE.running = true;
+  STATE.baseSpeed = d.startSpeed;
+  STATE.speed = d.startSpeed;
+  STATE.maxSpeed = d.maxSpeed;
+  STATE.ramp = d.ramp;
+  STATE.hitR = d.hitR;
+  STATE.distance = 0;
+  STATE.ringsCollected = 0;
+  STATE.shake = 0;
+  STATE.boostUntil = 0;
+  STATE.spawnTimer = 0;
+  STATE.ringTimer = 120;
+  shipGroup.position.set(0, 0, 5);
+  targetX = 0; targetY = 0;
+  for (const a of asteroids) { a.userData.active = false; a.visible = false; }
+  for (const r of rings) { r.userData.active = false; r.visible = false; }
+  document.getElementById('startOverlay').classList.remove('show');
+  document.getElementById('endOverlay').classList.remove('show');
+}
+function gameOver() {
+  STATE.running = false;
+  if (STATE.distance > STATE.best) {
+    STATE.best = Math.floor(STATE.distance);
+    localStorage.setItem('uzayKacisiBest', String(STATE.best));
+  }
+  sndCrash();
+  STATE.shake = 30;
+  document.getElementById('endDist').textContent = Math.floor(STATE.distance);
+  document.getElementById('endRings').textContent = STATE.ringsCollected;
+  document.getElementById('endBest').textContent = STATE.best;
+  document.getElementById('best').textContent = STATE.best;
+  setTimeout(() => document.getElementById('endOverlay').classList.add('show'), 700);
+}
+document.getElementById('startBtn').addEventListener('click', start);
+document.getElementById('restartBtn').addEventListener('click', start);
+
+// ─── Loop ───
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const now = performance.now();
+
+  // Ship gentle motion (idle drift) when not running
+  if (!STATE.running) {
+    shipGroup.position.x += (Math.sin(now * 0.0008) * 1.5 - shipGroup.position.x) * 0.02;
+    shipGroup.position.y += (Math.cos(now * 0.0006) * 0.6 - shipGroup.position.y) * 0.02;
+    shipGroup.rotation.z = Math.sin(now * 0.0008) * 0.15;
+    shipGroup.rotation.x = Math.cos(now * 0.0006) * 0.08;
+  } else {
+    // Speed ramp up
+    const target = STATE.maxSpeed;
+    STATE.baseSpeed += (target - STATE.baseSpeed) * STATE.ramp;
+    STATE.speed = STATE.baseSpeed * (STATE.boostUntil > now ? 1.6 : 1.0);
+
+    // Ship movement
+    const lx = shipGroup.position.x;
+    const ly = shipGroup.position.y;
+    shipGroup.position.x += (targetX - lx) * 0.12;
+    shipGroup.position.y += (targetY - ly) * 0.12;
+    // Bank (roll) and pitch based on velocity
+    const dx = shipGroup.position.x - lx;
+    const dy = shipGroup.position.y - ly;
+    shipGroup.rotation.z += (-dx * 0.6 - shipGroup.rotation.z) * 0.15;
+    shipGroup.rotation.x += (dy * 0.4 - shipGroup.rotation.x) * 0.15;
+
+    // Distance
+    STATE.distance += STATE.speed * 3;
+
+    // Spawn asteroids
+    STATE.spawnTimer -= 1 + STATE.speed * 1.5;
+    if (STATE.spawnTimer <= 0) {
+      STATE.spawnTimer = (28 + Math.random() * 20) * DIFF[difficulty].spawnMul;
+      spawnAsteroid();
+      if (STATE.speed > DIFF[difficulty].doubleSpawnThresh && Math.random() < 0.4) spawnAsteroid();
+    }
+    // Spawn rings
+    STATE.ringTimer -= 1;
+    if (STATE.ringTimer <= 0) {
+      STATE.ringTimer = 200 + Math.random() * 120;
+      spawnRing();
+    }
+  }
+
+  // Update asteroids
+  for (const a of asteroids) {
+    if (!a.userData.active) continue;
+    a.position.z += STATE.speed * (STATE.running ? 60 : 12) * dt;
+    a.rotation.x += a.userData.rotSpeed.x;
+    a.rotation.y += a.userData.rotSpeed.y;
+    a.rotation.z += a.userData.rotSpeed.z;
+    if (a.position.z > 12) {
+      a.userData.active = false;
+      a.visible = false;
+      continue;
+    }
+    // Collision
+    if (STATE.running && a.position.z > 2 && a.position.z < 7) {
+      const dx = a.position.x - shipGroup.position.x;
+      const dy = a.position.y - shipGroup.position.y;
+      const dz = a.position.z - shipGroup.position.z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+      const hitR = a.userData.radius + STATE.hitR;
+      if (distSq < hitR * hitR) {
+        a.userData.active = false;
+        a.visible = false;
+        gameOver();
+      }
+    }
+  }
+
+  // Update rings
+  for (const r of rings) {
+    if (!r.userData.active) continue;
+    r.position.z += STATE.speed * (STATE.running ? 60 : 12) * dt;
+    r.rotation.z += r.userData.rotSpeed;
+    if (r.position.z > 12) {
+      r.userData.active = false;
+      r.visible = false;
+      continue;
+    }
+    if (STATE.running && r.position.z > 2 && r.position.z < 7) {
+      const dx = r.position.x - shipGroup.position.x;
+      const dy = r.position.y - shipGroup.position.y;
+      const dz = r.position.z - shipGroup.position.z;
+      const distSq = dx * dx + dy * dy + dz * dz;
+      if (distSq < 1.6 * 1.6) {
+        r.userData.active = false;
+        r.visible = false;
+        STATE.ringsCollected++;
+        STATE.distance += 200;
+        STATE.boostUntil = now + 2200;
+        sndRing();
+      }
+    }
+  }
+
+  // Tunnel rings move with speed and recycle
+  for (const tr of tunnelRings) {
+    tr.position.z += STATE.speed * (STATE.running ? 60 : 12) * dt;
+    if (tr.position.z > 10) tr.position.z -= 200;
+    tr.material.opacity = 0.18 + Math.sin(now * 0.002 + tr.position.z * 0.05) * 0.1;
+  }
+
+  // Stars drift
+  stars.position.z += STATE.speed * (STATE.running ? 40 : 8) * dt;
+  if (stars.position.z > 200) stars.position.z = 0;
+  farStars.position.z += STATE.speed * 12 * dt;
+  if (farStars.position.z > 300) farStars.position.z = 0;
+
+  // Engine glow pulse
+  const eng = shipGroup.userData;
+  if (eng.engineL && eng.engineR) {
+    const pulse = 0.7 + Math.sin(now * 0.02) * 0.3 + (STATE.boostUntil > now ? 0.6 : 0);
+    eng.engineL.scale.setScalar(pulse);
+    eng.engineR.scale.setScalar(pulse);
+  }
+
+  // Trail particles
+  if (STATE.running) {
+    for (let k = 0; k < 2; k++) {
+      const idx = trailIdx % TRAIL_COUNT;
+      trailPos[idx * 3]     = shipGroup.position.x + (Math.random() - 0.5) * 0.2;
+      trailPos[idx * 3 + 1] = shipGroup.position.y + (Math.random() - 0.5) * 0.2;
+      trailPos[idx * 3 + 2] = shipGroup.position.z + 0.8;
+      trailLife[idx] = 1;
+      trailIdx++;
+    }
+  }
+  for (let i = 0; i < TRAIL_COUNT; i++) {
+    if (trailLife[i] > 0) {
+      trailPos[i * 3 + 2] += STATE.speed * 20 * dt;
+      trailLife[i] -= dt * 1.6;
+      if (trailLife[i] <= 0) trailPos[i * 3 + 2] = 9999;
+    }
+  }
+  trailGeo.attributes.position.needsUpdate = true;
+  trailMat.color.setHex(STATE.boostUntil > now ? 0x8effb6 : 0x7df9ff);
+
+  // Camera follow
+  const camTargetX = shipGroup.position.x * 0.4;
+  const camTargetY = shipGroup.position.y * 0.3 + 1.2;
+  camera.position.x += (camTargetX - camera.position.x) * 0.08;
+  camera.position.y += (camTargetY - camera.position.y) * 0.08;
+  camera.lookAt(shipGroup.position.x * 0.5, shipGroup.position.y * 0.4, shipGroup.position.z - 6);
+
+  // Shake on crash
+  if (STATE.shake > 0) {
+    camera.position.x += (Math.random() - 0.5) * STATE.shake * 0.05;
+    camera.position.y += (Math.random() - 0.5) * STATE.shake * 0.05;
+    STATE.shake *= 0.9;
+  }
+
+  // FOV speed feel
+  const fovTarget = 70 + (STATE.speed - DIFF[difficulty].startSpeed) * 8 + (STATE.boostUntil > now ? 10 : 0);
+  camera.fov += (fovTarget - camera.fov) * 0.06;
+  camera.updateProjectionMatrix();
+
+  // HUD
+  document.getElementById('dist').textContent = Math.floor(STATE.distance);
+  const speedNorm = Math.min(1, Math.max(0, (STATE.baseSpeed - DIFF[difficulty].startSpeed) / (STATE.maxSpeed - DIFF[difficulty].startSpeed)));
+  document.getElementById('speedFill').style.width = (speedNorm * 100) + '%';
+  const boostEl = document.getElementById('boostPill');
+  if (STATE.boostUntil > now) boostEl.classList.add('show');
+  else boostEl.classList.remove('show');
+
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>

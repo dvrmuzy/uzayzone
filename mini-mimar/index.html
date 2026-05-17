@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Mini Mimar</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Fredoka', sans-serif;
+  color: #3a2a1a;
+  user-select: none;
+  touch-action: none;
+}
+
+body {
+  background: linear-gradient(180deg, #aed6e8 0%, #e8d4a8 70%, #d6b878 100%);
+}
+
+#scene {
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+.topbar {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 10;
+  pointer-events: none;
+}
+.topbar > * { pointer-events: auto; }
+
+.title {
+  font-weight: 700;
+  font-size: 1.6rem;
+  color: #5a3a18;
+  text-shadow: 0 2px 0 rgba(255,255,255,0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.title .emoji { font-size: 1.5rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15)); }
+
+.top-actions { display: flex; gap: 8px; }
+
+.btn {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: rgba(90,58,24,0.85);
+  border: 2px solid rgba(255,255,255,0.4);
+  border-radius: 18px;
+  padding: 9px 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  text-transform: uppercase;
+}
+.btn:hover { transform: translateY(-1px); background: rgba(120,80,40,0.9); }
+.btn:active { transform: translateY(0); }
+.btn.danger { background: rgba(214,90,74,0.9); }
+.btn.danger:hover { background: rgba(230,100,80,0.95); }
+
+.toolbar {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background: rgba(255,250,240,0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 30px rgba(60,40,20,0.2);
+  border: 2px solid rgba(180,140,80,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 96%;
+}
+
+.tool-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.shape-btn, .tool-btn {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: #f3e9d6;
+  border: 2.5px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.shape-btn:hover, .tool-btn:hover { background: #e8dcc0; }
+.shape-btn.active, .tool-btn.active {
+  background: #fff;
+  border-color: #d6822b;
+  box-shadow: 0 0 0 3px rgba(214,130,43,0.2), 0 4px 12px rgba(214,130,43,0.25);
+}
+
+.shape-btn svg, .tool-btn svg {
+  width: 24px; height: 24px;
+  pointer-events: none;
+}
+
+.tool-btn.erase.active { border-color: #d65a4a; box-shadow: 0 0 0 3px rgba(214,90,74,0.2), 0 4px 12px rgba(214,90,74,0.25); }
+
+.divider {
+  width: 1.5px;
+  height: 34px;
+  background: rgba(180,140,80,0.3);
+  margin: 0 6px;
+}
+
+.color-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 2.5px solid #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.color-btn:hover { transform: scale(1.1); }
+.color-btn.active {
+  transform: scale(1.18);
+  box-shadow: 0 0 0 3px rgba(214,130,43,0.4), 0 4px 12px rgba(214,130,43,0.3);
+}
+
+.hint {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #5a3a18;
+  background: rgba(255,250,240,0.7);
+  padding: 6px 14px;
+  border-radius: 14px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  max-width: 90%;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.stat-pill {
+  position: fixed;
+  top: 64px;
+  right: 18px;
+  z-index: 5;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #5a3a18;
+  background: rgba(255,250,240,0.85);
+  padding: 6px 14px;
+  border-radius: 14px;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  border: 1.5px solid rgba(180,140,80,0.25);
+}
+
+.preset-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.preset-btn {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5a3a18;
+  background: rgba(243,233,214,0.9);
+  border: 1.5px solid rgba(180,140,80,0.4);
+  border-radius: 14px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.preset-btn:hover { background: #fff; border-color: #d6822b; color: #d6822b; }
+
+@media (max-width: 640px) {
+  .title { font-size: 1.2rem; }
+  .title .emoji { font-size: 1.2rem; }
+  .btn { font-size: 0.68rem; padding: 7px 12px; }
+  .shape-btn, .tool-btn { width: 38px; height: 38px; }
+  .shape-btn svg, .tool-btn svg { width: 20px; height: 20px; }
+  .color-btn { width: 26px; height: 26px; }
+  .toolbar { padding: 10px 12px; gap: 8px; bottom: 12px; }
+  .hint { font-size: 0.62rem; padding: 5px 10px; top: 56px; }
+  .stat-pill { font-size: 0.62rem; padding: 5px 10px; top: 56px; right: 12px; }
+  .divider { height: 28px; margin: 0 3px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="scene"></canvas>
+
+<div class="topbar">
+  <div class="title"><span class="emoji">🏰</span>MİNİ MİMAR</div>
+  <div class="top-actions">
+    <button class="btn danger" id="resetBtn">TEMİZLE</button>
+  </div>
+</div>
+
+<div class="hint" id="hint">Tıkla — blok ekle · Sürükle — kamerayı döndür · Kaydır — yakınlaş</div>
+<div class="stat-pill"><span id="blockCount">0</span> BLOK</div>
+
+<div class="toolbar">
+  <div class="tool-row" id="shapeRow">
+    <button class="shape-btn active" data-shape="cube" title="Küp">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="1.8">
+        <path d="M12 2L3 7v10l9 5 9-5V7l-9-5z M3 7l9 5 9-5 M12 22V12"/>
+      </svg>
+    </button>
+    <button class="shape-btn" data-shape="slab" title="Yarım Blok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="1.8">
+        <path d="M12 8L3 12v6l9 4 9-4v-6l-9-4z M3 12l9 4 9-4 M12 22v-6"/>
+      </svg>
+    </button>
+    <button class="shape-btn" data-shape="slope" title="Eğim">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="1.8" stroke-linejoin="round">
+        <path d="M3 20L21 6v14H3z M3 20L12 13"/>
+      </svg>
+    </button>
+    <button class="shape-btn" data-shape="cylinder" title="Silindir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="1.8">
+        <ellipse cx="12" cy="5" rx="7" ry="2.5"/>
+        <path d="M5 5v14a7 2.5 0 0 0 14 0V5"/>
+      </svg>
+    </button>
+    <button class="shape-btn" data-shape="pyramid" title="Piramit">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="1.8" stroke-linejoin="round">
+        <path d="M12 2L3 20h18L12 2z M12 2v18 M3 20l9-6 9 6"/>
+      </svg>
+    </button>
+    <div class="divider"></div>
+    <button class="tool-btn" id="toolBuild" title="Ekle Modu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#5a3a18" stroke-width="2.2" stroke-linecap="round">
+        <path d="M12 5v14 M5 12h14"/>
+      </svg>
+    </button>
+    <button class="tool-btn erase" id="toolErase" title="Silme Modu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#d65a4a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 20H8.5L3 14.5l9-9 7 7-5.5 5.5"/>
+        <path d="M10 8l6 6"/>
+      </svg>
+    </button>
+  </div>
+  <div class="tool-row" id="colorRow">
+    <!-- color buttons injected by JS -->
+  </div>
+  <div class="preset-row">
+    <button class="preset-btn" data-preset="kule">🗼 Kule</button>
+    <button class="preset-btn" data-preset="kopru">🌉 Köprü</button>
+    <button class="preset-btn" data-preset="saray">🏰 Saray</button>
+  </div>
+</div>
+
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(90,58,24,0.85);color:#fff5e0;font-family:'Fredoka',sans-serif;font-size:0.74rem;font-weight:700;letter-spacing:0.06em;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:2px solid rgba(255,255,255,0.4);transition:all 0.3s;box-shadow:0 3px 10px rgba(0,0,0,0.15);" onmouseover="this.style.background='rgba(120,80,40,0.95)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(90,58,24,0.85)';this.style.transform='scale(1)'">← ANA SAYFA</a>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// ─── Three.js Setup ───
+const canvas = document.getElementById('scene');
+const scene = new THREE.Scene();
+scene.background = null;
+scene.fog = new THREE.Fog(0xd6b878, 30, 80);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
+
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ─── Lights ───
+const ambient = new THREE.AmbientLight(0xffd5b0, 0.55);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xfff6e0, 1.0);
+sun.position.set(10, 18, 8);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 50;
+sun.shadow.camera.left = -20;
+sun.shadow.camera.right = 20;
+sun.shadow.camera.top = 20;
+sun.shadow.camera.bottom = -20;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0x9ec6e0, 0.35);
+fill.position.set(-6, 5, -8);
+scene.add(fill);
+
+// ─── Ground ───
+const GRID_SIZE = 20;
+const groundGeo = new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE);
+groundGeo.rotateX(-Math.PI / 2);
+const groundMat = new THREE.MeshLambertMaterial({ color: 0xc9a875 });
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.receiveShadow = true;
+ground.userData.isGround = true;
+scene.add(ground);
+
+// Grid helper
+const grid = new THREE.GridHelper(GRID_SIZE, GRID_SIZE, 0x8a6438, 0x8a6438);
+grid.material.opacity = 0.32;
+grid.material.transparent = true;
+grid.position.y = 0.001;
+scene.add(grid);
+
+// ─── Camera Orbit ───
+const orbit = {
+  target: new THREE.Vector3(0, 1, 0),
+  radius: 18,
+  theta: Math.PI * 0.25,
+  phi: Math.PI * 0.32
+};
+function updateCamera() {
+  const x = orbit.target.x + orbit.radius * Math.sin(orbit.phi) * Math.cos(orbit.theta);
+  const y = orbit.target.y + orbit.radius * Math.cos(orbit.phi);
+  const z = orbit.target.z + orbit.radius * Math.sin(orbit.phi) * Math.sin(orbit.theta);
+  camera.position.set(x, y, z);
+  camera.lookAt(orbit.target);
+}
+updateCamera();
+
+// ─── Blocks ───
+const blocks = new Map(); // key "x,y,z" -> mesh
+const blockGroup = new THREE.Group();
+scene.add(blockGroup);
+
+const COLORS = [
+  { hex: 0xd65a4a, css: '#d65a4a' }, // red
+  { hex: 0xf0a14a, css: '#f0a14a' }, // orange
+  { hex: 0xffd166, css: '#ffd166' }, // yellow
+  { hex: 0x8acf6f, css: '#8acf6f' }, // green
+  { hex: 0x4ec0e8, css: '#4ec0e8' }, // cyan
+  { hex: 0x5a7ee0, css: '#5a7ee0' }, // blue
+  { hex: 0xb47ce0, css: '#b47ce0' }, // purple
+  { hex: 0xf0e0c0, css: '#f0e0c0' }, // cream
+  { hex: 0x6b4a2e, css: '#6b4a2e' }, // brown
+  { hex: 0xeeeeee, css: '#eeeeee' }  // white
+];
+
+let currentColor = 1;  // orange
+let currentShape = 'cube';
+let currentTool = 'build';
+
+function key(x, y, z) { return `${x},${y},${z}`; }
+
+function makeBlockMesh(shape, hex) {
+  let geo;
+  const mat = new THREE.MeshLambertMaterial({ color: hex });
+  if (shape === 'cube') {
+    geo = new THREE.BoxGeometry(1, 1, 1);
+  } else if (shape === 'slab') {
+    geo = new THREE.BoxGeometry(1, 0.5, 1);
+  } else if (shape === 'slope') {
+    // Triangular prism: slope from top to bottom
+    geo = new THREE.BufferGeometry();
+    const verts = new Float32Array([
+      // Bottom (y=-0.5)
+      -0.5, -0.5,  0.5,   0.5, -0.5,  0.5,   0.5, -0.5, -0.5,
+      -0.5, -0.5,  0.5,   0.5, -0.5, -0.5,  -0.5, -0.5, -0.5,
+      // Front (slope face, low at z=0.5, high at z=-0.5)
+      -0.5, -0.5,  0.5,   0.5,  0.5, -0.5,   0.5, -0.5,  0.5,
+      -0.5, -0.5,  0.5,  -0.5,  0.5, -0.5,   0.5,  0.5, -0.5,
+      // Back (z=-0.5, vertical)
+      -0.5, -0.5, -0.5,   0.5,  0.5, -0.5,  -0.5,  0.5, -0.5,
+      -0.5, -0.5, -0.5,   0.5, -0.5, -0.5,   0.5,  0.5, -0.5,
+      // Left (x=-0.5, triangle)
+      -0.5, -0.5,  0.5,  -0.5,  0.5, -0.5,  -0.5, -0.5, -0.5,
+      // Right (x=0.5, triangle)
+       0.5, -0.5,  0.5,   0.5, -0.5, -0.5,   0.5,  0.5, -0.5
+    ]);
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+  } else if (shape === 'cylinder') {
+    geo = new THREE.CylinderGeometry(0.48, 0.48, 1, 16);
+  } else if (shape === 'pyramid') {
+    geo = new THREE.ConeGeometry(0.7, 1, 4);
+    geo.rotateY(Math.PI / 4);
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  // Subtle edge effect via edges geometry overlay
+  const edges = new THREE.EdgesGeometry(geo, 30);
+  const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+    color: 0x000000, transparent: true, opacity: 0.18
+  }));
+  mesh.add(line);
+  return mesh;
+}
+
+function placeBlock(x, y, z, shape, hex) {
+  if (x < -GRID_SIZE/2 || x >= GRID_SIZE/2 || z < -GRID_SIZE/2 || z >= GRID_SIZE/2) return;
+  if (y < 0 || y > 30) return;
+  if (blocks.has(key(x, y, z))) return;
+  const mesh = makeBlockMesh(shape, hex);
+  mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+  mesh.userData.gridKey = key(x, y, z);
+  mesh.userData.isBlock = true;
+  blockGroup.add(mesh);
+  blocks.set(key(x, y, z), mesh);
+  updateBlockCount();
+  // pop animation
+  mesh.scale.set(0.3, 0.3, 0.3);
+  const startTime = performance.now();
+  function popAnim(now) {
+    const t = Math.min(1, (now - startTime) / 200);
+    const s = 0.3 + (1 - 0.3) * easeOutBack(t);
+    mesh.scale.set(s, s, s);
+    if (t < 1) requestAnimationFrame(popAnim);
+  }
+  requestAnimationFrame(popAnim);
+}
+
+function easeOutBack(t) {
+  const c1 = 1.70158;
+  const c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function removeBlock(mesh) {
+  const k = mesh.userData.gridKey;
+  if (!k) return;
+  blocks.delete(k);
+  blockGroup.remove(mesh);
+  if (mesh.geometry) mesh.geometry.dispose();
+  if (mesh.material) mesh.material.dispose();
+  updateBlockCount();
+}
+
+function clearAll() {
+  for (const m of blocks.values()) {
+    blockGroup.remove(m);
+    if (m.geometry) m.geometry.dispose();
+    if (m.material) m.material.dispose();
+  }
+  blocks.clear();
+  updateBlockCount();
+}
+
+function updateBlockCount() {
+  document.getElementById('blockCount').textContent = blocks.size;
+}
+
+// ─── Preview ghost ───
+let ghost = null;
+function makeGhost() {
+  if (ghost) {
+    blockGroup.remove(ghost);
+    if (ghost.geometry) ghost.geometry.dispose();
+    if (ghost.material) ghost.material.dispose();
+  }
+  ghost = makeBlockMesh(currentShape, COLORS[currentColor].hex);
+  ghost.castShadow = false;
+  ghost.receiveShadow = false;
+  ghost.material.transparent = true;
+  ghost.material.opacity = 0.45;
+  ghost.visible = false;
+  // Remove black edges from ghost
+  while (ghost.children.length) ghost.remove(ghost.children[0]);
+  scene.add(ghost);
+}
+makeGhost();
+
+// ─── Raycasting ───
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let lastHover = null;
+
+function setPointerFromClient(cx, cy) {
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((cx - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((cy - rect.top) / rect.height) * 2 + 1;
+}
+
+function getHover() {
+  raycaster.setFromCamera(pointer, camera);
+  const targets = [ground, ...blockGroup.children.filter(o => o !== ghost)];
+  const hits = raycaster.intersectObjects(targets, false);
+  if (!hits.length) return null;
+  const hit = hits[0];
+  if (hit.object.userData.isGround) {
+    const x = Math.floor(hit.point.x);
+    const z = Math.floor(hit.point.z);
+    return { x, y: 0, z, isGround: true, object: hit.object };
+  } else {
+    // Hit a block — place on adjacent face
+    const block = hit.object;
+    const bp = block.userData.gridKey.split(',').map(Number);
+    const n = hit.face ? hit.face.normal.clone() : new THREE.Vector3(0, 1, 0);
+    // Transform normal to world space using block's matrix (rotation may apply for some shapes)
+    // For our shapes only the cylinder/cone may have non-axis-aligned normals; round to nearest axis
+    n.transformDirection(block.matrixWorld);
+    // Snap normal to nearest axis
+    const absX = Math.abs(n.x), absY = Math.abs(n.y), absZ = Math.abs(n.z);
+    let dx = 0, dy = 0, dz = 0;
+    if (absX > absY && absX > absZ) dx = Math.sign(n.x);
+    else if (absY > absZ) dy = Math.sign(n.y);
+    else dz = Math.sign(n.z);
+    return {
+      x: bp[0] + dx, y: bp[1] + dy, z: bp[2] + dz,
+      isGround: false, object: block
+    };
+  }
+}
+
+function updateGhost() {
+  if (!isPointerOverCanvas || dragMode === 'orbit') {
+    ghost.visible = false;
+    return;
+  }
+  const hover = getHover();
+  if (!hover || currentTool === 'erase') {
+    ghost.visible = false;
+    lastHover = hover;
+    return;
+  }
+  if (blocks.has(key(hover.x, hover.y, hover.z))) {
+    ghost.visible = false;
+    return;
+  }
+  if (hover.x < -GRID_SIZE/2 || hover.x >= GRID_SIZE/2 ||
+      hover.z < -GRID_SIZE/2 || hover.z >= GRID_SIZE/2 || hover.y < 0 || hover.y > 30) {
+    ghost.visible = false;
+    return;
+  }
+  ghost.position.set(hover.x + 0.5, hover.y + 0.5, hover.z + 0.5);
+  ghost.visible = true;
+  lastHover = hover;
+}
+
+// ─── Audio ───
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTone(freq, dur, type = 'sine', vol = 0.1) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + dur);
+}
+function sndPlace() {
+  playTone(440 + Math.random() * 60, 0.07, 'triangle', 0.1);
+  setTimeout(() => playTone(660, 0.08, 'triangle', 0.07), 30);
+}
+function sndErase() {
+  playTone(220, 0.12, 'sawtooth', 0.1);
+}
+
+// ─── Input ───
+let isPointerDown = false;
+let isPointerOverCanvas = false;
+let dragMode = null; // 'orbit' or 'place'
+let dragStart = null;
+let dragMoved = false;
+let touchPinchStart = null;
+
+function onPointerDown(cx, cy, button = 0) {
+  ensureAudio();
+  isPointerDown = true;
+  dragMoved = false;
+  dragStart = { x: cx, y: cy };
+  setPointerFromClient(cx, cy);
+  isPointerOverCanvas = true;
+  const hover = getHover();
+  // Default to orbit; if hovering a valid placement target with build/erase, treat as place
+  // Wait for movement to decide:
+  dragMode = 'pending';
+}
+function onPointerMove(cx, cy) {
+  setPointerFromClient(cx, cy);
+  isPointerOverCanvas = true;
+  if (!isPointerDown) {
+    updateGhost();
+    return;
+  }
+  const dx = cx - dragStart.x;
+  const dy = cy - dragStart.y;
+  if (!dragMoved && Math.hypot(dx, dy) > 5) dragMoved = true;
+  if (dragMode === 'pending' && dragMoved) {
+    dragMode = 'orbit';
+  }
+  if (dragMode === 'orbit') {
+    orbit.theta -= dx * 0.008;
+    orbit.phi -= dy * 0.008;
+    orbit.phi = Math.max(0.15, Math.min(Math.PI * 0.49, orbit.phi));
+    updateCamera();
+    dragStart = { x: cx, y: cy };
+    ghost.visible = false;
+  }
+}
+function onPointerUp(cx, cy) {
+  if (!isPointerDown) return;
+  isPointerDown = false;
+  if (!dragMoved && dragMode === 'pending') {
+    // Tap → place / erase
+    setPointerFromClient(cx, cy);
+    const hover = getHover();
+    if (hover) {
+      if (currentTool === 'erase') {
+        if (!hover.isGround && hover.object) {
+          removeBlock(hover.object);
+          sndErase();
+        }
+      } else {
+        if (!blocks.has(key(hover.x, hover.y, hover.z))) {
+          placeBlock(hover.x, hover.y, hover.z, currentShape, COLORS[currentColor].hex);
+          sndPlace();
+        }
+      }
+    }
+  }
+  dragMode = null;
+  updateGhost();
+}
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button === 0) onPointerDown(e.clientX, e.clientY, 0);
+});
+canvas.addEventListener('mousemove', e => {
+  isPointerOverCanvas = true;
+  onPointerMove(e.clientX, e.clientY);
+});
+canvas.addEventListener('mouseup', e => onPointerUp(e.clientX, e.clientY));
+canvas.addEventListener('mouseleave', () => {
+  isPointerOverCanvas = false;
+  ghost.visible = false;
+});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  orbit.radius *= (1 + Math.sign(e.deltaY) * 0.08);
+  orbit.radius = Math.max(6, Math.min(40, orbit.radius));
+  updateCamera();
+}, { passive: false });
+
+// Touch
+canvas.addEventListener('touchstart', e => {
+  ensureAudio();
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    touchPinchStart = { dist: Math.hypot(dx, dy), radius: orbit.radius };
+    isPointerDown = false;
+  } else if (e.touches.length === 1) {
+    e.preventDefault();
+    const t = e.touches[0];
+    onPointerDown(t.clientX, t.clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (e.touches.length === 2 && touchPinchStart) {
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const dist = Math.hypot(dx, dy);
+    const ratio = touchPinchStart.dist / dist;
+    orbit.radius = touchPinchStart.radius * ratio;
+    orbit.radius = Math.max(6, Math.min(40, orbit.radius));
+    updateCamera();
+  } else if (e.touches.length === 1) {
+    const t = e.touches[0];
+    onPointerMove(t.clientX, t.clientY);
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  if (e.touches.length === 0) {
+    const t = e.changedTouches[0];
+    if (t) onPointerUp(t.clientX, t.clientY);
+    touchPinchStart = null;
+  }
+}, { passive: false });
+
+// ─── UI ───
+function buildColorPalette() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = '';
+  COLORS.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'color-btn' + (i === currentColor ? ' active' : '');
+    btn.style.background = c.css;
+    btn.dataset.color = i;
+    btn.title = 'Renk ' + (i + 1);
+    btn.addEventListener('click', () => {
+      currentColor = i;
+      document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      makeGhost();
+    });
+    row.appendChild(btn);
+  });
+}
+buildColorPalette();
+
+document.querySelectorAll('.shape-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    currentShape = b.dataset.shape;
+    document.querySelectorAll('.shape-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    makeGhost();
+  });
+});
+
+function setTool(t) {
+  currentTool = t;
+  document.getElementById('toolBuild').classList.toggle('active', t === 'build');
+  document.getElementById('toolErase').classList.toggle('active', t === 'erase');
+  document.getElementById('hint').textContent = t === 'erase'
+    ? 'Tıkla — blok sil · Sürükle — kamerayı döndür'
+    : 'Tıkla — blok ekle · Sürükle — kamerayı döndür · Kaydır — yakınlaş';
+}
+document.getElementById('toolBuild').classList.add('active');
+document.getElementById('toolBuild').addEventListener('click', () => setTool('build'));
+document.getElementById('toolErase').addEventListener('click', () => setTool('erase'));
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (blocks.size === 0) return;
+  if (confirm('Tüm bloklar silinsin mi?')) {
+    clearAll();
+    sndErase();
+  }
+});
+
+// ─── Presets ───
+const PRESETS = {
+  kule: () => {
+    clearAll();
+    const c = (i) => COLORS[(i % COLORS.length)].hex;
+    // Base
+    for (let x = -2; x <= 1; x++) for (let z = -2; z <= 1; z++) {
+      placeBlock(x, 0, z, 'cube', COLORS[8].hex);
+    }
+    // Body
+    for (let y = 1; y <= 6; y++) for (let x = -1; x <= 0; x++) for (let z = -1; z <= 0; z++) {
+      placeBlock(x, y, z, 'cube', COLORS[7].hex);
+    }
+    // Roof
+    placeBlock(-1, 7, -1, 'pyramid', COLORS[0].hex);
+    placeBlock(0, 7, -1, 'pyramid', COLORS[0].hex);
+    placeBlock(-1, 7, 0, 'pyramid', COLORS[0].hex);
+    placeBlock(0, 7, 0, 'pyramid', COLORS[0].hex);
+  },
+  kopru: () => {
+    clearAll();
+    // Two towers
+    for (let y = 0; y < 4; y++) {
+      placeBlock(-5, y, 0, 'cube', COLORS[8].hex);
+      placeBlock(-5, y, 1, 'cube', COLORS[8].hex);
+      placeBlock(4, y, 0, 'cube', COLORS[8].hex);
+      placeBlock(4, y, 1, 'cube', COLORS[8].hex);
+    }
+    // Deck
+    for (let x = -4; x <= 3; x++) {
+      placeBlock(x, 3, 0, 'slab', COLORS[7].hex);
+      placeBlock(x, 3, 1, 'slab', COLORS[7].hex);
+    }
+    // Side rails (cylinders)
+    for (let x = -4; x <= 3; x += 2) {
+      placeBlock(x, 4, -1, 'cylinder', COLORS[5].hex);
+      placeBlock(x, 4, 2, 'cylinder', COLORS[5].hex);
+    }
+  },
+  saray: () => {
+    clearAll();
+    // Floor 4x6
+    for (let x = -3; x <= 2; x++) for (let z = -2; z <= 1; z++) {
+      placeBlock(x, 0, z, 'cube', COLORS[7].hex);
+    }
+    // Walls (perimeter, height 3)
+    for (let y = 1; y <= 3; y++) {
+      for (let x = -3; x <= 2; x++) {
+        placeBlock(x, y, -2, 'cube', COLORS[9].hex);
+        placeBlock(x, y, 1, 'cube', COLORS[9].hex);
+      }
+      placeBlock(-3, y, -1, 'cube', COLORS[9].hex);
+      placeBlock(-3, y, 0, 'cube', COLORS[9].hex);
+      placeBlock(2, y, -1, 'cube', COLORS[9].hex);
+      placeBlock(2, y, 0, 'cube', COLORS[9].hex);
+    }
+    // Battlements
+    for (let x = -3; x <= 2; x += 2) {
+      placeBlock(x, 4, -2, 'cube', COLORS[8].hex);
+      placeBlock(x, 4, 1, 'cube', COLORS[8].hex);
+    }
+    // Corner towers
+    [[-3,-2],[2,-2],[-3,1],[2,1]].forEach(([cx, cz]) => {
+      for (let y = 4; y <= 6; y++) placeBlock(cx, y, cz, 'cube', COLORS[8].hex);
+      placeBlock(cx, 7, cz, 'pyramid', COLORS[0].hex);
+    });
+    // Door
+    placeBlock(-1, 1, 1, 'cube', COLORS[8].hex); // (no-op cover) — actually remove door
+    if (blocks.has(key(-1, 1, 1))) removeBlock(blocks.get(key(-1, 1, 1)));
+    if (blocks.has(key(-1, 2, 1))) removeBlock(blocks.get(key(-1, 2, 1)));
+    if (blocks.has(key(0, 1, 1))) removeBlock(blocks.get(key(0, 1, 1)));
+    if (blocks.has(key(0, 2, 1))) removeBlock(blocks.get(key(0, 2, 1)));
+  }
+};
+document.querySelectorAll('.preset-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    const fn = PRESETS[b.dataset.preset];
+    if (fn) fn();
+  });
+});
+
+// ─── Loop ───
+function loop() {
+  requestAnimationFrame(loop);
+  updateGhost();
+  renderer.render(scene, camera);
+}
+loop();
+
+// Start with a tiny preview cluster so the scene isn't empty
+placeBlock(0, 0, 0, 'cube', COLORS[1].hex);
+placeBlock(1, 0, 0, 'cube', COLORS[2].hex);
+placeBlock(0, 0, 1, 'cube', COLORS[3].hex);
+placeBlock(0, 1, 0, 'pyramid', COLORS[0].hex);
+</script>
+</body>
+</html>
