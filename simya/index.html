@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simya · Element Karışımı</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(80,40,160,0.18), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(255,170,60,0.12), transparent 55%),
+      linear-gradient(180deg, #0a0e1e 0%, #14182a 100%);
+    color: #e8e4f0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(120,180,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,180,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    max-width: 1100px; margin: 0 auto;
+    padding: 60px 16px 40px;
+  }
+
+  /* ─── Header ─── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 28px; flex-wrap: wrap; gap: 16px;
+  }
+  .title-block { display: flex; align-items: center; gap: 14px; }
+  .logo {
+    font-size: 2.4rem;
+    filter: drop-shadow(0 0 14px rgba(255,170,60,0.45));
+  }
+  h1 {
+    font-size: 2rem; font-weight: 900; letter-spacing: 2px;
+    background: linear-gradient(90deg, #ffaa30, #ff60a8, #b060ff);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .progress-box {
+    background: rgba(20,28,52,0.7);
+    border: 1px solid rgba(120,180,255,0.18);
+    border-radius: 14px;
+    padding: 10px 18px;
+    display: flex; align-items: center; gap: 12px;
+    backdrop-filter: blur(8px);
+  }
+  .progress-label {
+    font-size: 0.7rem; letter-spacing: 3px;
+    color: rgba(232,228,240,0.6);
+    text-transform: uppercase;
+  }
+  .progress-count {
+    font-size: 1.4rem; font-weight: 800;
+    color: #ffd060;
+  }
+
+  /* ─── Layout ─── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+  }
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  /* ─── Element shelf ─── */
+  .shelf {
+    background: rgba(20,28,52,0.55);
+    border: 1px solid rgba(120,180,255,0.16);
+    border-radius: 18px;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  }
+  .shelf-title {
+    font-size: 0.78rem; letter-spacing: 4px;
+    color: rgba(232,228,240,0.55);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .element-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 10px;
+  }
+  .el {
+    aspect-ratio: 1;
+    background: linear-gradient(135deg, rgba(40,52,80,0.85), rgba(28,36,60,0.85));
+    border: 1px solid rgba(120,180,255,0.2);
+    border-radius: 14px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; padding: 4px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .el:hover {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 4px 20px var(--glow, rgba(120,180,255,0.4));
+    border-color: var(--clr, #ffaa30);
+  }
+  .el:active { transform: scale(0.95); }
+  .el .emoji { font-size: 1.8rem; filter: drop-shadow(0 0 8px var(--glow, transparent)); }
+  .el .name {
+    font-size: 0.62rem; letter-spacing: 0.5px;
+    color: rgba(232,228,240,0.85);
+    text-align: center; font-weight: 600;
+  }
+  .el.locked {
+    background: rgba(15,20,38,0.6);
+    border-color: rgba(120,180,255,0.08);
+    cursor: default;
+  }
+  .el.locked .emoji {
+    filter: blur(8px) grayscale(1) opacity(0.5);
+  }
+  .el.locked .name {
+    color: rgba(232,228,240,0.25);
+    letter-spacing: 4px;
+  }
+  .el.locked::after {
+    content: '?';
+    position: absolute;
+    font-size: 1.6rem; font-weight: 900;
+    color: rgba(255,255,255,0.35);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -68%);
+  }
+  .el.new-pop {
+    animation: newPop 0.6s ease-out;
+  }
+  @keyframes newPop {
+    0% { transform: scale(0.4); opacity: 0; }
+    60% { transform: scale(1.18); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ─── Lab side ─── */
+  .lab {
+    background: rgba(20,28,52,0.55);
+    border: 1px solid rgba(120,180,255,0.16);
+    border-radius: 18px;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+    display: flex; flex-direction: column; gap: 18px;
+    align-items: center;
+  }
+  .lab-title {
+    font-size: 0.78rem; letter-spacing: 4px;
+    color: rgba(232,228,240,0.55);
+    text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .beaker-wrap {
+    position: relative;
+    width: 200px; height: 240px;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .beaker-svg { width: 100%; height: 100%; overflow: visible; }
+  .beaker-shake { animation: shakeBeaker 0.5s ease-in-out; }
+  @keyframes shakeBeaker {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-3px) rotate(-1deg); }
+    40% { transform: translateX(3px) rotate(1deg); }
+    60% { transform: translateX(-2px) rotate(-0.5deg); }
+    80% { transform: translateX(2px) rotate(0.5deg); }
+  }
+
+  .contents-row {
+    display: flex; gap: 10px; align-items: center;
+    min-height: 44px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, rgba(40,52,80,0.95), rgba(28,36,60,0.95));
+    border: 1px solid var(--clr, rgba(120,180,255,0.3));
+    border-radius: 30px;
+    font-size: 0.85rem; font-weight: 600;
+    box-shadow: 0 0 12px var(--glow, transparent);
+    animation: pillIn 0.2s ease-out;
+  }
+  @keyframes pillIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .pill .emoji { font-size: 1.2rem; }
+  .plus { color: rgba(232,228,240,0.45); font-weight: 700; }
+  .empty-text {
+    color: rgba(232,228,240,0.4);
+    font-size: 0.85rem; letter-spacing: 1px;
+  }
+
+  .actions {
+    display: flex; gap: 10px; width: 100%;
+  }
+  .btn {
+    flex: 1;
+    padding: 12px;
+    border: none; border-radius: 12px;
+    font-family: inherit; font-weight: 800;
+    font-size: 0.9rem; letter-spacing: 2px;
+    text-transform: uppercase; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+  }
+  .btn-mix {
+    background: linear-gradient(135deg, #ffaa30, #ff60a8);
+    color: #1a0e0e;
+    box-shadow: 0 4px 20px rgba(255,170,60,0.4);
+  }
+  .btn-mix:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 28px rgba(255,170,60,0.55);
+  }
+  .btn-mix:disabled {
+    opacity: 0.4; cursor: not-allowed; filter: grayscale(0.5);
+    box-shadow: none;
+  }
+  .btn-clear {
+    background: rgba(60,72,96,0.7);
+    color: #e8e4f0;
+    border: 1px solid rgba(120,180,255,0.2);
+  }
+  .btn-clear:hover {
+    background: rgba(80,92,116,0.8);
+    transform: translateY(-2px);
+  }
+
+  .message {
+    min-height: 32px;
+    text-align: center;
+    font-size: 0.95rem; letter-spacing: 1px;
+    color: rgba(232,228,240,0.7);
+    font-weight: 600;
+    transition: color 0.2s;
+  }
+  .message.success { color: #88ffa0; }
+  .message.fail { color: #ff8090; }
+
+  /* ─── Discovery modal ─── */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(10,14,30,0.7);
+    backdrop-filter: blur(8px);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    animation: modalFade 0.3s;
+  }
+  .modal.show { display: flex; }
+  @keyframes modalFade { from { opacity: 0; } to { opacity: 1; } }
+  .modal-card {
+    background: linear-gradient(135deg, rgba(40,52,80,0.95), rgba(28,36,60,0.95));
+    border: 2px solid var(--mclr, #ffaa30);
+    border-radius: 24px;
+    padding: 40px 48px;
+    text-align: center;
+    box-shadow: 0 0 60px var(--mglow, rgba(255,170,60,0.4));
+    animation: cardPop 0.45s cubic-bezier(.34,1.56,.64,1);
+    max-width: 90vw;
+  }
+  @keyframes cardPop {
+    0% { transform: scale(0.3) rotate(-8deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  .modal-emoji {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 28px var(--mglow, rgba(255,170,60,0.6)));
+    margin-bottom: 8px;
+    animation: spin 1.4s ease-out;
+  }
+  @keyframes spin {
+    from { transform: rotate(-360deg) scale(0.4); }
+    to { transform: rotate(0) scale(1); }
+  }
+  .modal-name {
+    font-size: 2rem; font-weight: 900; letter-spacing: 2px;
+    color: var(--mclr, #ffaa30);
+    margin-bottom: 6px;
+    text-shadow: 0 0 18px var(--mglow);
+  }
+  .modal-sub {
+    color: rgba(232,228,240,0.6);
+    letter-spacing: 3px; font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+  }
+  .modal-recipe {
+    color: rgba(232,228,240,0.8);
+    font-size: 1rem;
+    letter-spacing: 1px;
+  }
+
+  /* ─── Particle canvas ─── */
+  #particles {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ─── Reset button ─── */
+  .reset-link {
+    margin-top: 16px; align-self: flex-start;
+    background: none; border: none;
+    color: rgba(232,228,240,0.4);
+    font-size: 0.75rem; letter-spacing: 2px;
+    cursor: pointer; font-family: inherit;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .reset-link:hover { color: rgba(255,140,140,0.8); }
+
+  @media (max-width: 600px) {
+    .app { padding: 50px 12px 30px; }
+    h1 { font-size: 1.6rem; letter-spacing: 1px; }
+    .logo { font-size: 2rem; }
+    .progress-count { font-size: 1.2rem; }
+    .beaker-wrap { width: 160px; height: 200px; }
+    .modal-card { padding: 28px 32px; }
+    .modal-emoji { font-size: 4rem; }
+    .modal-name { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="title-block">
+      <div class="logo">⚗️</div>
+      <h1>SİMYA</h1>
+    </div>
+    <div class="progress-box">
+      <span class="progress-label">Keşif</span>
+      <span class="progress-count"><span id="discCount">4</span>/<span id="totalCount">25</span></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="shelf">
+      <div class="shelf-title">Elementler · Birleştirmek için tıkla</div>
+      <div class="element-grid" id="elGrid"></div>
+      <button class="reset-link" id="resetBtn">↺ Keşifleri Sıfırla</button>
+    </section>
+
+    <aside class="lab">
+      <div class="lab-title">Karıştırma Beheri</div>
+      <div class="beaker-wrap" id="beakerWrap">
+        <svg class="beaker-svg" viewBox="0 0 200 240">
+          <defs>
+            <clipPath id="liquidClip">
+              <path d="M 50 80 L 50 200 Q 50 220 70 220 L 130 220 Q 150 220 150 200 L 150 80 Z"/>
+            </clipPath>
+            <linearGradient id="glassShine" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="rgba(255,255,255,0.25)"/>
+              <stop offset="40%" stop-color="rgba(255,255,255,0)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+            </linearGradient>
+          </defs>
+          <!-- Liquid (color blended) -->
+          <rect id="liquid" x="50" y="220" width="100" height="0" fill="#4ec0e8" clip-path="url(#liquidClip)"/>
+          <!-- Bubbles inside liquid -->
+          <g id="bubbles" clip-path="url(#liquidClip)"></g>
+          <!-- Beaker outline -->
+          <path d="M 70 30 L 70 80 L 50 80 L 50 200 Q 50 220 70 220 L 130 220 Q 150 220 150 200 L 150 80 L 130 80 L 130 30"
+                fill="none" stroke="rgba(180,220,255,0.6)" stroke-width="3" stroke-linecap="round"/>
+          <!-- Neck cap -->
+          <path d="M 64 24 L 136 24 L 136 32 L 64 32 Z"
+                fill="rgba(180,220,255,0.25)" stroke="rgba(180,220,255,0.6)" stroke-width="2"/>
+          <!-- Shine -->
+          <path d="M 70 30 L 70 80 L 50 80 L 50 200 Q 50 220 70 220 L 130 220 Q 150 220 150 200 L 150 80 L 130 80 L 130 30"
+                fill="url(#glassShine)" opacity="0.6"/>
+          <!-- Measure marks -->
+          <g stroke="rgba(180,220,255,0.4)" stroke-width="1.5">
+            <line x1="50" y1="120" x2="62" y2="120"/>
+            <line x1="50" y1="160" x2="62" y2="160"/>
+            <line x1="50" y1="190" x2="62" y2="190"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="contents-row" id="contents">
+        <span class="empty-text">Eleman ekle</span>
+      </div>
+
+      <div class="actions">
+        <button class="btn btn-clear" id="clearBtn">Boşalt</button>
+        <button class="btn btn-mix" id="mixBtn" disabled>Karıştır</button>
+      </div>
+
+      <div class="message" id="message">2 element seç, sonra karıştır</div>
+    </aside>
+  </main>
+</div>
+
+<canvas id="particles"></canvas>
+
+<div class="modal" id="discoveryModal">
+  <div class="modal-card" id="discCard">
+    <div class="modal-emoji" id="discEmoji">✨</div>
+    <div class="modal-name" id="discName">Yeni Element</div>
+    <div class="modal-sub">Yeni element keşfedildi</div>
+    <div class="modal-recipe" id="discRecipe"></div>
+  </div>
+</div>
+
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#fff;font-family:'Segoe UI',system-ui,sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,170,48,0.3);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+<script>
+// ─────────────────────────────────────
+// SİMYA · Element Karışım Oyunu
+// ─────────────────────────────────────
+
+const ELEMENTS = {
+  su:        { emoji: '💧', name: 'Su',        color: '#4ec0e8', start: true },
+  ates:      { emoji: '🔥', name: 'Ateş',      color: '#ff6030', start: true },
+  toprak:    { emoji: '🪨', name: 'Toprak',    color: '#8a5a2a', start: true },
+  hava:      { emoji: '💨', name: 'Hava',      color: '#cfd8e0', start: true },
+
+  buhar:     { emoji: '♨️', name: 'Buhar',     color: '#a8c0d8' },
+  camur:     { emoji: '🟫', name: 'Çamur',     color: '#5a3a1a' },
+  lav:       { emoji: '🌋', name: 'Lav',       color: '#e8401a' },
+  enerji:    { emoji: '⚡', name: 'Enerji',    color: '#ffe040' },
+  yagmur:    { emoji: '🌧️', name: 'Yağmur',  color: '#4080c0' },
+  bulut:     { emoji: '☁️', name: 'Bulut',    color: '#d8e0e8' },
+  okyanus:   { emoji: '🌊', name: 'Okyanus',   color: '#1e60a8' },
+  tas:       { emoji: '🗿', name: 'Taş',       color: '#787878' },
+  kum:       { emoji: '🏖️', name: 'Kum',      color: '#e8c878' },
+  cam:       { emoji: '🪟', name: 'Cam',       color: '#a8d8e8' },
+  metal:     { emoji: '🔩', name: 'Metal',     color: '#909098' },
+  gunes:     { emoji: '☀️', name: 'Güneş',    color: '#ffd040' },
+  bitki:     { emoji: '🌱', name: 'Bitki',     color: '#60a040' },
+  agac:      { emoji: '🌳', name: 'Ağaç',      color: '#308030' },
+  cicek:     { emoji: '🌸', name: 'Çiçek',     color: '#f898c8' },
+  balik:     { emoji: '🐟', name: 'Balık',     color: '#f0a020' },
+  simsek:    { emoji: '🌩️', name: 'Şimşek',  color: '#ffe858' },
+  ada:       { emoji: '🏝️', name: 'Ada',     color: '#88c8a0' },
+  gokkusagi: { emoji: '🌈', name: 'Gökkuşağı', color: '#c060d0' },
+  altin:     { emoji: '🥇', name: 'Altın',     color: '#ffd060' },
+  meyve:     { emoji: '🍎', name: 'Meyve',     color: '#e84030' }
+};
+
+// Each recipe: [ingredient1, ingredient2, result]
+const RECIPES = [
+  ['su',      'ates',    'buhar'],
+  ['su',      'toprak',  'camur'],
+  ['ates',    'toprak',  'lav'],
+  ['ates',    'hava',    'enerji'],
+  ['buhar',   'hava',    'bulut'],
+  ['bulut',   'su',      'yagmur'],
+  ['su',      'hava',    'bulut'],
+  ['su',      'su',      'okyanus'],
+  ['yagmur',  'yagmur',  'okyanus'],
+  ['lav',     'su',      'tas'],
+  ['tas',     'hava',    'kum'],
+  ['kum',     'ates',    'cam'],
+  ['tas',     'ates',    'metal'],
+  ['ates',    'ates',    'gunes'],
+  ['enerji',  'hava',    'gunes'],
+  ['camur',   'gunes',   'bitki'],
+  ['toprak',  'yagmur',  'bitki'],
+  ['bitki',   'bitki',   'agac'],
+  ['bitki',   'su',      'cicek'],
+  ['okyanus', 'camur',   'balik'],
+  ['okyanus', 'bitki',   'balik'],
+  ['bulut',   'enerji',  'simsek'],
+  ['okyanus', 'kum',     'ada'],
+  ['yagmur',  'gunes',   'gokkusagi'],
+  ['metal',   'gunes',   'altin'],
+  ['agac',    'cicek',   'meyve']
+];
+
+// ─── State ─────────────────────────────
+const STORAGE_KEY = 'simya_discovered_v1';
+let discovered = new Set();
+let beaker = []; // up to 2 element keys
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      arr.forEach(k => { if (ELEMENTS[k]) discovered.add(k); });
+    }
+  } catch (e) {}
+  for (const k of Object.keys(ELEMENTS)) {
+    if (ELEMENTS[k].start) discovered.add(k);
+  }
+}
+function saveProgress() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...discovered]));
+  } catch (e) {}
+}
+
+// ─── Recipe lookup ─────────────────────
+function findRecipe(a, b) {
+  for (const [x, y, r] of RECIPES) {
+    if ((x === a && y === b) || (x === b && y === a)) return r;
+  }
+  return null;
+}
+
+// ─── Color helpers ─────────────────────
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  return {
+    r: parseInt(h.slice(0, 2), 16),
+    g: parseInt(h.slice(2, 4), 16),
+    b: parseInt(h.slice(4, 6), 16)
+  };
+}
+function blendColors(colors) {
+  if (colors.length === 0) return { r: 100, g: 140, b: 200 };
+  const sum = colors.reduce((a, c) => {
+    const rgb = hexToRgb(c);
+    return { r: a.r + rgb.r, g: a.g + rgb.g, b: a.b + rgb.b };
+  }, { r: 0, g: 0, b: 0 });
+  return { r: sum.r / colors.length, g: sum.g / colors.length, b: sum.b / colors.length };
+}
+
+// ─── Render shelf ──────────────────────
+const elGrid = document.getElementById('elGrid');
+const allKeys = Object.keys(ELEMENTS);
+document.getElementById('totalCount').textContent = allKeys.length;
+
+function renderShelf() {
+  elGrid.innerHTML = '';
+  for (const key of allKeys) {
+    const el = ELEMENTS[key];
+    const div = document.createElement('div');
+    const isDisc = discovered.has(key);
+    div.className = 'el' + (isDisc ? '' : ' locked');
+    div.style.setProperty('--clr', el.color);
+    div.style.setProperty('--glow', el.color + '88');
+    div.innerHTML = `
+      <div class="emoji">${el.emoji}</div>
+      <div class="name">${isDisc ? el.name : '???'}</div>
+    `;
+    if (isDisc) {
+      div.addEventListener('click', () => addToBeaker(key, div));
+    }
+    div.dataset.key = key;
+    elGrid.appendChild(div);
+  }
+  document.getElementById('discCount').textContent = discovered.size;
+}
+
+// ─── Beaker logic ─────────────────────
+const contentsEl = document.getElementById('contents');
+const mixBtn = document.getElementById('mixBtn');
+const clearBtn = document.getElementById('clearBtn');
+const messageEl = document.getElementById('message');
+const liquidEl = document.getElementById('liquid');
+const bubblesEl = document.getElementById('bubbles');
+const beakerWrap = document.getElementById('beakerWrap');
+
+function setMessage(text, kind) {
+  messageEl.textContent = text;
+  messageEl.className = 'message' + (kind ? ' ' + kind : '');
+}
+
+function renderBeaker() {
+  if (beaker.length === 0) {
+    contentsEl.innerHTML = '<span class="empty-text">Eleman ekle</span>';
+  } else {
+    const parts = beaker.map(k => {
+      const el = ELEMENTS[k];
+      return `<span class="pill" style="--clr:${el.color};--glow:${el.color}55;"><span class="emoji">${el.emoji}</span>${el.name}</span>`;
+    });
+    contentsEl.innerHTML = parts.join('<span class="plus">+</span>');
+  }
+  mixBtn.disabled = beaker.length !== 2;
+
+  // Update liquid fill & color
+  const colors = beaker.map(k => ELEMENTS[k].color);
+  const blend = blendColors(colors);
+  const fillHeight = beaker.length === 0 ? 0 : (beaker.length === 1 ? 70 : 140);
+  const y = 220 - fillHeight;
+  liquidEl.setAttribute('y', y);
+  liquidEl.setAttribute('height', fillHeight);
+  liquidEl.style.transition = 'y 0.4s, height 0.4s, fill 0.4s';
+  liquidEl.setAttribute('fill', `rgb(${blend.r|0}, ${blend.g|0}, ${blend.b|0})`);
+
+  renderBubbles(fillHeight > 0);
+}
+
+let bubbleTimer = null;
+function renderBubbles(active) {
+  bubblesEl.innerHTML = '';
+  if (bubbleTimer) clearInterval(bubbleTimer);
+  if (!active) return;
+  function spawnBubble() {
+    const cx = 60 + Math.random() * 80;
+    const cy = 215;
+    const r = 1.5 + Math.random() * 2;
+    const dur = 1.5 + Math.random() * 1.5;
+    const target = 80 + Math.random() * 20;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', cx);
+    c.setAttribute('cy', cy);
+    c.setAttribute('r', r);
+    c.setAttribute('fill', 'rgba(255,255,255,0.4)');
+    bubblesEl.appendChild(c);
+    const anim = c.animate(
+      [
+        { cy: cy, opacity: 0.0 },
+        { cy: cy - 5, opacity: 0.7, offset: 0.1 },
+        { cy: target, opacity: 0 }
+      ],
+      { duration: dur * 1000, easing: 'ease-out' }
+    );
+    anim.onfinish = () => c.remove();
+  }
+  bubbleTimer = setInterval(spawnBubble, 380);
+}
+
+function addToBeaker(key, sourceEl) {
+  if (beaker.length >= 2) {
+    setMessage('Beher dolu — önce karıştır veya boşalt', 'fail');
+    sfx.deny();
+    return;
+  }
+  beaker.push(key);
+  renderBeaker();
+  setMessage(beaker.length === 1 ? 'Bir element daha ekle' : 'Karıştırmaya hazır!', '');
+  sfx.drop();
+  // Brief click pulse on source
+  if (sourceEl) {
+    sourceEl.style.transform = 'scale(0.9)';
+    setTimeout(() => { sourceEl.style.transform = ''; }, 150);
+  }
+}
+
+function clearBeaker() {
+  if (beaker.length === 0) return;
+  beaker = [];
+  renderBeaker();
+  setMessage('Beher boşaltıldı', '');
+  sfx.clear();
+}
+
+function mix() {
+  if (beaker.length !== 2) return;
+  const [a, b] = beaker;
+  const result = findRecipe(a, b);
+
+  beakerWrap.classList.remove('beaker-shake');
+  void beakerWrap.offsetWidth; // restart animation
+  beakerWrap.classList.add('beaker-shake');
+  sfx.mix();
+
+  setTimeout(() => {
+    if (result) {
+      const isNew = !discovered.has(result);
+      discovered.add(result);
+      saveProgress();
+
+      // Recipe text
+      const ra = ELEMENTS[a], rb = ELEMENTS[b], rr = ELEMENTS[result];
+      const recipeText = `${ra.emoji} ${ra.name} + ${rb.emoji} ${rb.name} → ${rr.emoji} ${rr.name}`;
+
+      if (isNew) {
+        showDiscovery(result, recipeText);
+        sfx.discover();
+        celebrateParticles(result);
+      } else {
+        setMessage('✓ ' + recipeText, 'success');
+        sfx.success();
+        smallSparkle(result);
+      }
+
+      renderShelf();
+      // Animate the newly-discovered tile
+      if (isNew) {
+        const tile = elGrid.querySelector(`[data-key="${result}"]`);
+        if (tile) tile.classList.add('new-pop');
+      }
+
+      beaker = [];
+      renderBeaker();
+    } else {
+      setMessage('Hiçbir şey olmadı… farklı bir kombinasyon dene', 'fail');
+      sfx.fizzle();
+      beaker = [];
+      renderBeaker();
+    }
+  }, 500);
+}
+
+mixBtn.addEventListener('click', mix);
+clearBtn.addEventListener('click', clearBeaker);
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('Tüm keşifler silinecek. Emin misin?')) {
+    discovered.clear();
+    for (const k of Object.keys(ELEMENTS)) if (ELEMENTS[k].start) discovered.add(k);
+    saveProgress();
+    beaker = [];
+    renderShelf();
+    renderBeaker();
+    setMessage('Sıfırlandı. 4 element ile başlıyorsun.', '');
+  }
+});
+
+// ─── Discovery modal ───────────────────
+const modal = document.getElementById('discoveryModal');
+const discCard = document.getElementById('discCard');
+const discEmoji = document.getElementById('discEmoji');
+const discName = document.getElementById('discName');
+const discRecipe = document.getElementById('discRecipe');
+
+function showDiscovery(key, recipeText) {
+  const el = ELEMENTS[key];
+  discEmoji.textContent = el.emoji;
+  discName.textContent = el.name;
+  discRecipe.textContent = recipeText;
+  discCard.style.setProperty('--mclr', el.color);
+  discCard.style.setProperty('--mglow', el.color + '99');
+  modal.classList.add('show');
+  setTimeout(() => modal.classList.remove('show'), 2400);
+}
+modal.addEventListener('click', () => modal.classList.remove('show'));
+
+// ─── Particles ─────────────────────────
+const pCanvas = document.getElementById('particles');
+const pCtx = pCanvas.getContext('2d');
+function resizeCanvas() {
+  pCanvas.width = window.innerWidth;
+  pCanvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const particles = [];
+function spawnParticleBurst(x, y, color, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const v = (0.6 + Math.random()) * speed;
+    particles.push({
+      x, y,
+      vx: Math.cos(ang) * v,
+      vy: Math.sin(ang) * v - 1,
+      life: 1,
+      size: 2 + Math.random() * 3,
+      color
+    });
+  }
+}
+function celebrateParticles(elKey) {
+  const rect = beakerWrap.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  spawnParticleBurst(cx, cy, ELEMENTS[elKey].color, 60, 5);
+  // Confetti from top
+  setTimeout(() => {
+    for (let i = 0; i < 40; i++) {
+      const colors = ['#ffd060', '#ff60a8', '#60d0ff', '#88ffa0', '#b060ff'];
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: -10,
+        vx: (Math.random() - 0.5) * 2,
+        vy: 1 + Math.random() * 2,
+        life: 1.5,
+        size: 3 + Math.random() * 4,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+  }, 200);
+}
+function smallSparkle(elKey) {
+  const rect = beakerWrap.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  spawnParticleBurst(cx, cy, ELEMENTS[elKey].color, 18, 3);
+}
+
+function animateParticles() {
+  pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.12;
+    p.life -= 0.018;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    pCtx.globalAlpha = Math.max(0, p.life);
+    pCtx.fillStyle = p.color;
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    pCtx.fill();
+  }
+  pCtx.globalAlpha = 1;
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ─── Audio ─────────────────────────────
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function tone(freq, dur, type, vol, when) {
+  const ctx = ensureAudio(); if (!ctx) return;
+  const t0 = when || ctx.currentTime;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol || 0.15, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(ctx.destination);
+  o.start(t0);
+  o.stop(t0 + dur + 0.05);
+}
+const sfx = {
+  drop: () => { tone(520, 0.12, 'sine', 0.18); tone(780, 0.08, 'sine', 0.1, audioCtx ? audioCtx.currentTime + 0.03 : 0); },
+  clear: () => { tone(380, 0.18, 'triangle', 0.12); },
+  deny: () => { tone(180, 0.2, 'square', 0.1); },
+  mix: () => {
+    // Swirl: rising glissando
+    const ctx = ensureAudio(); if (!ctx) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(220, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.4);
+    g.gain.setValueAtTime(0.0001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.45);
+    o.connect(g).connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.5);
+  },
+  success: () => {
+    tone(660, 0.1, 'sine', 0.15);
+    setTimeout(() => tone(880, 0.15, 'sine', 0.15), 80);
+  },
+  discover: () => {
+    // Magic discovery chime
+    const notes = [523, 659, 784, 1047]; // C E G C
+    const ctx = ensureAudio(); if (!ctx) return;
+    notes.forEach((f, i) => tone(f, 0.4, 'sine', 0.14, ctx.currentTime + i * 0.08));
+  },
+  fizzle: () => {
+    const ctx = ensureAudio(); if (!ctx) return;
+    const dur = 0.5;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) * 0.4;
+    }
+    const n = ctx.createBufferSource();
+    n.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 1200;
+    n.connect(f).connect(ctx.destination);
+    n.start();
+  }
+};
+
+// ─── Init ──────────────────────────────
+loadProgress();
+renderShelf();
+renderBeaker();
+setMessage('2 element seç, sonra karıştır');
+
+// First time greeting
+if (discovered.size === 4) {
+  setMessage('Hoş geldin! 💧 + 🔥 ile başla');
+}
+</script>
+</body>
+</html>

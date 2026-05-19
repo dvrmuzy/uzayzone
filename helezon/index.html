@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Helezon · Sonsuz Düşüş</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: #0a0118; color: #fff;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #game { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  .hud {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 10; pointer-events: none; text-align: center;
+  }
+  .score {
+    font-size: 4rem; font-weight: 900; color: #fff;
+    text-shadow: 0 0 18px #ff00ea, 0 0 36px rgba(255,0,234,0.6);
+    letter-spacing: 2px; line-height: 1;
+    transition: transform 0.15s;
+  }
+  .score.pop { transform: scale(1.2); }
+  .score-label {
+    font-size: 0.7rem; letter-spacing: 5px;
+    color: rgba(255,255,255,0.5); text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .combo-tag {
+    position: fixed; top: 40%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    font-size: 3.5rem; font-weight: 900;
+    color: #fff700; letter-spacing: 4px;
+    text-shadow: 0 0 25px #fff700, 0 0 50px rgba(255,247,0,0.6);
+    opacity: 0; pointer-events: none; z-index: 5;
+    transition: opacity 0.2s, transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+  .combo-tag.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .smash-banner {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    padding: 10px 28px;
+    background: linear-gradient(90deg, #fff700, #ff8800);
+    color: #1a0820; font-weight: 900; letter-spacing: 4px;
+    border-radius: 30px; font-size: 0.95rem; text-transform: uppercase;
+    box-shadow: 0 0 30px rgba(255,247,0,0.7);
+    opacity: 0; transition: opacity 0.25s;
+    pointer-events: none; z-index: 6;
+    animation: pulse 0.7s ease-in-out infinite alternate;
+  }
+  .smash-banner.show { opacity: 1; }
+  @keyframes pulse {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.08); }
+  }
+
+  .overlay {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(255,0,234,0.18), rgba(10,1,24,0.95) 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 20; padding: 20px;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.4s;
+  }
+  #endScreen { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .title {
+    font-size: 5.5rem; font-weight: 900; letter-spacing: 12px;
+    background: linear-gradient(90deg, #ff00ea, #00f0ff, #fff700, #ff00ea);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 20px rgba(255,0,234,0.6));
+    margin-bottom: 8px;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer {
+    from { background-position: 0% 0; }
+    to { background-position: 200% 0; }
+  }
+  .subtitle {
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 6px; font-size: 0.85rem;
+    margin-bottom: 50px; text-transform: uppercase;
+  }
+  .btn {
+    padding: 18px 56px;
+    background: linear-gradient(135deg, #ff00ea, #00f0ff);
+    border: none; border-radius: 50px;
+    color: #fff; font-size: 1.15rem; font-weight: 800;
+    letter-spacing: 4px; cursor: pointer;
+    box-shadow: 0 0 35px rgba(255,0,234,0.6), inset 0 1px 0 rgba(255,255,255,0.3);
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-transform: uppercase; font-family: inherit;
+  }
+  .btn:hover, .btn:active {
+    transform: scale(1.06);
+    box-shadow: 0 0 50px rgba(255,0,234,0.8), inset 0 1px 0 rgba(255,255,255,0.4);
+  }
+  .hint {
+    margin-top: 40px;
+    color: rgba(255,255,255,0.45);
+    font-size: 0.85rem; text-align: center;
+    line-height: 1.7; letter-spacing: 1px;
+  }
+  .hint b { color: #00f0ff; font-weight: 700; }
+
+  .final-score {
+    font-size: 7rem; font-weight: 900; color: #fff;
+    text-shadow: 0 0 30px #00f0ff, 0 0 60px rgba(0,240,255,0.5);
+    line-height: 1; margin-bottom: 6px;
+  }
+  .final-label {
+    color: rgba(255,255,255,0.5); letter-spacing: 5px;
+    text-transform: uppercase; font-size: 0.85rem;
+    margin-bottom: 14px;
+  }
+  .best {
+    color: #fff700; letter-spacing: 3px;
+    margin-top: 4px; font-size: 1.05rem; font-weight: 700;
+    text-shadow: 0 0 15px rgba(255,247,0,0.5);
+  }
+  .new-best {
+    color: #ff00ea; font-weight: 900; letter-spacing: 4px;
+    margin-top: 10px; font-size: 0.95rem;
+    text-shadow: 0 0 20px #ff00ea;
+    animation: blink 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes blink { from { opacity: 0.6; } to { opacity: 1; } }
+
+  @media (max-width: 600px) {
+    .title { font-size: 3.2rem; letter-spacing: 6px; }
+    .subtitle { font-size: 0.7rem; letter-spacing: 4px; margin-bottom: 36px; }
+    .score { font-size: 3rem; }
+    .final-score { font-size: 5rem; }
+    .btn { padding: 14px 40px; font-size: 1rem; letter-spacing: 3px; }
+    .combo-tag { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game"></div>
+
+<div class="hud">
+  <div class="score" id="scoreDisplay">0</div>
+  <div class="score-label">Skor</div>
+</div>
+
+<div class="combo-tag" id="comboDisplay">KOMBO x2</div>
+<div class="smash-banner" id="smashBanner">⚡ SMASH MODU ⚡</div>
+
+<div class="overlay" id="startScreen">
+  <div class="title">HELEZON</div>
+  <div class="subtitle">Sonsuz Düşüş</div>
+  <button class="btn" id="startBtn">Başla</button>
+  <div class="hint">
+    <b>Sürükle</b> ile kuleyi döndür<br>
+    Boşluklardan geç · <b>Kırmızıdan</b> kaç<br>
+    Üst üste 3 boşluk = <b>Smash Modu</b> ⚡
+  </div>
+</div>
+
+<div class="overlay" id="endScreen">
+  <div class="final-label">Skor</div>
+  <div class="final-score" id="finalScore">0</div>
+  <div class="best" id="bestScore">En İyi: 0</div>
+  <div class="new-best" id="newBest" style="display:none;">YENİ REKOR!</div>
+  <button class="btn" id="retryBtn" style="margin-top: 40px;">Tekrar</button>
+</div>
+
+<a href="../index.html" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#fff;font-family:'Segoe UI',system-ui,sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,0,234,0.3);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+// ───────────────────────────────────────────────
+// HELEZON · Sonsuz Düşüş
+// ───────────────────────────────────────────────
+
+const container = document.getElementById('game');
+const W = () => window.innerWidth;
+const H = () => window.innerHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a0628);
+scene.fog = new THREE.Fog(0x5a1a48, 9, 26);
+
+const camera = new THREE.PerspectiveCamera(60, W()/H(), 0.1, 100);
+camera.position.set(0, 2, 8);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(W(), H());
+container.appendChild(renderer.domElement);
+
+// ─── Lighting ───
+scene.add(new THREE.AmbientLight(0x404060, 0.5));
+
+const keyLight = new THREE.DirectionalLight(0xff00ea, 0.9);
+keyLight.position.set(6, 10, 6);
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0x00f0ff, 0.6);
+fillLight.position.set(-6, 4, -4);
+scene.add(fillLight);
+
+const topGlow = new THREE.PointLight(0xffaa50, 1.3, 16);
+topGlow.position.set(0, 6, 0);
+scene.add(topGlow);
+
+// Warm sunset rim light from behind/below horizon
+const sunLight = new THREE.DirectionalLight(0xff7a30, 0.85);
+sunLight.position.set(0, -4, 14);
+scene.add(sunLight);
+
+// ─── Sunset skybox ───
+function makeSunsetTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 1024;
+  const g = c.getContext('2d');
+  // Vertical gradient
+  const grad = g.createLinearGradient(0, 0, 0, 1024);
+  grad.addColorStop(0.00, '#08021a');  // zenith — almost night
+  grad.addColorStop(0.15, '#1c0838');  // deep purple
+  grad.addColorStop(0.32, '#4a1452');  // dusky violet
+  grad.addColorStop(0.48, '#a82658');  // magenta band
+  grad.addColorStop(0.60, '#e8462a');  // red-orange
+  grad.addColorStop(0.72, '#ff9430');  // bright orange
+  grad.addColorStop(0.80, '#ffc858');  // golden glow at horizon
+  grad.addColorStop(0.86, '#7a1838');  // sea/ground reflection
+  grad.addColorStop(1.00, '#10020c');  // dark below
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 512, 1024);
+
+  // Soft sun disk + glow at horizon
+  const sunY = 808;
+  const halo = g.createRadialGradient(256, sunY, 4, 256, sunY, 260);
+  halo.addColorStop(0.00, 'rgba(255, 245, 200, 1)');
+  halo.addColorStop(0.12, 'rgba(255, 210, 130, 0.7)');
+  halo.addColorStop(0.35, 'rgba(255, 130, 60, 0.25)');
+  halo.addColorStop(1.00, 'rgba(255, 80, 40, 0)');
+  g.fillStyle = halo;
+  g.fillRect(0, 0, 512, 1024);
+
+  // Soft horizontal cloud streaks
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 6; i++) {
+    const y = 580 + i * 28 + Math.random() * 8;
+    const cg = g.createLinearGradient(0, y, 512, y);
+    cg.addColorStop(0, 'rgba(255,140,80,0)');
+    cg.addColorStop(0.5, 'rgba(255,160,90,' + (0.12 - i * 0.015) + ')');
+    cg.addColorStop(1, 'rgba(255,140,80,0)');
+    g.fillStyle = cg;
+    g.fillRect(0, y, 512, 14);
+  }
+  g.globalCompositeOperation = 'source-over';
+
+  // Stars near zenith
+  for (let i = 0; i < 50; i++) {
+    const x = Math.random() * 512;
+    const y = Math.random() * 220;
+    const r = 0.4 + Math.random() * 0.9;
+    g.fillStyle = 'rgba(255,255,255,' + (0.3 + Math.random() * 0.6) + ')';
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  if ('SRGBColorSpace' in THREE) tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const skyGeom = new THREE.SphereGeometry(38, 36, 22);
+const skyMat = new THREE.MeshBasicMaterial({
+  map: makeSunsetTexture(),
+  side: THREE.BackSide,
+  fog: false,
+  depthWrite: false
+});
+const sky = new THREE.Mesh(skyGeom, skyMat);
+sky.renderOrder = -1;
+scene.add(sky);
+
+// ─── Tower setup ───
+const INNER_R = 0.55;
+const OUTER_R = 2.3;
+const SEGMENT_HEIGHT = 0.45;
+const SLICE_COUNT = 8;
+const LEVEL_GAP = 2.1;
+const VISIBLE_LEVELS = 14;
+
+// Central pole (very long, behind everything)
+const poleGeom = new THREE.CylinderGeometry(0.42, 0.42, 600, 18);
+const poleMat = new THREE.MeshStandardMaterial({
+  color: 0x1a0530,
+  emissive: 0xff00ea,
+  emissiveIntensity: 0.35,
+  metalness: 0.7, roughness: 0.25
+});
+const pole = new THREE.Mesh(poleGeom, poleMat);
+pole.position.y = -290;
+scene.add(pole);
+
+const tower = new THREE.Group();
+scene.add(tower);
+
+const levels = [];
+
+function makeSliceMesh(startA, endA, isDanger) {
+  const shape = new THREE.Shape();
+  shape.absarc(0, 0, OUTER_R, startA, endA, false);
+  shape.absarc(0, 0, INNER_R, endA, startA, true);
+
+  const geom = new THREE.ExtrudeGeometry(shape, {
+    depth: SEGMENT_HEIGHT,
+    bevelEnabled: true,
+    bevelThickness: 0.04,
+    bevelSize: 0.04,
+    bevelSegments: 2
+  });
+  geom.translate(0, 0, -SEGMENT_HEIGHT / 2);
+  geom.rotateX(-Math.PI / 2);
+
+  const color = isDanger ? 0xff0844 : 0x8a1bd6;
+  const emissive = isDanger ? 0xff0044 : 0xff00ea;
+
+  const mat = new THREE.MeshStandardMaterial({
+    color, emissive,
+    emissiveIntensity: isDanger ? 0.55 : 0.3,
+    metalness: 0.35,
+    roughness: 0.45
+  });
+
+  const mesh = new THREE.Mesh(geom, mat);
+  mesh.userData.isDanger = isDanger;
+  mesh.userData.startA = startA;
+  mesh.userData.endA = endA;
+  return mesh;
+}
+
+function createLevel(idx) {
+  const group = new THREE.Group();
+  group.position.y = -idx * LEVEL_GAP;
+
+  // Easier first 2 levels
+  const isEarly = idx < 2;
+  const gapCount = isEarly ? 3 : (1 + (Math.random() < 0.5 ? 1 : 0));
+  const gapStart = Math.floor(Math.random() * SLICE_COUNT);
+  const isGap = new Array(SLICE_COUNT).fill(false);
+  for (let i = 0; i < gapCount; i++) {
+    isGap[(gapStart + i) % SLICE_COUNT] = true;
+  }
+
+  // Danger ramps up with depth
+  const dangerProb = isEarly ? 0 : Math.min(0.32, 0.06 + idx * 0.012);
+  // Ensure at least one safe slice (non-danger and non-gap)
+  let safeCount = 0;
+  const sliceData = [];
+  for (let i = 0; i < SLICE_COUNT; i++) {
+    if (isGap[i]) { sliceData.push({ gap: true, danger: false }); continue; }
+    const danger = Math.random() < dangerProb;
+    if (!danger) safeCount++;
+    sliceData.push({ gap: false, danger });
+  }
+  if (safeCount === 0) {
+    // Force one safe slice
+    for (let i = 0; i < SLICE_COUNT; i++) {
+      if (!sliceData[i].gap) { sliceData[i].danger = false; break; }
+    }
+  }
+
+  const slices = [];
+  const sliceAngle = (Math.PI * 2) / SLICE_COUNT;
+  for (let i = 0; i < SLICE_COUNT; i++) {
+    if (sliceData[i].gap) { slices.push(null); continue; }
+    const startA = i * sliceAngle;
+    const endA = (i + 1) * sliceAngle;
+    const mesh = makeSliceMesh(startA, endA, sliceData[i].danger);
+    mesh.userData.sliceIdx = i;
+    group.add(mesh);
+    slices.push(mesh);
+  }
+
+  group.userData = {
+    index: idx,
+    isGap,
+    slices,
+    passed: false,
+    broken: false
+  };
+  return group;
+}
+
+function disposeLevel(level) {
+  for (const s of level.userData.slices) {
+    if (s) { s.geometry.dispose(); s.material.dispose(); }
+  }
+}
+
+function clearTower() {
+  while (tower.children.length > 0) tower.remove(tower.children[0]);
+  for (const l of levels) disposeLevel(l);
+  levels.length = 0;
+}
+
+// ─── Ball ───
+const ballRadius = 0.36;
+const ballPosR = OUTER_R - 0.45;
+const ballGeom = new THREE.SphereGeometry(ballRadius, 32, 32);
+const ballMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: 0x00f0ff,
+  emissiveIntensity: 0.7,
+  metalness: 0.5,
+  roughness: 0.2
+});
+const ball = new THREE.Mesh(ballGeom, ballMat);
+ball.position.set(ballPosR, 1, 0);
+scene.add(ball);
+
+const ballLight = new THREE.PointLight(0x00f0ff, 2.2, 5);
+ball.add(ballLight);
+
+// ─── Game state ───
+const state = {
+  ballY: 1,
+  ballVy: 0,
+  towerAngle: 0,
+  towerAngleVel: 0,
+  score: 0,
+  combo: 0,
+  smashMode: false,
+  smashCharges: 0,
+  running: false,
+  dragging: false,
+  lastTouchX: 0,
+  shake: 0,
+  cameraY: 3,
+  comboTimer: 0
+};
+
+const GRAVITY = -16;
+const BOUNCE = 8.5;
+const MAX_FALL = -18;
+const SMASH_THRESHOLD = 3;
+
+// ─── Particles ───
+const particles = [];
+function spawnParticles(pos, color, count = 14, speed = 4) {
+  for (let i = 0; i < count; i++) {
+    const geom = new THREE.SphereGeometry(0.08 + Math.random() * 0.05, 6, 6);
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
+    const p = new THREE.Mesh(geom, mat);
+    p.position.copy(pos);
+    const v = new THREE.Vector3(
+      (Math.random() - 0.5) * speed,
+      Math.random() * speed + 1,
+      (Math.random() - 0.5) * speed
+    );
+    p.userData = { v, life: 0.8 + Math.random() * 0.4 };
+    scene.add(p);
+    particles.push(p);
+  }
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.userData.v.y -= 9 * dt;
+    p.position.x += p.userData.v.x * dt;
+    p.position.y += p.userData.v.y * dt;
+    p.position.z += p.userData.v.z * dt;
+    p.userData.life -= dt * 1.4;
+    p.material.opacity = Math.max(0, p.userData.life);
+    p.scale.setScalar(Math.max(0.2, p.userData.life));
+    if (p.userData.life <= 0) {
+      scene.remove(p);
+      p.geometry.dispose();
+      p.material.dispose();
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function breakLevel(level) {
+  level.userData.broken = true;
+  for (const slice of level.userData.slices) {
+    if (!slice) continue;
+    const midA = (slice.userData.startA + slice.userData.endA) / 2 + tower.rotation.y;
+    const midR = (INNER_R + OUTER_R) / 2;
+    const worldPos = new THREE.Vector3(
+      Math.cos(midA) * midR,
+      level.position.y,
+      Math.sin(midA) * midR
+    );
+    const c = slice.userData.isDanger ? 0xff0844 : 0xff00ea;
+    spawnParticles(worldPos, c, 5, 5);
+  }
+  level.visible = false;
+}
+
+// ─── Audio (Web Audio synth) ───
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function beep(freq, dur, type = 'sine', vol = 0.18) {
+  const ctx = ensureAudio(); if (!ctx) return;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, ctx.currentTime);
+  g.gain.setValueAtTime(vol, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+  o.connect(g).connect(ctx.destination);
+  o.start();
+  o.stop(ctx.currentTime + dur);
+}
+function bounceThump() {
+  const ctx = ensureAudio(); if (!ctx) return;
+  const t = ctx.currentTime;
+  // Low thump body: sine wave with quick pitch drop
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(220, t);
+  o.frequency.exponentialRampToValueAtTime(55, t + 0.16);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.45, t + 0.006);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+  o.connect(g).connect(ctx.destination);
+  o.start(t); o.stop(t + 0.24);
+
+  // Short noise burst for the "click" of contact
+  const dur = 0.04;
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  }
+  const n = ctx.createBufferSource();
+  n.buffer = buf;
+  const nf = ctx.createBiquadFilter();
+  nf.type = 'bandpass';
+  nf.frequency.value = 1800;
+  nf.Q.value = 1.2;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.15, t);
+  ng.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  n.connect(nf).connect(ng).connect(ctx.destination);
+  n.start(t);
+}
+
+// ─── Ambient music (warm major-key pad) ───
+const music = { playing: false, master: null, chordIdx: 0, melodyIdx: 0 };
+
+// C — G — Am — F  (classic uplifting pop progression, I-V-vi-IV)
+// Roots chosen so bass stays in a warm, non-rumbling range
+const CHORDS = [
+  { root: 261.63, intervals: [0, 4, 7] },  // C major (C E G)
+  { root: 196.00, intervals: [0, 4, 7] },  // G major (G B D)
+  { root: 220.00, intervals: [0, 3, 7] },  // A minor (A C E)
+  { root: 174.61, intervals: [0, 4, 7] }   // F major (F A C)
+];
+const CHORD_DUR = 8.0;
+
+function semitoneToHz(rootHz, semi) {
+  return rootHz * Math.pow(2, semi / 12);
+}
+
+function softTone(when, freq, dur, peak, type) {
+  const ctx = audioCtx;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type || 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(peak, when + Math.min(dur * 0.35, 2.5));
+  g.gain.setValueAtTime(peak, when + dur - Math.min(dur * 0.35, 2.5));
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  o.connect(g).connect(music.master);
+  o.start(when);
+  o.stop(when + dur + 0.05);
+}
+
+function pluckTone(when, freq, dur, peak) {
+  const ctx = audioCtx;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, when);
+  g.gain.exponentialRampToValueAtTime(peak, when + 0.08);
+  g.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+  o.connect(g).connect(music.master);
+  o.start(when);
+  o.stop(when + dur + 0.05);
+}
+
+function scheduleChord(when) {
+  if (!music.playing) return;
+  const ctx = audioCtx;
+  const chord = CHORDS[music.chordIdx];
+
+  // Very soft bass — just hints at the root, no rumble
+  softTone(when, chord.root / 2, CHORD_DUR, 0.07, 'sine');
+
+  // Whisper-quiet pad — just for harmonic background, not foreground
+  for (const semi of chord.intervals) {
+    const f = semitoneToHz(chord.root, semi);
+    softTone(when, f, CHORD_DUR, 0.035, 'sine');
+  }
+
+  // Music-box melody — chord tones, up and back down
+  // tones[0]=root tones[1]=3rd tones[2]=5th tones[3]=root+octave
+  const tones = [
+    semitoneToHz(chord.root, chord.intervals[0] + 12),
+    semitoneToHz(chord.root, chord.intervals[1] + 12),
+    semitoneToHz(chord.root, chord.intervals[2] + 12),
+    semitoneToHz(chord.root, chord.intervals[0] + 24)
+  ];
+  // 8 notes evenly across the chord, gentle arc up and back
+  const pattern = [0, 1, 2, 3, 2, 1, 2, 0];
+  const spacing = CHORD_DUR / 8;
+  for (let i = 0; i < 8; i++) {
+    const t = when + 0.25 + i * spacing;
+    pluckTone(t, tones[pattern[i]], 1.4, 0.13);
+  }
+
+  music.chordIdx = (music.chordIdx + 1) % CHORDS.length;
+  const nextWhen = when + CHORD_DUR;
+  const waitMs = Math.max(0, (nextWhen - ctx.currentTime) * 1000 - 200);
+  setTimeout(() => scheduleChord(nextWhen), waitMs);
+}
+
+function startMusic() {
+  const ctx = ensureAudio(); if (!ctx) return;
+  if (music.playing) return;
+  music.playing = true;
+  music.chordIdx = 0;
+  music.master = ctx.createGain();
+  music.master.gain.setValueAtTime(0, ctx.currentTime);
+  music.master.gain.linearRampToValueAtTime(0.28, ctx.currentTime + 4);
+
+  // Warm gentle lowpass + slight reverb-ish delay
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass';
+  filt.frequency.value = 3200;
+  filt.Q.value = 0.4;
+
+  // Very subtle delay for spaciousness (no echo cave feel)
+  const delay = ctx.createDelay();
+  delay.delayTime.value = 0.30;
+  const delayGain = ctx.createGain();
+  delayGain.gain.value = 0.10;
+  const feedback = ctx.createGain();
+  feedback.gain.value = 0.12;
+
+  music.master.connect(filt);
+  filt.connect(ctx.destination);
+  filt.connect(delay);
+  delay.connect(feedback);
+  feedback.connect(delay);
+  delay.connect(delayGain).connect(ctx.destination);
+
+  scheduleChord(ctx.currentTime + 0.3);
+}
+
+const sfx = {
+  bounce: bounceThump,
+  pass: () => { beep(520, 0.07, 'triangle', 0.12); setTimeout(() => beep(780, 0.1, 'triangle', 0.12), 40); },
+  smash: () => { beep(120, 0.25, 'sawtooth', 0.22); setTimeout(() => beep(80, 0.3, 'sawtooth', 0.18), 60); },
+  smashOn: () => { beep(660, 0.08, 'sine', 0.2); setTimeout(() => beep(880, 0.12, 'sine', 0.2), 60); setTimeout(() => beep(1100, 0.15, 'sine', 0.2), 130); },
+  gameover: () => {
+    beep(220, 0.2, 'sawtooth', 0.28);
+    setTimeout(() => beep(165, 0.25, 'sawtooth', 0.28), 110);
+    setTimeout(() => beep(110, 0.4, 'sawtooth', 0.28), 260);
+  }
+};
+
+// ─── Combo UI ───
+const scoreEl = document.getElementById('scoreDisplay');
+const comboEl = document.getElementById('comboDisplay');
+const smashEl = document.getElementById('smashBanner');
+
+function bumpScore() {
+  scoreEl.textContent = state.score;
+  scoreEl.classList.add('pop');
+  setTimeout(() => scoreEl.classList.remove('pop'), 150);
+}
+
+function showCombo(n) {
+  comboEl.textContent = 'KOMBO ×' + n;
+  comboEl.classList.add('show');
+  state.comboTimer = 0.7;
+}
+
+const SMASH_MAX = 3;
+function updateSmashBanner() {
+  smashEl.textContent = '⚡ SMASH ×' + state.smashCharges + ' ⚡';
+}
+function setSmash(on) {
+  if (on === state.smashMode) return;
+  state.smashMode = on;
+  if (on) {
+    state.smashCharges = SMASH_MAX;
+    updateSmashBanner();
+    smashEl.classList.add('show');
+    ballMat.emissive.setHex(0xfff700);
+    ballMat.emissiveIntensity = 1.4;
+    ballLight.color.setHex(0xfff700);
+    ballLight.intensity = 4.5;
+    sfx.smashOn();
+  } else {
+    state.smashCharges = 0;
+    smashEl.classList.remove('show');
+    ballMat.emissive.setHex(0x00f0ff);
+    ballMat.emissiveIntensity = 0.7;
+    ballLight.color.setHex(0x00f0ff);
+    ballLight.intensity = 2.2;
+  }
+}
+
+// ─── Input ───
+function onDragStart(x) {
+  if (!state.running) return;
+  state.dragging = true;
+  state.lastTouchX = x;
+  state.towerAngleVel = 0;
+}
+function onDragMove(x) {
+  if (!state.dragging) return;
+  const dx = x - state.lastTouchX;
+  const factor = 0.011;
+  state.towerAngle -= dx * factor;
+  state.towerAngleVel = -dx * factor;
+  state.lastTouchX = x;
+}
+function onDragEnd() { state.dragging = false; }
+
+renderer.domElement.addEventListener('mousedown', e => onDragStart(e.clientX));
+window.addEventListener('mousemove', e => onDragMove(e.clientX));
+window.addEventListener('mouseup', onDragEnd);
+
+renderer.domElement.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length > 0) onDragStart(e.touches[0].clientX);
+}, { passive: false });
+window.addEventListener('touchmove', e => {
+  if (state.dragging) e.preventDefault();
+  if (e.touches.length > 0) onDragMove(e.touches[0].clientX);
+}, { passive: false });
+window.addEventListener('touchend', onDragEnd);
+window.addEventListener('touchcancel', onDragEnd);
+
+// ─── Game flow ───
+function startGame() {
+  ensureAudio();
+  startMusic();
+  clearTower();
+  for (let i = 0; i < VISIBLE_LEVELS; i++) {
+    const lv = createLevel(i);
+    tower.add(lv);
+    levels.push(lv);
+  }
+  tower.rotation.y = 0;
+
+  state.ballY = 1.5;
+  state.ballVy = 0;
+  state.towerAngle = 0;
+  state.towerAngleVel = 0;
+  state.score = 0;
+  state.combo = 0;
+  state.shake = 0;
+  state.cameraY = 3;
+  state.comboTimer = 0;
+  state.running = true;
+
+  setSmash(false);
+  ball.position.set(ballPosR, state.ballY, 0);
+  scoreEl.textContent = '0';
+  comboEl.classList.remove('show');
+
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('endScreen').style.display = 'none';
+}
+
+function endGame() {
+  state.running = false;
+  sfx.gameover();
+  spawnParticles(new THREE.Vector3(ball.position.x, state.ballY, 0), 0xff0844, 30, 6);
+  state.shake = 0.35;
+
+  setTimeout(() => {
+    const best = parseInt(localStorage.getItem('helezon_best') || '0', 10);
+    const isNewBest = state.score > best;
+    if (isNewBest) localStorage.setItem('helezon_best', String(state.score));
+    document.getElementById('finalScore').textContent = state.score;
+    document.getElementById('bestScore').textContent = 'En İyi: ' + Math.max(best, state.score);
+    document.getElementById('newBest').style.display = isNewBest && state.score > 0 ? 'block' : 'none';
+    document.getElementById('endScreen').style.display = 'flex';
+  }, 700);
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('retryBtn').addEventListener('click', startGame);
+
+// ─── Collision & physics ───
+function handleCollision(level, sliceIdx) {
+  const isGap = level.userData.isGap[sliceIdx];
+  const slice = level.userData.slices[sliceIdx];
+
+  if (isGap) {
+    if (!level.userData.passed) {
+      level.userData.passed = true;
+      state.score++;
+      state.combo++;
+      bumpScore();
+      sfx.pass();
+      if (state.combo >= 2 && state.combo < SMASH_THRESHOLD) showCombo(state.combo);
+      if (state.combo === SMASH_THRESHOLD) setSmash(true);
+    }
+    return 'pass';
+  }
+
+  // Hit a slice
+  const isDanger = slice.userData.isDanger;
+
+  if (state.smashMode) {
+    breakLevel(level);
+    sfx.smash();
+    state.shake = Math.max(state.shake, 0.18);
+    if (!level.userData.passed) {
+      level.userData.passed = true;
+      state.score += 2;
+      bumpScore();
+    }
+    state.smashCharges--;
+    if (state.smashCharges > 0) {
+      updateSmashBanner();
+    } else {
+      state.combo = 0;
+      setSmash(false);
+    }
+    return 'smash';
+  }
+
+  if (isDanger) {
+    endGame();
+    return 'dead';
+  }
+
+  // Normal bounce
+  state.ballVy = BOUNCE;
+  state.combo = 0;
+  setSmash(false);
+  sfx.bounce();
+  // Tiny bounce particles
+  spawnParticles(
+    new THREE.Vector3(ball.position.x, level.position.y + SEGMENT_HEIGHT / 2, 0),
+    0x00f0ff, 6, 2.5
+  );
+  return 'bounce';
+}
+
+function physicsStep(dt) {
+  // Tower rotation with inertia
+  if (!state.dragging) {
+    state.towerAngle += state.towerAngleVel;
+    state.towerAngleVel *= 0.93;
+    if (Math.abs(state.towerAngleVel) < 0.0005) state.towerAngleVel = 0;
+  }
+  tower.rotation.y = state.towerAngle;
+
+  // Ball physics
+  state.ballVy += GRAVITY * dt;
+  if (state.ballVy < MAX_FALL) state.ballVy = MAX_FALL;
+
+  const oldY = state.ballY;
+  state.ballY += state.ballVy * dt;
+
+  const oldBottom = oldY - ballRadius;
+  const newBottom = state.ballY - ballRadius;
+
+  // Determine ball angle in tower's local frame
+  let angleLocal = -state.towerAngle;
+  const TWO_PI = Math.PI * 2;
+  angleLocal = ((angleLocal % TWO_PI) + TWO_PI) % TWO_PI;
+  const sliceAngle = TWO_PI / SLICE_COUNT;
+  const sliceIdx = Math.floor(angleLocal / sliceAngle) % SLICE_COUNT;
+
+  // Check collision (only while moving down)
+  if (state.ballVy < 0) {
+    for (const level of levels) {
+      if (!level.visible || level.userData.broken) continue;
+      const topY = level.position.y + SEGMENT_HEIGHT / 2;
+      if (oldBottom > topY && newBottom <= topY) {
+        const result = handleCollision(level, sliceIdx);
+        if (result === 'bounce') {
+          // Reset ball position above platform
+          state.ballY = topY + ballRadius + 0.001;
+        }
+        if (result === 'dead') return;
+        // pass / smash continue falling
+      }
+    }
+  }
+
+  ball.position.y = state.ballY;
+
+  // Recycle levels above ball that are out of view
+  while (levels.length > 0 && levels[0].position.y > state.ballY + 6) {
+    const top = levels.shift();
+    tower.remove(top);
+    disposeLevel(top);
+    const lastIdx = levels.length > 0 ? levels[levels.length - 1].userData.index : 0;
+    const newL = createLevel(lastIdx + 1);
+    tower.add(newL);
+    levels.push(newL);
+  }
+}
+
+// ─── Camera ───
+function updateCamera(dt) {
+  const targetY = state.ballY + 1.6;
+  state.cameraY += (targetY - state.cameraY) * 0.12;
+  let camX = 0, camZ = 8;
+  if (state.shake > 0) {
+    camX = (Math.random() - 0.5) * state.shake * 2;
+    camZ += (Math.random() - 0.5) * state.shake * 2;
+    state.shake *= 0.88;
+    if (state.shake < 0.005) state.shake = 0;
+  }
+  camera.position.set(camX, state.cameraY, camZ);
+  camera.lookAt(0, state.ballY - 0.4, 0);
+  // Sky follows camera so the sunset always surrounds the scene
+  sky.position.set(camera.position.x, state.cameraY, camera.position.z);
+}
+
+// ─── Resize ───
+window.addEventListener('resize', () => {
+  camera.aspect = W() / H();
+  camera.updateProjectionMatrix();
+  renderer.setSize(W(), H());
+});
+
+// ─── Main loop ───
+let last = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.033, (now - last) / 1000);
+  last = now;
+
+  if (state.running) {
+    physicsStep(dt);
+    if (state.comboTimer > 0) {
+      state.comboTimer -= dt;
+      if (state.comboTimer <= 0) comboEl.classList.remove('show');
+    }
+  } else {
+    // gentle idle rotation on start/end screens
+    tower.rotation.y += dt * 0.15;
+  }
+
+  updateCamera(dt);
+  updateParticles(dt);
+
+  // Subtle pole pulse
+  poleMat.emissiveIntensity = 0.3 + Math.sin(now * 0.002) * 0.1;
+
+  // Ball gentle rotation
+  ball.rotation.y += dt * 2;
+  ball.rotation.x += dt * 1.5;
+
+  renderer.render(scene, camera);
+}
+
+// Pre-populate the tower so the start screen has a nice preview
+for (let i = 0; i < VISIBLE_LEVELS; i++) {
+  const lv = createLevel(i);
+  tower.add(lv);
+  levels.push(lv);
+}
+ball.position.set(ballPosR, 1.5, 0);
+
+requestAnimationFrame(now => { last = now; loop(now); });
+</script>
+</body>
+</html>
