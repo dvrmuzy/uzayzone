@@ -346,7 +346,7 @@
     </div>
     <div class="progress-box">
       <span class="progress-label">Keşif</span>
-      <span class="progress-count"><span id="discCount">4</span>/<span id="totalCount">25</span></span>
+      <span class="progress-count"><span id="discCount">4</span>/<span id="totalCount">70</span></span>
     </div>
   </header>
 
@@ -451,7 +451,66 @@ const ELEMENTS = {
   ada:       { emoji: '🏝️', name: 'Ada',     color: '#88c8a0' },
   gokkusagi: { emoji: '🌈', name: 'Gökkuşağı', color: '#c060d0' },
   altin:     { emoji: '🥇', name: 'Altın',     color: '#ffd060' },
-  meyve:     { emoji: '🍎', name: 'Meyve',     color: '#e84030' }
+  meyve:     { emoji: '🍎', name: 'Meyve',     color: '#e84030' },
+
+  // ─── Yaşam & Canlılar ───
+  yasam:      { emoji: '🧬', name: 'Yaşam',      color: '#5be0a0' },
+  hayvan:     { emoji: '🐾', name: 'Hayvan',     color: '#c08850' },
+  kus:        { emoji: '🐦', name: 'Kuş',        color: '#70b0e0' },
+  bocek:      { emoji: '🐛', name: 'Böcek',      color: '#88a040' },
+  balina:     { emoji: '🐋', name: 'Balina',     color: '#4a7fb5' },
+  maymun:     { emoji: '🐒', name: 'Maymun',     color: '#9a6a3a' },
+  insan:      { emoji: '🧑', name: 'İnsan',      color: '#e0a878' },
+  yumurta:    { emoji: '🥚', name: 'Yumurta',    color: '#f0e0b0' },
+  dinozor:    { emoji: '🦕', name: 'Dinozor',    color: '#6aa84f' },
+  ejderha:    { emoji: '🐉', name: 'Ejderha',    color: '#b03030' },
+  kurbaga:    { emoji: '🐸', name: 'Kurbağa',    color: '#5aa838' },
+
+  // ─── Medeniyet ───
+  alet:       { emoji: '🔨', name: 'Alet',       color: '#b0b0b8' },
+  tugla:      { emoji: '🧱', name: 'Tuğla',      color: '#b5562e' },
+  ev:         { emoji: '🏠', name: 'Ev',         color: '#c87850' },
+  sehir:      { emoji: '🏙️', name: 'Şehir',     color: '#8090a0' },
+  tekerlek:   { emoji: '🛞', name: 'Tekerlek',   color: '#404048' },
+  araba:      { emoji: '🚗', name: 'Araba',      color: '#d03030' },
+  gemi:       { emoji: '⛵', name: 'Gemi',        color: '#c0a070' },
+  ucak:       { emoji: '✈️', name: 'Uçak',       color: '#d0d8e0' },
+  elektrik:   { emoji: '🔌', name: 'Elektrik',   color: '#ffd83a' },
+  robot:      { emoji: '🤖', name: 'Robot',      color: '#9aa8b8' },
+  ampul:      { emoji: '💡', name: 'Ampul',      color: '#fff0a0' },
+  para:       { emoji: '💰', name: 'Para',       color: '#ffd060' },
+  gokdelen:   { emoji: '🏢', name: 'Gökdelen',   color: '#90a0b0' },
+
+  // ─── Doğal Afetler ───
+  deprem:     { emoji: '🫨', name: 'Deprem',     color: '#8a6a4a' },
+  tsunami:    { emoji: '🌊', name: 'Tsunami',    color: '#1860a0' },
+  dag:        { emoji: '⛰️', name: 'Dağ',        color: '#7a8a7a' },
+  volkan:     { emoji: '🗻', name: 'Volkan',     color: '#c0502a' },
+  firtina:    { emoji: '🌪️', name: 'Fırtına',   color: '#6a7a90' },
+  kasirga:    { emoji: '🌀', name: 'Kasırga',    color: '#5a8ac0' },
+
+  // ─── Hava & Soğuk ───
+  buz:        { emoji: '🧊', name: 'Buz',        color: '#b0e8ff' },
+  kar:        { emoji: '❄️', name: 'Kar',        color: '#e8f4ff' },
+  kardanadam: { emoji: '⛄', name: 'Kardan Adam', color: '#e0f0ff' },
+  ruzgar:     { emoji: '🍃', name: 'Rüzgar',     color: '#b8e0c0' },
+
+  // ─── Uzay ───
+  yildiz:     { emoji: '⭐', name: 'Yıldız',     color: '#ffe860' },
+  uzay:       { emoji: '🌌', name: 'Uzay',       color: '#5a3aa0' },
+  gezegen:    { emoji: '🪐', name: 'Gezegen',    color: '#c08850' },
+  ay:         { emoji: '🌙', name: 'Ay',         color: '#d0d0e0' },
+
+  // ─── Yiyecek ───
+  bugday:     { emoji: '🌾', name: 'Buğday',     color: '#e8c050' },
+  ekmek:      { emoji: '🍞', name: 'Ekmek',      color: '#c8954a' },
+  sarap:      { emoji: '🍷', name: 'Şarap',      color: '#8a2040' },
+  seker:      { emoji: '🍬', name: 'Şeker',      color: '#f0a0c8' },
+
+  // ─── Fantastik ───
+  peri:       { emoji: '🧚', name: 'Peri',       color: '#f0a8e0' },
+  hayalet:    { emoji: '👻', name: 'Hayalet',    color: '#d0e0f0' },
+  dev:        { emoji: '🧌', name: 'Dev',        color: '#6a7a50' }
 };
 
 // Each recipe: [ingredient1, ingredient2, result]
@@ -481,7 +540,66 @@ const RECIPES = [
   ['okyanus', 'kum',     'ada'],
   ['yagmur',  'gunes',   'gokkusagi'],
   ['metal',   'gunes',   'altin'],
-  ['agac',    'cicek',   'meyve']
+  ['agac',    'cicek',   'meyve'],
+
+  // ─── Yaşam & Canlılar ───
+  ['su',       'enerji',   'yasam'],
+  ['yasam',    'toprak',   'hayvan'],
+  ['hayvan',   'hava',     'kus'],
+  ['hayvan',   'bitki',    'bocek'],
+  ['hayvan',   'okyanus',  'balina'],
+  ['hayvan',   'agac',     'maymun'],
+  ['maymun',   'enerji',   'insan'],
+  ['hayvan',   'hayvan',   'yumurta'],
+  ['yumurta',  'tas',      'dinozor'],
+  ['dinozor',  'ates',     'ejderha'],
+  ['balik',    'toprak',   'kurbaga'],
+
+  // ─── Medeniyet ───
+  ['metal',    'insan',    'alet'],
+  ['camur',    'ates',     'tugla'],
+  ['tugla',    'tugla',    'ev'],
+  ['ev',       'insan',    'sehir'],
+  ['tas',      'alet',     'tekerlek'],
+  ['metal',    'tekerlek', 'araba'],
+  ['agac',     'okyanus',  'gemi'],
+  ['metal',    'kus',      'ucak'],
+  ['enerji',   'metal',    'elektrik'],
+  ['metal',    'elektrik', 'robot'],
+  ['elektrik', 'cam',      'ampul'],
+  ['altin',    'sehir',    'para'],
+  ['sehir',    'cam',      'gokdelen'],
+
+  // ─── Doğal Afetler ───
+  ['toprak',   'enerji',   'deprem'],
+  ['okyanus',  'deprem',   'tsunami'],
+  ['tas',      'toprak',   'dag'],
+  ['dag',      'lav',      'volkan'],
+  ['hava',     'simsek',   'firtina'],
+  ['firtina',  'okyanus',  'kasirga'],
+
+  // ─── Hava & Soğuk ───
+  ['okyanus',  'hava',     'buz'],
+  ['buz',      'hava',     'kar'],
+  ['kar',      'insan',    'kardanadam'],
+  ['hava',     'hava',     'ruzgar'],
+
+  // ─── Uzay ───
+  ['enerji',   'gunes',    'yildiz'],
+  ['yildiz',   'yildiz',   'uzay'],
+  ['uzay',     'toprak',   'gezegen'],
+  ['tas',      'uzay',     'ay'],
+
+  // ─── Yiyecek ───
+  ['bitki',    'gunes',    'bugday'],
+  ['bugday',   'ates',     'ekmek'],
+  ['meyve',    'meyve',    'sarap'],
+  ['meyve',    'gunes',    'seker'],
+
+  // ─── Fantastik ───
+  ['insan',    'cicek',    'peri'],
+  ['insan',    'enerji',   'hayalet'],
+  ['insan',    'dag',      'dev']
 ];
 
 // ─── State ─────────────────────────────
