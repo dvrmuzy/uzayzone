@@ -251,6 +251,44 @@
   .message.success { color: #88ffa0; }
   .message.fail { color: #ff8090; }
 
+  /* ─── Recipe display (under beaker) ─── */
+  .recipe-display {
+    width: 100%;
+    margin-top: 4px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(255,170,48,0.12), rgba(176,96,255,0.12));
+    border: 1px solid rgba(255,170,48,0.35);
+    border-radius: 14px;
+    text-align: center;
+    animation: recipePop 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes recipePop {
+    0% { transform: scale(0.8); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .recipe-display-label {
+    font-size: 0.65rem; letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(255,208,96,0.85);
+    margin-bottom: 8px;
+  }
+  .recipe-display-list {
+    display: flex; flex-direction: column; gap: 6px;
+    max-height: 220px; overflow-y: auto;
+  }
+  .recipe-line {
+    font-size: 0.95rem; font-weight: 700;
+    color: #f0ecf8; letter-spacing: 0.5px;
+    line-height: 1.4;
+    padding: 6px 8px;
+    border-radius: 8px;
+  }
+  .recipe-line.latest {
+    background: rgba(255,208,96,0.14);
+    color: #ffe0a0;
+    animation: recipePop 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+
   /* ─── Discovery modal ─── */
   .modal {
     position: fixed; inset: 0;
@@ -430,6 +468,11 @@
       </div>
 
       <div class="message" id="message">2 element seç, sonra karıştır</div>
+
+      <div class="recipe-display" id="recipeDisplay" hidden>
+        <div class="recipe-display-label">Keşfedilen Tarifler</div>
+        <div class="recipe-display-list" id="recipeDisplayList"></div>
+      </div>
     </aside>
   </main>
 </div>
@@ -760,7 +803,9 @@ const RECIPES = [
 
 // ─── State ─────────────────────────────
 const STORAGE_KEY = 'simya_discovered_v1';
+const RECIPE_LOG_KEY = 'simya_recipelog_v1';
 let discovered = new Set();
+let recipeLog = []; // discovered recipe texts, oldest first
 let beaker = []; // up to 2 element keys
 
 function loadProgress() {
@@ -770,6 +815,8 @@ function loadProgress() {
       const arr = JSON.parse(raw);
       arr.forEach(k => { if (ELEMENTS[k]) discovered.add(k); });
     }
+    const rawLog = localStorage.getItem(RECIPE_LOG_KEY);
+    if (rawLog) recipeLog = JSON.parse(rawLog) || [];
   } catch (e) {}
   for (const k of Object.keys(ELEMENTS)) {
     if (ELEMENTS[k].start) discovered.add(k);
@@ -778,6 +825,7 @@ function loadProgress() {
 function saveProgress() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([...discovered]));
+    localStorage.setItem(RECIPE_LOG_KEY, JSON.stringify(recipeLog));
   } catch (e) {}
 }
 
@@ -946,10 +994,13 @@ function mix() {
 
       // Recipe text
       const ra = ELEMENTS[a], rb = ELEMENTS[b], rr = ELEMENTS[result];
-      const recipeText = `${ra.emoji} ${ra.name} + ${rb.emoji} ${rb.name} → ${rr.emoji} ${rr.name}`;
+      const recipeText = `${rr.emoji} ${rr.name} → ${ra.emoji} ${ra.name} + ${rb.emoji} ${rb.name}`;
 
       if (isNew) {
+        recipeLog.push(recipeText);
+        saveProgress();
         showDiscovery(result, recipeText);
+        showRecipeDisplay(recipeText);
         sfx.discover();
         celebrateParticles(result);
       } else {
@@ -982,11 +1033,14 @@ clearBtn.addEventListener('click', clearBeaker);
 document.getElementById('resetBtn').addEventListener('click', () => {
   if (confirm('Tüm keşifler silinecek. Emin misin?')) {
     discovered.clear();
+    recipeLog = [];
     for (const k of Object.keys(ELEMENTS)) if (ELEMENTS[k].start) discovered.add(k);
     saveProgress();
     beaker = [];
     renderShelf();
     renderBeaker();
+    recipeDisplayList.innerHTML = '';
+    document.getElementById('recipeDisplay').hidden = true;
     setMessage('Sıfırlandı. 4 element ile başlıyorsun.', '');
   }
 });
@@ -1009,6 +1063,26 @@ function showDiscovery(key, recipeText) {
   setTimeout(() => modal.classList.remove('show'), 2400);
 }
 modal.addEventListener('click', () => modal.classList.remove('show'));
+
+// ─── Recipe display under beaker ───────
+const recipeDisplay = document.getElementById('recipeDisplay');
+const recipeDisplayList = document.getElementById('recipeDisplayList');
+function showRecipeDisplay(recipeText) {
+  recipeDisplay.hidden = false;
+  // Demote the previous latest line
+  const prev = recipeDisplayList.querySelector('.recipe-line.latest');
+  if (prev) prev.classList.remove('latest');
+  // Prepend the new discovery so the newest stays on top
+  const line = document.createElement('div');
+  line.className = 'recipe-line latest';
+  line.textContent = recipeText;
+  recipeDisplayList.prepend(line);
+}
+function rebuildRecipeDisplay() {
+  recipeDisplayList.innerHTML = '';
+  // oldest first → prepend each so the newest ends up on top
+  recipeLog.forEach(txt => showRecipeDisplay(txt));
+}
 
 // ─── Particles ─────────────────────────
 const pCanvas = document.getElementById('particles');
@@ -1232,6 +1306,7 @@ const sfx = {
 loadProgress();
 renderShelf();
 renderBeaker();
+rebuildRecipeDisplay();
 setMessage('2 element seç, sonra karıştır');
 
 // First time greeting
