@@ -312,6 +312,33 @@
     z-index: 5;
   }
 
+  /* ─── Explosion flash ─── */
+  #flash {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at center,
+      rgba(255,230,160,0.95), rgba(255,90,20,0.55) 38%, transparent 70%);
+    pointer-events: none;
+    z-index: 50;
+    opacity: 0;
+  }
+  #flash.boom { animation: boomFlash 0.5s ease-out; }
+  @keyframes boomFlash {
+    0%   { opacity: 0; }
+    8%   { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .app.boom-shake { animation: boomShake 0.55s cubic-bezier(.36,.07,.19,.97); }
+  @keyframes boomShake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    10% { transform: translate(-9px, 5px) rotate(-1deg); }
+    20% { transform: translate(9px, -5px) rotate(1deg); }
+    30% { transform: translate(-7px, -4px) rotate(-0.6deg); }
+    45% { transform: translate(7px, 4px) rotate(0.6deg); }
+    60% { transform: translate(-4px, 2px); }
+    75% { transform: translate(4px, -2px); }
+    90% { transform: translate(-2px, 1px); }
+  }
+
   /* ─── Reset button ─── */
   .reset-link {
     margin-top: 16px; align-self: flex-start;
@@ -408,6 +435,7 @@
 </div>
 
 <canvas id="particles"></canvas>
+<div id="flash"></div>
 
 <div class="modal" id="discoveryModal">
   <div class="modal-card" id="discCard">
@@ -812,8 +840,8 @@ function mix() {
       beaker = [];
       renderBeaker();
     } else {
-      setMessage('Hiçbir şey olmadı… farklı bir kombinasyon dene', 'fail');
-      sfx.fizzle();
+      setMessage('💥 BOOM! Yanlış karışım patladı!', 'fail');
+      triggerExplosion();
       beaker = [];
       renderBeaker();
     }
@@ -907,6 +935,49 @@ function smallSparkle(elKey) {
   spawnParticleBurst(cx, cy, ELEMENTS[elKey].color, 18, 3);
 }
 
+// ─── Explosion (wrong mix) ─────────────
+function explodeParticles() {
+  const rect = beakerWrap.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const fire = ['#fff0a0', '#ffd040', '#ff8020', '#ff5020', '#ff3010', '#c02000'];
+  // Fiery blast outward
+  for (let i = 0; i < 90; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const v = (1 + Math.random()) * 9;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(ang) * v,
+      vy: Math.sin(ang) * v - 2,
+      life: 1 + Math.random() * 0.5,
+      size: 3 + Math.random() * 5,
+      color: fire[Math.floor(Math.random() * fire.length)]
+    });
+  }
+  // Rising smoke
+  for (let i = 0; i < 24; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const v = Math.random() * 3;
+    particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(ang) * v,
+      vy: -1 - Math.random() * 2,
+      life: 1.6,
+      size: 6 + Math.random() * 9,
+      color: 'rgba(90,90,100,0.55)'
+    });
+  }
+}
+
+function triggerExplosion() {
+  sfx.explode();
+  explodeParticles();
+  const flash = document.getElementById('flash');
+  flash.classList.remove('boom'); void flash.offsetWidth; flash.classList.add('boom');
+  const app = document.querySelector('.app');
+  app.classList.remove('boom-shake'); void app.offsetWidth; app.classList.add('boom-shake');
+}
+
 function animateParticles() {
   pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
   for (let i = particles.length - 1; i >= 0; i--) {
@@ -994,6 +1065,38 @@ const sfx = {
     f.frequency.value = 1200;
     n.connect(f).connect(ctx.destination);
     n.start();
+  },
+  explode: () => {
+    const ctx = ensureAudio(); if (!ctx) return;
+    const t = ctx.currentTime;
+    // Deep boom — pitch drops fast
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(140, t);
+    o.frequency.exponentialRampToValueAtTime(28, t + 0.5);
+    g.gain.setValueAtTime(0.4, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g).connect(ctx.destination);
+    o.start(t); o.stop(t + 0.65);
+    // Noise burst with closing low-pass for the "blast"
+    const dur = 0.6;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 2);
+    }
+    const n = ctx.createBufferSource();
+    n.buffer = buf;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(2200, t);
+    f.frequency.exponentialRampToValueAtTime(180, t + 0.5);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.4, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    n.connect(f).connect(ng).connect(ctx.destination);
+    n.start(t);
   }
 };
 
