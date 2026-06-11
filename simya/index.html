@@ -14,7 +14,7 @@
       linear-gradient(180deg, #0a0e1e 0%, #14182a 100%);
     color: #e8e4f0;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    overflow-x: hidden;
+    overflow-x: clip; /* clip (not hidden) so position:sticky still works */
     user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
@@ -74,9 +74,7 @@
     display: grid;
     grid-template-columns: 1fr 360px;
     gap: 24px;
-  }
-  @media (max-width: 800px) {
-    main { grid-template-columns: 1fr; }
+    align-items: start;
   }
 
   /* ─── Element shelf ─── */
@@ -160,6 +158,17 @@
     backdrop-filter: blur(8px);
     display: flex; flex-direction: column; gap: 18px;
     align-items: center;
+    position: sticky;
+    top: 16px;
+    /* fixed full-viewport height so the recipe list can flex-fill down to the bottom */
+    height: calc(100vh - 32px);
+    overflow: hidden;
+  }
+
+  /* Group of interactive controls (selected pills, buttons, message) */
+  .mix-controls {
+    width: 100%;
+    display: flex; flex-direction: column; gap: 18px;
   }
   .lab-title {
     font-size: 0.78rem; letter-spacing: 4px;
@@ -251,30 +260,42 @@
   .message.success { color: #88ffa0; }
   .message.fail { color: #ff8090; }
 
-  /* ─── Recipe display (under beaker) ─── */
-  .recipe-display {
-    width: 100%;
-    margin-top: 4px;
-    padding: 14px 16px;
-    background: linear-gradient(135deg, rgba(255,170,48,0.12), rgba(176,96,255,0.12));
-    border: 1px solid rgba(255,170,48,0.35);
-    border-radius: 14px;
-    text-align: center;
-    animation: recipePop 0.4s cubic-bezier(.34,1.56,.64,1);
-  }
+  /* ─── Recipe display (collapsible, under beaker) ─── */
   @keyframes recipePop {
     0% { transform: scale(0.8); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
   }
+  .recipe-display {
+    width: 100%;
+    margin-top: 4px;
+    display: flex; flex-direction: column; gap: 8px;
+    /* fill remaining height of the sticky lab so the list can stretch down */
+    flex: 1; min-height: 0;
+  }
   .recipe-display-label {
-    font-size: 0.65rem; letter-spacing: 3px;
-    text-transform: uppercase;
-    color: rgba(255,208,96,0.85);
-    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase;
+    color: #ffd060; font-weight: 800;
+    padding: 0 2px;
+  }
+  .recipe-display-count {
+    margin-left: auto;
+    background: rgba(255,208,96,0.2);
+    color: #ffe0a0;
+    border-radius: 20px; padding: 2px 10px;
+    font-size: 0.8rem; letter-spacing: 0;
   }
   .recipe-display-list {
-    display: flex; flex-direction: column; gap: 6px;
-    max-height: 220px; overflow-y: auto;
+    display: flex;
+    flex-direction: column; gap: 6px;
+    /* flex-fill the rest of the sticky lab; scroll only when recipes reach the bottom */
+    flex: 1; min-height: 0;
+    overflow-y: auto;
+    padding: 8px;
+    text-align: center;
+    background: rgba(20,28,52,0.55);
+    border: 1px solid rgba(120,180,255,0.16);
+    border-radius: 14px;
   }
   .recipe-line {
     font-size: 0.95rem; font-weight: 700;
@@ -389,8 +410,40 @@
   }
   .reset-link:hover { color: rgba(255,140,140,0.8); }
 
+  /* ─── Mobile: single column + fixed bottom mixing bar ─── */
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+    .lab {
+      position: static;
+      height: auto;
+      max-height: none;
+      overflow: visible;
+      /* backdrop-filter creates a containing block for fixed children,
+         which would trap the bottom bar inside .lab — disable it here */
+      backdrop-filter: none;
+    }
+    /* Mixing controls float as an always-reachable bottom bar */
+    .mix-controls {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 40;
+      gap: 10px;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      background: rgba(14,18,34,0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(120,180,255,0.2);
+      box-shadow: 0 -6px 24px rgba(0,0,0,0.45);
+    }
+    .mix-controls .contents-row { min-height: 0; }
+    .mix-controls .message { min-height: 18px; font-size: 0.82rem; }
+    /* Recipe list flows with the page (no inner scroll) on mobile */
+    .recipe-display-list { max-height: none; overflow: visible; }
+    /* Leave room so page content isn't hidden behind the bar */
+    .app { padding-bottom: 200px; }
+  }
+
   @media (max-width: 600px) {
-    .app { padding: 50px 12px 30px; }
+    .app { padding: 50px 12px 200px; }
     h1 { font-size: 1.6rem; letter-spacing: 1px; }
     .logo { font-size: 2rem; }
     .progress-count { font-size: 1.2rem; }
@@ -459,19 +512,24 @@
         </svg>
       </div>
 
-      <div class="contents-row" id="contents">
-        <span class="empty-text">Eleman ekle</span>
-      </div>
+      <div class="mix-controls" id="mixControls">
+        <div class="contents-row" id="contents">
+          <span class="empty-text">Eleman ekle</span>
+        </div>
 
-      <div class="actions">
-        <button class="btn btn-clear" id="clearBtn">Boşalt</button>
-        <button class="btn btn-mix" id="mixBtn" disabled>Karıştır</button>
-      </div>
+        <div class="actions">
+          <button class="btn btn-clear" id="clearBtn">Boşalt</button>
+          <button class="btn btn-mix" id="mixBtn" disabled>Karıştır</button>
+        </div>
 
-      <div class="message" id="message">2 element seç, sonra karıştır</div>
+        <div class="message" id="message">2 element seç, sonra karıştır</div>
+      </div>
 
       <div class="recipe-display" id="recipeDisplay" hidden>
-        <div class="recipe-display-label">Keşfedilen Tarifler</div>
+        <div class="recipe-display-label">
+          <span>📜 Keşfedilen Tarifler</span>
+          <span class="recipe-display-count" id="recipeCount">0</span>
+        </div>
         <div class="recipe-display-list" id="recipeDisplayList"></div>
       </div>
     </aside>
@@ -1042,6 +1100,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
     renderBeaker();
     recipeDisplayList.innerHTML = '';
     document.getElementById('recipeDisplay').hidden = true;
+    document.getElementById('recipeCount').textContent = '0';
     setMessage('Sıfırlandı. 4 element ile başlıyorsun.', '');
   }
 });
@@ -1068,6 +1127,12 @@ modal.addEventListener('click', () => modal.classList.remove('show'));
 // ─── Recipe display under beaker ───────
 const recipeDisplay = document.getElementById('recipeDisplay');
 const recipeDisplayList = document.getElementById('recipeDisplayList');
+const recipeCount = document.getElementById('recipeCount');
+
+function updateRecipeCount() {
+  recipeCount.textContent = recipeDisplayList.children.length;
+}
+
 function showRecipeDisplay(recipeText) {
   recipeDisplay.hidden = false;
   // Demote the previous latest line
@@ -1078,6 +1143,7 @@ function showRecipeDisplay(recipeText) {
   line.className = 'recipe-line latest';
   line.textContent = recipeText;
   recipeDisplayList.prepend(line);
+  updateRecipeCount();
 }
 function rebuildRecipeDisplay() {
   recipeDisplayList.innerHTML = '';
