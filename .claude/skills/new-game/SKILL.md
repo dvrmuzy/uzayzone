@@ -160,6 +160,16 @@ Yeni oyun objesini array'in **sonuna** ekle (son `]` kapanışından önce). Ren
 - `bar`: Oyunun 2 ana renginden oluşan gradient
 - `border`: Accent rengin düşük opaklıklı rgba versiyonu
 
+### Sıralama ve "YENİ" Vurgusu (Otomatik)
+
+Ana sayfada kartlar `renderCards()` ile **ters sırada** gösterilir: array'in **sonuna** eklenen oyun listede **en başta** gözükür. Yani yeni oyunu sona eklemen yeterli — otomatik olarak en üstte çıkar.
+
+Array'in **son `NEW_COUNT` (varsayılan 2)** oyunu otomatik olarak `is-new` sınıfını alır:
+- Köşede animasyonlu **"YENİ" rozeti** gösterilir
+- Karta **dikkat çekici, nabız gibi atan accent renkli border** (`newRing` animasyonu) eklenir
+
+Bunlar için ekstra bir şey yapmana gerek yok; sadece yeni oyunu array'in sonuna ekle. Böylece son eklenen 2 oyun her zaman "YENİ" olarak işaretli kalır, daha eskiler otomatik olarak normale döner. Kaç oyunun "YENİ" sayılacağını değiştirmek istersen `index.html` içindeki `const NEW_COUNT = 2;` değerini güncelle.
+
 ## Adım 6: Doğrulama
 
 Bitirdikten sonra şunları kontrol et:

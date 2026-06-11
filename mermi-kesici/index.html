@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mermi Kesici 3D</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body {
+  height:100%; width:100%; overflow:hidden;
+  background:linear-gradient(180deg,#1a0a1e,#0d0820 55%,#07030f);
+  font-family:'Rajdhani', sans-serif; color:#e8f6ff;
+  user-select:none; -webkit-user-select:none;
+}
+#three, #fx {
+  position:fixed; inset:0; display:block; touch-action:none;
+}
+#three { z-index:1; cursor:crosshair; }
+#fx { z-index:2; pointer-events:none; }
+
+/* damage vignette */
+#vignette {
+  position:fixed; inset:0; z-index:3; pointer-events:none; opacity:0;
+  box-shadow: inset 0 0 140px 40px rgba(255,10,40,0.9), inset 0 0 60px 10px rgba(255,40,60,0.7);
+  transition:opacity 0.08s linear;
+}
+
+/* HUD */
+#hud {
+  position:fixed; top:0; left:0; right:0; z-index:5;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:12px 16px; pointer-events:none; gap:10px;
+}
+#hud.hidden { display:none; }
+#health { font-size:clamp(1.2rem,5vw,1.6rem); letter-spacing:2px; filter:drop-shadow(0 2px 6px rgba(255,77,110,0.6)); }
+#levelBox { text-align:center; flex:1; }
+#levelTxt {
+  font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1.05rem,4.4vw,1.5rem);
+  letter-spacing:0.14em;
+  background:linear-gradient(135deg,#00f0ff,#b44eff); -webkit-background-clip:text; background-clip:text;
+  -webkit-text-fill-color:transparent; filter:drop-shadow(0 0 12px rgba(0,240,255,0.45));
+}
+#progBar { width:min(48vw,240px); height:7px; margin:5px auto 0; background:rgba(255,255,255,0.12); border-radius:6px; overflow:hidden; }
+#progFill { height:100%; width:0%; background:linear-gradient(90deg,#00f0ff,#b44eff); transition:width .2s ease; border-radius:6px; }
+#scoreBox { text-align:right; }
+#score { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(1.4rem,6vw,2rem); color:#fff; line-height:1; filter:drop-shadow(0 0 12px rgba(0,240,255,0.4)); }
+#scoreLbl { font-family:'Orbitron',sans-serif; font-size:0.55rem; letter-spacing:0.22em; color:#7a8bbf; text-transform:uppercase; }
+
+/* Overlays */
+.overlay {
+  position:fixed; inset:0; z-index:10;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:24px;
+  background:radial-gradient(ellipse at center, rgba(10,5,24,0.66), rgba(7,3,15,0.93));
+  backdrop-filter:blur(6px); animation:fadeIn .35s ease;
+}
+.overlay.hidden { display:none; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.title {
+  font-family:'Orbitron', sans-serif; font-weight:900; font-size:clamp(2.1rem, 8.5vw, 4.2rem);
+  letter-spacing:0.07em;
+  background:linear-gradient(135deg, #00f0ff, #b44eff, #ff3d6e, #00f0ff); background-size:300% 300%;
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  animation:shimmer 4s ease infinite; filter:drop-shadow(0 0 26px rgba(0,240,255,0.35)); line-height:1.05;
+}
+@keyframes shimmer { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+.tagline { font-family:'Orbitron', sans-serif; font-size:clamp(0.7rem, 2.6vw, 0.95rem); letter-spacing:0.3em; text-transform:uppercase; color:#7a8bbf; margin-top:14px; }
+.blade-emoji { font-size:clamp(2.4rem,10vw,3.6rem); margin-bottom:6px; filter:drop-shadow(0 0 18px rgba(0,240,255,0.5)); }
+.howto { margin-top:24px; max-width:450px; font-size:clamp(0.95rem,3.4vw,1.12rem); line-height:1.75; color:#b8c6e8; }
+.howto b { color:#00f0ff; } .howto .bad { color:#ff5d78; }
+.btn-primary {
+  margin-top:30px; font-family:'Orbitron',sans-serif; font-weight:700; font-size:clamp(1rem,4vw,1.3rem); letter-spacing:0.14em;
+  padding:16px 54px; border-radius:40px; border:none; cursor:pointer; color:#07030f;
+  background:linear-gradient(135deg,#00f0ff,#b44eff,#ff3d6e); background-size:200% 200%;
+  box-shadow:0 0 30px rgba(0,240,255,0.4); transition:transform .2s, box-shadow .2s; animation:shimmer 5s ease infinite;
+}
+.btn-primary:hover { transform:scale(1.06); box-shadow:0 0 46px rgba(180,78,255,0.55); }
+.btn-primary:active { transform:scale(0.98); }
+.best-line { margin-top:18px; font-family:'Orbitron',sans-serif; font-size:0.85rem; letter-spacing:0.16em; color:#ffd84d; }
+.go-title { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(2rem,8vw,3.4rem); letter-spacing:0.06em; color:#ff4d6e; filter:drop-shadow(0 0 20px rgba(255,77,110,0.5)); }
+.go-score { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(3rem,16vw,6rem); color:#00f0ff; filter:drop-shadow(0 0 24px rgba(0,240,255,0.5)); margin:10px 0; line-height:1; }
+.go-stats { font-size:clamp(1rem,4vw,1.2rem); color:#b8c6e8; line-height:1.8; }
+.go-stats .hl { color:#ffd84d; font-weight:700; }
+.newrec { display:inline-block; margin-top:10px; font-family:'Orbitron',sans-serif; font-weight:700; font-size:0.85rem; letter-spacing:0.2em; color:#07030f; background:linear-gradient(135deg,#ffd84d,#ff9a3d); padding:6px 18px; border-radius:20px; box-shadow:0 0 20px rgba(255,216,77,0.5); animation:pulse 1s ease infinite; }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+
+#loading { position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; font-family:'Orbitron',sans-serif; letter-spacing:0.2em; color:#7a8bbf; }
+
+/* move controls (touch) */
+#controls { position:fixed; right:14px; bottom:70px; z-index:8; display:none; flex-direction:column; align-items:center; gap:6px; }
+#controls.show { display:flex; }
+.mvrow { display:flex; gap:6px; }
+.mvbtn {
+  width:54px; height:54px; border-radius:14px; border:1px solid rgba(0,240,255,0.3);
+  background:rgba(0,24,34,0.5); color:#00f0ff; font-size:1.25rem; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  backdrop-filter:blur(6px); touch-action:none; cursor:pointer;
+}
+.mvbtn:active { background:rgba(0,240,255,0.28); transform:scale(0.94); }
+</style>
+</head>
+<body>
+
+<canvas id="three"></canvas>
+<canvas id="fx"></canvas>
+<div id="vignette"></div>
+
+<div id="controls">
+  <button class="mvbtn" data-mv="fwd">▲</button>
+  <div class="mvrow">
+    <button class="mvbtn" data-mv="left">◀</button>
+    <button class="mvbtn" data-mv="back">▼</button>
+    <button class="mvbtn" data-mv="right">▶</button>
+  </div>
+</div>
+
+<div id="loading">YÜKLENİYOR…</div>
+
+<div id="hud" class="hidden">
+  <div id="health"></div>
+  <div id="levelBox">
+    <div id="levelTxt">LEVEL 1</div>
+    <div id="progBar"><div id="progFill"></div></div>
+  </div>
+  <div id="scoreBox">
+    <div id="score">0</div>
+    <div id="scoreLbl">SKOR</div>
+  </div>
+</div>
+
+<div id="startScreen" class="overlay hidden">
+  <div class="blade-emoji">⚔️</div>
+  <h1 class="title">MERMİ KESİCİ</h1>
+  <p class="tagline">3D · Samuray refleksi</p>
+  <div class="howto">
+    Sen <b>katanalı samuray</b>sın. Karşındaki düşmanlar sana <span class="bad">ateş ediyor</span>!<br>
+    Parmağını (veya fareyi basılı tutup) ekranda kaydırarak üstüne gelen <b>mermileri havada ikiye böl.</b><br>
+<b>WASD</b> veya <b>ok tuşları</b> ile hareket et, mermilerden kaç! Sadece <b>yakınındaki</b> (parlayan) mermileri kesebilirsin.<br>
+    Her level <b>daha çok düşman</b> ve <b>daha hızlı mermi</b>. Vurulursan ekran <span class="bad">kıpkırmızı</span> olur!
+  </div>
+  <button class="btn-primary" id="startBtn">BAŞLA</button>
+  <div class="best-line" id="bestLine"></div>
+</div>
+
+<div id="overScreen" class="overlay hidden">
+  <div class="go-title">VURULDUN!</div>
+  <div class="go-score" id="finalScore">0</div>
+  <div class="go-stats">
+    Ulaştığın level: <span class="hl" id="finalLevel">1</span><br>
+    Kesilen mermi: <span class="hl" id="finalCuts">0</span>
+  </div>
+  <div id="recordBadge"></div>
+  <button class="btn-primary" id="retryBtn">TEKRAR DENE</button>
+</div>
+
+<a href="../index.html" style="position:fixed;bottom:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#00f0ff;font-family:'Orbitron',sans-serif;font-size:0.8rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(0,240,255,0.25);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+if(typeof THREE === 'undefined'){
+  document.getElementById('loading').textContent = 'Three.js yüklenemedi (internet?)';
+  return;
+}
+
+let W = window.innerWidth, H = window.innerHeight;
+
+/* ─── Renderer / Scene / Camera ─── */
+const renderer = new THREE.WebGLRenderer({ canvas:document.getElementById('three'), antialias:true, alpha:true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0d0820, 18, 46);
+
+const camera = new THREE.PerspectiveCamera(62, W/H, 0.1, 200);
+const CAM = new THREE.Vector3(0, 1.55, 6);
+camera.position.copy(CAM);
+camera.lookAt(0, 1.3, -10);
+scene.add(camera);
+
+/* lights */
+scene.add(new THREE.AmbientLight(0x8090c0, 0.7));
+const key = new THREE.DirectionalLight(0xffffff, 0.9); key.position.set(4, 10, 6); scene.add(key);
+const rim = new THREE.DirectionalLight(0xff4d6e, 0.5); rim.position.set(-6, 4, -10); scene.add(rim);
+const cyan = new THREE.PointLight(0x00f0ff, 0.6, 40); cyan.position.set(0, 3, 5); scene.add(cyan);
+
+/* ground */
+const groundMat = new THREE.MeshStandardMaterial({ color:0x140a26, roughness:0.9, metalness:0.1 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), groundMat);
+ground.rotation.x = -Math.PI/2; ground.position.z = -20; scene.add(ground);
+const grid = new THREE.GridHelper(120, 60, 0x00f0ff, 0x3a2060);
+grid.position.set(0, 0.01, -20); grid.material.opacity = 0.35; grid.material.transparent = true; scene.add(grid);
+
+/* camera right/up (static) */
+const camRight = new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+const camUp = new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+
+/* movement / range tuning */
+const HIT_RADIUS = 0.85;
+const CUT_RANGE = 9;
+const MOVE_SPEED = 6.5;
+const keys = {};
+const moveBtn = { left:false, right:false, fwd:false, back:false };
+
+/* ─── Shared geometry / materials ─── */
+function makeGlowTexture(){
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(32,32,0,32,32,32);
+  grd.addColorStop(0,'rgba(255,240,180,1)'); grd.addColorStop(0.4,'rgba(255,200,90,0.6)'); grd.addColorStop(1,'rgba(255,180,60,0)');
+  g.fillStyle = grd; g.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(c);
+}
+const glowTex = makeGlowTexture();
+const bulletGeo = new THREE.SphereGeometry(0.16, 12, 10);
+const bulletMat = new THREE.MeshStandardMaterial({ color:0xffd060, emissive:0xffb020, emissiveIntensity:1.6, roughness:0.4, metalness:0.6 });
+const halfGeo = new THREE.BoxGeometry(0.18, 0.18, 0.22);
+const halfMat = new THREE.MeshStandardMaterial({ color:0xf5c560, emissive:0x8a6020, emissiveIntensity:0.8, roughness:0.5, metalness:0.6 });
+
+/* ─── Katana (attached to camera) ─── */
+function makeKatana(){
+  const g = new THREE.Group();
+  const handleMat = new THREE.MeshStandardMaterial({ color:0x1a0e06, roughness:0.8 });
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.42,10), handleMat);
+  handle.position.y = -0.2; g.add(handle);
+  const wrapMat = new THREE.MeshStandardMaterial({ color:0xc8a24a, emissive:0x3a2a08, roughness:0.6, metalness:0.4 });
+  const guard = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.03,12), wrapMat);
+  guard.position.y = 0.02; g.add(guard);
+  const bladeMat = new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0x00cfff, emissiveIntensity:1.2, roughness:0.15, metalness:0.9 });
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.5, 0.02), bladeMat);
+  blade.position.y = 0.78; g.add(blade);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.025, 0.18, 4), bladeMat);
+  tip.position.y = 1.55; g.add(tip);
+  return g;
+}
+const katana = makeKatana();
+katana.position.set(0.45, -0.9, -1.35);
+katana.rotation.set(0.2, 0, -0.5);
+camera.add(katana);
+const katanaRest = { z:-0.5, x:0.2 };
+
+/* ─── Overlay FX canvas (trail / sparks / floaters) ─── */
+const fx = document.getElementById('fx');
+const fctx = fx.getContext('2d');
+let FDPR = 1;
+function sizeFx(){ FDPR = Math.min(window.devicePixelRatio||1,2); fx.width = W*FDPR; fx.height = H*FDPR; fx.style.width=W+'px'; fx.style.height=H+'px'; fctx.setTransform(FDPR,0,0,FDPR,0,0); }
+
+/* ─── Resize ─── */
+function resize(){
+  W = window.innerWidth; H = window.innerHeight;
+  renderer.setSize(W,H); camera.aspect = W/H; camera.updateProjectionMatrix();
+  sizeFx();
+}
+window.addEventListener('resize', resize);
+sizeFx();
+
+/* ─── Audio ─── */
+let actx=null;
+function audio(){ if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function tone(freq,dur,type,vol,slideTo){
+  const a=audio(); if(!a) return;
+  const o=a.createOscillator(), g=a.createGain();
+  o.type=type||'sine'; o.frequency.value=freq;
+  if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, a.currentTime+dur);
+  g.gain.setValueAtTime(0.0001,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(vol||0.2, a.currentTime+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime+dur);
+  o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+dur+0.02);
+}
+function noiseBurst(dur,vol,freq,q){
+  const a=audio(); if(!a) return;
+  const len=Math.floor(a.sampleRate*dur); const buf=a.createBuffer(1,len,a.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*(1-i/len);
+  const src=a.createBufferSource(); src.buffer=buf;
+  const bp=a.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=freq||1800; bp.Q.value=q||1;
+  const g=a.createGain(); g.gain.value=vol||0.25;
+  src.connect(bp); bp.connect(g); g.connect(a.destination); src.start();
+}
+const snd = {
+  slash(){ noiseBurst(0.14,0.13,2800,1.6); },
+  cut(){ tone(1200,0.07,'square',0.18,2000); setTimeout(()=>tone(1700,0.09,'triangle',0.14,900),35); },
+  gun(){ noiseBurst(0.08,0.28,900,0.8); tone(150,0.07,'square',0.12,60); },
+  hit(){ noiseBurst(0.35,0.5,260,0.7); tone(110,0.4,'sine',0.4,45); },
+  level(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.18,'triangle',0.2),i*90)); },
+  over(){ [440,330,247,165].forEach((f,i)=>setTimeout(()=>tone(f,0.32,'triangle',0.2),i*150)); }
+};
+
+/* ─── Enemies ─── */
+function makeEnemy(){
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color:0x3a1020, emissive:0x401018, emissiveIntensity:0.4, roughness:0.7 });
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.7, 4, 10), bodyMat);
+  body.position.y = 0.95; g.add(body);
+  const headMat = new THREE.MeshStandardMaterial({ color:0xc89888, roughness:0.8 });
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), headMat);
+  head.position.y = 1.75; g.add(head);
+  const helmMat = new THREE.MeshStandardMaterial({ color:0x5a1020, emissive:0x300810, roughness:0.6 });
+  const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,0.18,12), helmMat);
+  helm.position.y = 1.92; g.add(helm);
+  const chestMat = new THREE.MeshStandardMaterial({ color:0xff5d78, emissive:0xff3050, emissiveIntensity:1.4 });
+  const chest = new THREE.Mesh(new THREE.BoxGeometry(0.34,0.1,0.06), chestMat);
+  chest.position.set(0,1.05,0.32); g.add(chest);
+  // gun pointing toward player (+z)
+  const gunMat = new THREE.MeshStandardMaterial({ color:0x15151c, roughness:0.5, metalness:0.7 });
+  const gun = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.6), gunMat);
+  gun.position.set(0.28,1.05,0.5); g.add(gun);
+  // muzzle flash sprite
+  const flash = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color:0xffd060, transparent:true, opacity:0, blending:THREE.AdditiveBlending, depthWrite:false }));
+  flash.scale.set(0.9,0.9,1); flash.position.set(0.28,1.05,0.85); g.add(flash);
+  g.userData = { fireTimer:0, flash, gun, recoil:0 };
+  return g;
+}
+
+/* ─── State ─── */
+const ST={MENU:0,PLAY:1,OVER:2};
+let state=ST.MENU;
+let phase='fight', transTimer=0, bannerTxt='', bannerSub='';
+
+let enemies=[], bullets=[], halves=[];
+let trail=[], sparks=[], floaters=[];
+let level, health, maxHealth, score, totalCuts, deflected, goal;
+let dmgFlash=0, shake=0, comboCount=0;
+let pressing=false, lastPt=null, aimX=0, aimY=0;
+
+function clearGroup(arr){ for(const o of arr){ if(o.mesh) scene.remove(o.mesh); else scene.remove(o); } arr.length=0; }
+
+function reset(){
+  level=1; health=4; maxHealth=4; score=0; totalCuts=0;
+  for(const b of bullets) scene.remove(b.mesh);
+  for(const h of halves) scene.remove(h.mesh);
+  for(const e of enemies) scene.remove(e);
+  bullets=[]; halves=[]; enemies=[]; trail=[]; sparks=[]; floaters=[];
+  dmgFlash=0; shake=0; comboCount=0; pressing=false; lastPt=null;
+  CAM.set(0, 1.55, 6);
+  setupLevel();
+}
+
+/* ─── Level ─── */
+function levelCfg(lv){
+  return {
+    enemyCount: Math.min(lv, 7),
+    bulletSpeed: 7.5 + lv*0.95,
+    fireInterval: Math.max(0.6, 1.9 - lv*0.12),
+    goal: 5 + lv*3
+  };
+}
+function setupLevel(){
+  const cfg = levelCfg(level);
+  goal = cfg.goal; deflected = 0;
+  for(const e of enemies) scene.remove(e);
+  enemies = [];
+  const n = cfg.enemyCount;
+  for(let i=0;i<n;i++){
+    const e = makeEnemy();
+    const t = n===1 ? 0.5 : i/(n-1);
+    e.position.x = (t-0.5) * Math.min(13, 4+n*1.5);
+    e.position.z = -14 - Math.random()*14;
+    e.userData.fireTimer = 0.8 + Math.random()*cfg.fireInterval*1.5;
+    e.lookAt(0,1.2,camera.position.z);
+    enemies.push(e); scene.add(e);
+  }
+  phase='fight';
+}
+
+/* ─── Spawn bullet ─── */
+function rand(a,b){ return a+Math.random()*(b-a); }
+const _tmp = new THREE.Vector3();
+function enemyFire(e){
+  const cfg = levelCfg(level);
+  e.userData.flash.material.opacity = 1; e.userData.recoil = 1; snd.gun();
+  const origin = new THREE.Vector3(); e.localToWorld(origin.set(0.28,1.05,0.85));
+  // aim around the player's area with wide spread so shots don't all converge on one spot
+  const target = new THREE.Vector3(
+    CAM.x + rand(-2.4, 2.4),
+    1.4 + rand(-0.9, 1.0),
+    CAM.z + rand(-0.6, 0.6)
+  );
+  const dir = target.sub(origin).normalize();
+  const m = new THREE.Mesh(bulletGeo, bulletMat);
+  m.position.copy(origin);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map:glowTex, color:0xffc040, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false }));
+  glow.scale.set(0.7,0.7,1); m.add(glow);
+  // stretch along travel
+  m.scale.set(1,1,2.2);
+  m.lookAt(origin.clone().add(dir));
+  scene.add(m);
+  bullets.push({ mesh:m, glow:glow, vel:dir.multiplyScalar(cfg.bulletSpeed), cut:false });
+}
+
+/* ─── Screen projection ─── */
+const _v = new THREE.Vector3();
+function toScreen(pos){
+  _v.copy(pos).project(camera);
+  return { x:(_v.x*0.5+0.5)*W, y:(-_v.y*0.5+0.5)*H, behind:_v.z>1 };
+}
+function pixelRadius(pos){
+  const c = toScreen(pos);
+  _tmp.copy(pos).addScaledVector(camRight, 0.18);
+  const e = toScreen(_tmp);
+  return Math.max(14, Math.hypot(e.x-c.x, e.y-c.y));
+}
+function distToSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1, dy=y2-y1, l2=dx*dx+dy*dy;
+  if(l2<1e-6) return Math.hypot(px-x1,py-y1);
+  let t=((px-x1)*dx+(py-y1)*dy)/l2; t=Math.max(0,Math.min(1,t));
+  return Math.hypot(px-(x1+t*dx), py-(y1+t*dy));
+}
+
+/* ─── Slicing ─── */
+function sliceCheck(x1,y1,x2,y2){
+  for(const b of bullets){
+    if(b.cut) continue;
+    if(b.mesh.position.distanceToSquared(camera.position) > CUT_RANGE*CUT_RANGE) continue; // çok uzaktakini kesemezsin
+    const s = toScreen(b.mesh.position);
+    if(s.behind) continue;
+    const r = pixelRadius(b.mesh.position) + 16;
+    if(distToSeg(s.x,s.y,x1,y1,x2,y2) < r){ doCut(b, s); }
+  }
+}
+function doCut(b, s){
+  b.cut=true; totalCuts++; deflected++; comboCount++;
+  let gain = 10 + (comboCount>=2 ? (comboCount-1)*5 : 0);
+  score += gain; snd.cut(); shake = Math.max(shake, 0.05);
+  floaters.push({ x:s.x, y:s.y, t:0, txt:'+'+gain, col:'#9fefff', big:comboCount>=3 });
+  if(comboCount>=3) floaters.push({ x:s.x, y:s.y-30, t:0, txt:'x'+comboCount, col:'#ff7df0', big:true });
+  spark2d(s.x, s.y, '#cffcff', 16);
+  spark2d(s.x, s.y, '#ffe9a8', 10);
+  // 3D halves
+  const p = b.mesh.position;
+  for(const sgn of [1,-1]){
+    const m = new THREE.Mesh(halfGeo, halfMat);
+    m.position.copy(p);
+    const vel = b.vel.clone().multiplyScalar(0.25);
+    vel.addScaledVector(camRight, sgn*rand(2,4));
+    vel.addScaledVector(camUp, rand(1,3));
+    scene.add(m);
+    halves.push({ mesh:m, vel, spin:new THREE.Vector3(rand(-8,8),rand(-8,8),rand(-8,8)), t:0 });
+  }
+  scene.remove(b.mesh);
+  if(deflected >= goal && phase==='fight') startTransition();
+}
+function spark2d(x,y,color,n){
+  for(let i=0;i<n;i++){
+    const a=rand(0,Math.PI*2), sp=rand(1.5,7);
+    sparks.push({ x,y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp, r:rand(1.5,3.5), t:0, life:rand(.25,.6), color });
+  }
+}
+
+/* ─── Hit ─── */
+function takeHit(b){
+  b.cut=true; scene.remove(b.mesh);
+  health--; dmgFlash=1; shake=0.32; snd.hit(); comboCount=0;
+  if(health<=0) gameOver();
+}
+
+/* ─── Transition ─── */
+function startTransition(){
+  phase='transition'; transTimer=1.8;
+  bannerTxt='LEVEL '+level+' GEÇİLDİ'; bannerSub='Hazır ol... Level '+(level+1);
+  snd.level(); score += 25;
+  for(const b of bullets){ if(!b.cut){ b.cut=true; const s=toScreen(b.mesh.position); if(!s.behind) spark2d(s.x,s.y,'#9fefff',8); scene.remove(b.mesh); } }
+}
+
+/* ─── Update ─── */
+function update(dt){
+  if(dmgFlash>0) dmgFlash=Math.max(0, dmgFlash-dt*1.7);
+  if(shake>0) shake=Math.max(0, shake-dt*1.2);
+
+  // movement (WASD / arrows / touch buttons)
+  let mx=0, mz=0;
+  if(keys['a']||keys['arrowleft']||moveBtn.left) mx-=1;
+  if(keys['d']||keys['arrowright']||moveBtn.right) mx+=1;
+  if(keys['w']||keys['arrowup']||moveBtn.fwd) mz-=1;
+  if(keys['s']||keys['arrowdown']||moveBtn.back) mz+=1;
+  if(mx||mz){
+    CAM.x = Math.max(-7, Math.min(7, CAM.x + mx*MOVE_SPEED*dt));
+    CAM.z = Math.max(3, Math.min(8.8, CAM.z + mz*MOVE_SPEED*dt));
+  }
+
+  // katana swing
+  const tz = pressing ? (-aimX*0.9 - 0.3) : katanaRest.z;
+  const tx = pressing ? (0.2 + aimY*0.5) : katanaRest.x;
+  katana.rotation.z += (tz - katana.rotation.z)*Math.min(1,dt*14);
+  katana.rotation.x += (tx - katana.rotation.x)*Math.min(1,dt*14);
+
+  if(phase==='transition'){
+    transTimer-=dt;
+    if(transTimer<=0){ level++; setupLevel(); }
+  } else {
+    for(const e of enemies){
+      const u=e.userData;
+      if(u.flash.material.opacity>0) u.flash.material.opacity=Math.max(0,u.flash.material.opacity-dt*8);
+      if(u.recoil>0){ u.recoil=Math.max(0,u.recoil-dt*5); u.gun.position.z = 0.5 - u.recoil*0.12; }
+      u.fireTimer-=dt;
+      if(u.fireTimer<=0){ enemyFire(e); const cfg=levelCfg(level); u.fireTimer=cfg.fireInterval*rand(0.7,1.4); }
+    }
+  }
+
+  // bullets
+  for(let i=bullets.length-1;i>=0;i--){
+    const b=bullets[i];
+    b.mesh.position.addScaledVector(b.vel, dt);
+    if(b.cut){ bullets.splice(i,1); continue; }
+    const d2 = b.mesh.position.distanceToSquared(camera.position);
+    // in-range visual cue: bullets you can cut glow cyan & bigger
+    if(b.glow){
+      if(d2 < CUT_RANGE*CUT_RANGE){ b.glow.material.color.setHex(0x9fffff); b.glow.scale.set(1.05,1.05,1); }
+      else { b.glow.material.color.setHex(0xffc040); b.glow.scale.set(0.7,0.7,1); }
+    }
+    if(d2 < HIT_RADIUS*HIT_RADIUS){ takeHit(b); bullets.splice(i,1); continue; }
+    if(b.mesh.position.z > camera.position.z + 2.5){ scene.remove(b.mesh); bullets.splice(i,1); } // ıskaladı, hasar yok
+  }
+  // halves
+  for(let i=halves.length-1;i>=0;i--){
+    const h=halves[i];
+    h.vel.y -= 9*dt;
+    h.mesh.position.addScaledVector(h.vel, dt);
+    h.mesh.rotation.x += h.spin.x*dt; h.mesh.rotation.y += h.spin.y*dt; h.mesh.rotation.z += h.spin.z*dt;
+    h.t+=dt;
+    const s = Math.max(0, 1 - h.t/1.1); h.mesh.scale.setScalar(s);
+    if(h.t>1.1){ scene.remove(h.mesh); halves.splice(i,1); }
+  }
+  // 2d sparks
+  for(let i=sparks.length-1;i>=0;i--){ const p=sparks[i]; p.vy+=0.25; p.x+=p.vx; p.y+=p.vy; p.vx*=0.96; p.vy*=0.96; p.t+=dt; if(p.t>p.life) sparks.splice(i,1); }
+  // floaters
+  for(let i=floaters.length-1;i>=0;i--){ const f=floaters[i]; f.t+=dt; f.y-=34*dt; if(f.t>0.9) floaters.splice(i,1); }
+  // trail fade
+  const now=performance.now(); while(trail.length && now-trail[0].t>150) trail.shift();
+}
+
+/* ─── Render FX overlay ─── */
+function renderFx(){
+  fctx.clearRect(0,0,W,H);
+  // sparks
+  for(const p of sparks){
+    fctx.globalAlpha=Math.max(0,1-p.t/p.life); fctx.fillStyle=p.color; fctx.shadowColor=p.color; fctx.shadowBlur=8;
+    fctx.beginPath(); fctx.arc(p.x,p.y,p.r,0,Math.PI*2); fctx.fill();
+  }
+  fctx.globalAlpha=1; fctx.shadowBlur=0;
+  // floaters
+  fctx.textAlign='center'; fctx.textBaseline='middle';
+  for(const f of floaters){
+    fctx.globalAlpha=Math.max(0,1-f.t/0.9); fctx.fillStyle=f.col;
+    fctx.font='900 '+(f.big?28:20)+"px 'Orbitron',sans-serif"; fctx.shadowColor=f.col; fctx.shadowBlur=10;
+    fctx.fillText(f.txt,f.x,f.y);
+  }
+  fctx.globalAlpha=1; fctx.shadowBlur=0;
+  // trail
+  if(trail.length>=2){
+    for(let pass=0;pass<2;pass++){
+      fctx.beginPath(); fctx.moveTo(trail[0].x,trail[0].y);
+      for(let i=1;i<trail.length;i++) fctx.lineTo(trail[i].x,trail[i].y);
+      fctx.lineJoin='round'; fctx.lineCap='round';
+      if(pass===0){ fctx.strokeStyle='rgba(0,240,255,0.45)'; fctx.lineWidth=18; fctx.shadowColor='#00f0ff'; fctx.shadowBlur=18; }
+      else { fctx.strokeStyle='rgba(255,255,255,0.95)'; fctx.lineWidth=5; fctx.shadowBlur=0; }
+      fctx.stroke();
+    }
+    fctx.shadowBlur=0;
+  }
+  // banner
+  if(phase==='transition' && state===ST.PLAY){
+    fctx.textAlign='center'; fctx.textBaseline='middle';
+    fctx.fillStyle='#00f0ff'; fctx.shadowColor='#00f0ff'; fctx.shadowBlur=24;
+    fctx.font='900 '+Math.round(Math.min(W*0.08,40))+"px 'Orbitron',sans-serif";
+    fctx.fillText(bannerTxt, W/2, H*0.4);
+    fctx.shadowBlur=0; fctx.fillStyle='#b8c6e8'; fctx.font='700 18px "Rajdhani",sans-serif';
+    fctx.fillText(bannerSub, W/2, H*0.4+42);
+  }
+}
+
+/* ─── Vignette ─── */
+const vignetteEl = document.getElementById('vignette');
+function updateVignette(){
+  const lowPulse = (health<=1 && state===ST.PLAY) ? (0.22+0.12*Math.sin(performance.now()/240)) : 0;
+  vignetteEl.style.opacity = Math.min(0.95, dmgFlash + lowPulse).toFixed(3);
+}
+
+/* ─── Loop ─── */
+let lastT=performance.now();
+function loop(now){
+  let dt=(now-lastT)/1000; lastT=now; if(dt>0.05) dt=0.05;
+  if(state===ST.PLAY){ update(dt); syncHud(); }
+  // camera position (with shake) + always look forward
+  let bx=CAM.x, by=CAM.y, bz=CAM.z;
+  if(shake>0.002){ bx+=(Math.random()-0.5)*shake; by+=(Math.random()-0.5)*shake; bz+=(Math.random()-0.5)*shake*0.5; }
+  camera.position.set(bx,by,bz);
+  camera.lookAt(bx, 1.3, bz-10);
+  renderer.render(scene, camera);
+  renderFx();
+  updateVignette();
+  requestAnimationFrame(loop);
+}
+
+/* ─── Input ─── */
+const threeCanvas = document.getElementById('three');
+function pt(e){ const t=e.touches?e.touches[0]:e; return {x:t.clientX, y:t.clientY}; }
+function setAim(p){ aimX=(p.x/W)*2-1; aimY=(p.y/H)*2-1; }
+function onDown(e){
+  if(state!==ST.PLAY) return; e.preventDefault();
+  audio(); if(actx&&actx.state==='suspended') actx.resume();
+  pressing=true; const p=pt(e); lastPt=p; comboCount=0; trail.length=0;
+  trail.push({x:p.x,y:p.y,t:performance.now()}); setAim(p);
+}
+function onMove(e){
+  if(state!==ST.PLAY||!pressing) return; e.preventDefault();
+  const p=pt(e); trail.push({x:p.x,y:p.y,t:performance.now()}); if(trail.length>22) trail.shift();
+  setAim(p);
+  if(lastPt){
+    if(Math.hypot(p.x-lastPt.x,p.y-lastPt.y)>6) snd.slash();
+    sliceCheck(lastPt.x,lastPt.y,p.x,p.y);
+  }
+  lastPt=p;
+}
+function onUp(){ pressing=false; lastPt=null; comboCount=0; }
+threeCanvas.addEventListener('mousedown',onDown);
+threeCanvas.addEventListener('mousemove',onMove);
+window.addEventListener('mouseup',onUp);
+threeCanvas.addEventListener('touchstart',onDown,{passive:false});
+threeCanvas.addEventListener('touchmove',onMove,{passive:false});
+window.addEventListener('touchend',onUp);
+
+// keyboard movement
+window.addEventListener('keydown', e=>{
+  const k=e.key.toLowerCase(); keys[k]=true;
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].indexOf(k)>=0) e.preventDefault();
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+
+// touch move buttons
+document.querySelectorAll('.mvbtn').forEach(btn=>{
+  const k=btn.dataset.mv;
+  const on=e=>{ e.preventDefault(); moveBtn[k]=true; };
+  const off=e=>{ if(e&&e.preventDefault) e.preventDefault(); moveBtn[k]=false; };
+  btn.addEventListener('touchstart',on,{passive:false});
+  btn.addEventListener('touchend',off); btn.addEventListener('touchcancel',off);
+  btn.addEventListener('mousedown',on); btn.addEventListener('mouseup',off); btn.addEventListener('mouseleave',off);
+});
+if('ontouchstart' in window) document.getElementById('controls').classList.add('show');
+
+/* ─── HUD / Screens ─── */
+const hud=document.getElementById('hud');
+const elScore=document.getElementById('score'), elHealth=document.getElementById('health');
+const elLevel=document.getElementById('levelTxt'), elProg=document.getElementById('progFill');
+let shS=-1, shH=-1, shL=-1;
+function syncHud(){
+  if(score!==shS){ elScore.textContent=score; shS=score; }
+  if(health!==shH){ elHealth.textContent='❤️'.repeat(Math.max(0,health))+'🖤'.repeat(Math.max(0,maxHealth-health)); shH=health; }
+  if(level!==shL){ elLevel.textContent='LEVEL '+level; shL=level; }
+  elProg.style.width = Math.min(100,(deflected/goal)*100)+'%';
+}
+
+const startScreen=document.getElementById('startScreen'), overScreen=document.getElementById('overScreen');
+const bestLine=document.getElementById('bestLine');
+function showBest(){
+  const b=+(localStorage.getItem('mk3_best')||0), l=+(localStorage.getItem('mk3_lvl')||1);
+  bestLine.textContent='🏆 EN İYİ: '+b+'  ·  LEVEL '+l;
+}
+function startGame(){
+  audio(); if(actx&&actx.state==='suspended') actx.resume();
+  reset(); state=ST.PLAY; shS=shH=shL=-1; syncHud();
+  startScreen.classList.add('hidden'); overScreen.classList.add('hidden'); hud.classList.remove('hidden');
+}
+function gameOver(){
+  if(state!==ST.PLAY) return; state=ST.OVER; snd.over();
+  const best=+(localStorage.getItem('mk3_best')||0); const isRec=score>best;
+  if(isRec) localStorage.setItem('mk3_best',score);
+  const bl=+(localStorage.getItem('mk3_lvl')||1); if(level>bl) localStorage.setItem('mk3_lvl',level);
+  document.getElementById('finalScore').textContent=score;
+  document.getElementById('finalLevel').textContent=level;
+  document.getElementById('finalCuts').textContent=totalCuts;
+  document.getElementById('recordBadge').innerHTML = isRec
+    ? '<div class="newrec">🏆 YENİ REKOR!</div>'
+    : '<div style="margin-top:10px;color:#7a8bbf;font-family:Orbitron;font-size:0.8rem;letter-spacing:0.14em;">EN İYİ: '+best+'</div>';
+  hud.classList.add('hidden');
+  setTimeout(()=>overScreen.classList.remove('hidden'), 550);
+}
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('retryBtn').addEventListener('click',startGame);
+
+/* ─── Boot ─── */
+document.getElementById('loading').style.display='none';
+startScreen.classList.remove('hidden');
+showBest();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
