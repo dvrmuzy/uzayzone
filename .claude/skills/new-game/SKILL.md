@@ -119,6 +119,18 @@ Oyunun görsel/işitsel kalitesini artırmak için **ücretsiz CC0 / CC-BY lisan
 - **Performans**: Canvas tabanlı oyunlar için `requestAnimationFrame`; objeleri yeniden kullan (pool)
 - **Erişilebilirlik**: Klavye kontrolü + dokunma kontrolü; renk körü dostu kontrast
 
+### Google Analytics (Zorunlu)
+
+Her oyun sayfası, portalın ortak Google Analytics (GA4) kodunu yükleyen paylaşılan dosyayı içermeli. Oyunun `</head>` tagından hemen önce şu satırı ekle:
+
+```html
+<script src="../analytics.js"></script>
+```
+
+- Dosya kök dizindeki `uzayzone/analytics.js`'tir; oyun klasörü bir seviye altta olduğu için **`../analytics.js`** şeklinde relatif yol kullan.
+- Ölçüm Kimliği (Measurement ID) tek yerde — `analytics.js` içinde — tutulur, sayfalara tekrar yazma.
+- Bu satırı **tüm yeni oyunlara** eklemeyi unutma; eksikse o oyunun ziyaretleri analitiğe düşmez.
+
 ### Ana Sayfaya Dön Butonu
 
 Oyunun `</body>` tagından hemen önce şu butonu ekle (renkleri oyunun temasına uyarla):
@@ -179,8 +191,9 @@ Bitirdikten sonra şunları kontrol et:
 3. Kütüphane CDN'i doğru ve güncel mi (`<script src="...">`)
 4. Oyun bağımsız çalışıyor mu (mantık hatası, asset yükleme hatası yok mu)
 5. Ana sayfaya dön butonu oyunda görünüyor mu
-6. `uzayzone/index.html` GAMES array'ine kart eklendi mi
-7. Kullanıcıya oyunu tarayıcıda test etmesini söyle, ana sayfa URL'sini hatırlat
+6. `<script src="../analytics.js"></script>` oyunun `</head>` öncesine eklendi mi (Google Analytics)
+7. `uzayzone/index.html` GAMES array'ine kart eklendi mi
+8. Kullanıcıya oyunu tarayıcıda test etmesini söyle, ana sayfa URL'sini hatırlat
 
 ## Önemli Notlar
 
