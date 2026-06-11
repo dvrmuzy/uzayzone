@@ -4,11 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Kule Yığını</title>
+<link rel="icon" href="../logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../logo/favicon-16.png">
+<link rel="icon" type="image/svg+xml" href="../logo/favicon.svg">
+<link rel="apple-touch-icon" href="../logo/apple-touch-icon.png">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
   html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
   body {
-    background: linear-gradient(180deg, #0a0a2a 0%, #1a1040 55%, #2a1858 100%);
+    background: linear-gradient(180deg, #1a2230 0%, #2e3d4f 45%, #6b5a48 80%, #8a7257 100%);
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     color: #fff;
     -webkit-tap-highlight-color: transparent;
@@ -294,7 +299,7 @@ const diffTagEl     = document.getElementById('diffTag');
 
 // ─── Three.js setup ───
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x1a1040, 35, 90);
+scene.fog = new THREE.Fog(0x2e3d4f, 40, 95);
 
 const camera = new THREE.OrthographicCamera();
 const VIEW_SIZE = 26;
@@ -318,10 +323,10 @@ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-// Lights
-scene.add(new THREE.AmbientLight(0x9999cc, 0.55));
+// Lights — neutral daylight so brick/concrete read naturally
+scene.add(new THREE.AmbientLight(0xc4c0b4, 0.62));
 
-const dirLight = new THREE.DirectionalLight(0xffffff, 1.15);
+const dirLight = new THREE.DirectionalLight(0xfff4e0, 1.2);
 dirLight.position.set(18, 38, 14);
 dirLight.castShadow = true;
 dirLight.shadow.mapSize.width  = 1024;
@@ -334,7 +339,7 @@ dirLight.shadow.camera.near = 1;
 dirLight.shadow.camera.far  = 120;
 scene.add(dirLight);
 
-const rimLight = new THREE.DirectionalLight(0x7d4aff, 0.5);
+const rimLight = new THREE.DirectionalLight(0x6688aa, 0.45);
 rimLight.position.set(-12, 8, -10);
 scene.add(rimLight);
 
@@ -432,25 +437,246 @@ function soundGameOver() {
   setTimeout(() => playTone(150, 0.55, 'triangle', 0.13), 340);
 }
 
-// ─── Color helper ───
-function blockColor(index) {
-  const hue = (200 + index * 14) % 360;
-  return new THREE.Color(`hsl(${hue}, 72%, 60%)`);
+// ─── Procedural construction textures (brick & concrete) ───
+function createBrickTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  // mortar base
+  ctx.fillStyle = '#c9bca9';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 2600; i++) {
+    ctx.fillStyle = `rgba(150,138,120,${Math.random() * 0.18})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  const rows = 6, cols = 3, brickH = 256 / rows, brickW = 256 / cols, mortar = 5;
+  for (let r = 0; r < rows; r++) {
+    const y = r * brickH;
+    const off = (r % 2) ? brickW / 2 : 0;
+    for (let ci = -1; ci <= cols; ci++) {
+      const x = ci * brickW + off;
+      const shade = 150 + Math.random() * 42;            // terracotta variation
+      ctx.fillStyle = `rgb(${shade | 0},${shade * 0.40 | 0},${shade * 0.31 | 0})`;
+      ctx.fillRect(x + mortar / 2, y + mortar / 2, brickW - mortar, brickH - mortar);
+      // top highlight + bottom shadow for relief
+      ctx.fillStyle = 'rgba(255,235,210,0.10)';
+      ctx.fillRect(x + mortar / 2, y + mortar / 2, brickW - mortar, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.16)';
+      ctx.fillRect(x + mortar / 2, y + brickH - mortar - 3, brickW - mortar, 3);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  return tex;
 }
 
-function makeMaterial(color) {
+function createConcreteTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#9c9b93';
+  ctx.fillRect(0, 0, 256, 256);
+  // speckled grain
+  for (let i = 0; i < 11000; i++) {
+    const g = 156 + (Math.random() - 0.5) * 46;
+    ctx.fillStyle = `rgba(${g | 0},${g | 0},${(g - 6) | 0},${Math.random() * 0.5})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  // hairline cracks
+  ctx.strokeStyle = 'rgba(60,60,56,0.22)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    let x = Math.random() * 256, y = Math.random() * 256;
+    ctx.moveTo(x, y);
+    for (let s = 0; s < 5; s++) { x += (Math.random() - 0.5) * 60; y += (Math.random() - 0.5) * 60; ctx.lineTo(x, y); }
+    ctx.stroke();
+  }
+  // form-panel seams
+  ctx.fillStyle = 'rgba(0,0,0,0.10)';
+  ctx.fillRect(0, 127, 256, 2);
+  ctx.fillRect(127, 0, 2, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+function finishTexture(c) {
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  return tex;
+}
+
+// Cinder / breeze block — gray block with two hollow cores
+function createCinderTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#7f8079';
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 7000; i++) {
+    const g = 124 + (Math.random() - 0.5) * 40;
+    ctx.fillStyle = `rgba(${g | 0},${g | 0},${(g - 4) | 0},${Math.random() * 0.5})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  ctx.strokeStyle = 'rgba(40,40,38,0.55)';
+  ctx.lineWidth = 4;
+  for (let r = 0; r < 2; r++) {
+    const y = r * 128;
+    ctx.strokeRect(8, y + 8, 240, 112);
+    // two hollow cores per block
+    ctx.fillStyle = 'rgba(35,35,33,0.45)';
+    ctx.fillRect(34, y + 30, 80, 68);
+    ctx.fillRect(142, y + 30, 80, 68);
+    ctx.strokeStyle = 'rgba(20,20,18,0.6)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(34, y + 30, 80, 68);
+    ctx.strokeRect(142, y + 30, 80, 68);
+    ctx.strokeStyle = 'rgba(40,40,38,0.55)';
+    ctx.lineWidth = 4;
+  }
+  return finishTexture(c);
+}
+
+// Wooden construction planks
+function createWoodTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const planks = 4, pw = 256 / planks;
+  for (let p = 0; p < planks; p++) {
+    const base = 120 + Math.random() * 35;
+    ctx.fillStyle = `rgb(${base | 0},${base * 0.66 | 0},${base * 0.40 | 0})`;
+    ctx.fillRect(p * pw, 0, pw, 256);
+    // grain lines
+    for (let g = 0; g < 22; g++) {
+      ctx.strokeStyle = `rgba(${base * 0.55 | 0},${base * 0.38 | 0},${base * 0.22 | 0},${0.18 + Math.random() * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      const gx = p * pw + Math.random() * pw;
+      ctx.moveTo(gx, 0);
+      ctx.bezierCurveTo(gx + (Math.random() - 0.5) * 8, 85, gx + (Math.random() - 0.5) * 8, 170, gx + (Math.random() - 0.5) * 8, 256);
+      ctx.stroke();
+    }
+    // plank gap shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(p * pw, 0, 2, 256);
+    ctx.fillStyle = 'rgba(255,235,200,0.06)';
+    ctx.fillRect(p * pw + 2, 0, 2, 256);
+  }
+  return finishTexture(c);
+}
+
+// Hazard tape — diagonal yellow/black stripes (steel beams / barriers)
+function createHazardTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#f2c200';
+  ctx.fillRect(0, 0, 256, 256);
+  ctx.fillStyle = '#1a1a1a';
+  const sw = 36;
+  ctx.save();
+  for (let i = -8; i < 16; i++) {
+    ctx.beginPath();
+    ctx.moveTo(i * sw, 0);
+    ctx.lineTo(i * sw + sw, 0);
+    ctx.lineTo(i * sw + sw - 256, 256);
+    ctx.lineTo(i * sw - 256, 256);
+    ctx.closePath();
+    if (i % 2 === 0) ctx.fill();
+  }
+  ctx.restore();
+  // subtle wear
+  for (let i = 0; i < 2500; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.12})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+  }
+  return finishTexture(c);
+}
+
+// Cut stone / ashlar masonry
+function createStoneTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#5e6166';
+  ctx.fillRect(0, 0, 256, 256);
+  const rows = 4, rowH = 256 / rows;
+  for (let r = 0; r < rows; r++) {
+    const y = r * rowH;
+    const n = 2 + Math.floor(Math.random() * 2);
+    let x = -Math.random() * 40;
+    for (let i = 0; i <= n; i++) {
+      const w = 256 / n + (Math.random() - 0.5) * 40;
+      const s = 92 + Math.random() * 40;
+      ctx.fillStyle = `rgb(${s | 0},${(s + 4) | 0},${(s + 8) | 0})`;
+      ctx.fillRect(x + 3, y + 3, w - 6, rowH - 6);
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      ctx.fillRect(x + 3, y + 3, w - 6, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(x + 3, y + rowH - 6, w - 6, 3);
+      x += w;
+    }
+  }
+  return finishTexture(c);
+}
+
+// Glazed checker tile
+function createTileTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const ctx = c.getContext('2d');
+  const n = 4, t = 256 / n;
+  for (let yi = 0; yi < n; yi++) {
+    for (let xi = 0; xi < n; xi++) {
+      const dark = (xi + yi) % 2 === 0;
+      ctx.fillStyle = dark ? '#1f6f78' : '#e9f3f0';
+      ctx.fillRect(xi * t, yi * t, t, t);
+      // grout
+      ctx.strokeStyle = 'rgba(60,70,72,0.5)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(xi * t, yi * t, t, t);
+      // glossy highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(xi * t + 5, yi * t + 5, t - 10, 6);
+    }
+  }
+  return finishTexture(c);
+}
+
+// Build the deck of block styles once; tower cycles through them for variety.
+const TEXTURE_SET = [
+  { tex: createBrickTexture(),    rough: 0.88, metal: 0.0 },
+  { tex: createConcreteTexture(), rough: 0.94, metal: 0.0 },
+  { tex: createCinderTexture(),   rough: 0.92, metal: 0.0 },
+  { tex: createWoodTexture(),     rough: 0.80, metal: 0.0 },
+  { tex: createHazardTexture(),   rough: 0.55, metal: 0.15 },
+  { tex: createStoneTexture(),    rough: 0.85, metal: 0.05 },
+  { tex: createTileTexture(),     rough: 0.35, metal: 0.10 }
+];
+
+// Each layer gets a different patterned style, cycling down the tower.
+function makeMaterial(index) {
+  const style = TEXTURE_SET[index % TEXTURE_SET.length];
+  const tex = style.tex.clone();
+  tex.needsUpdate = true;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.offset.set(Math.random(), Math.random());
   return new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.42,
-    metalness: 0.12,
-    emissive: color.clone().multiplyScalar(0.18)
+    map: tex,
+    roughness: style.rough,
+    metalness: style.metal
   });
 }
 
 // ─── Blocks ───
 function addBlock(x, y, z, sizeX, sizeZ, axis, moving) {
   const geo = new THREE.BoxGeometry(sizeX, BLOCK_HEIGHT, sizeZ);
-  const mat = makeMaterial(blockColor(blocks.length));
+  const mat = makeMaterial(blocks.length);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -463,9 +689,11 @@ function addBlock(x, y, z, sizeX, sizeZ, axis, moving) {
   return block;
 }
 
-function addFallingChunk(x, y, z, sizeX, sizeZ, vx, vz, color) {
+function addFallingChunk(x, y, z, sizeX, sizeZ, vx, vz, srcMat) {
   const geo = new THREE.BoxGeometry(sizeX, BLOCK_HEIGHT, sizeZ);
-  const mat = makeMaterial(color.clone());
+  const mat = srcMat.clone();
+  mat.map = srcMat.map.clone();
+  mat.map.needsUpdate = true;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -517,7 +745,7 @@ function spawnNextBlock() {
   const y = prev.mesh.position.y + BLOCK_HEIGHT;
   currentBlock = addBlock(x, y, z, prev.sizeX, prev.sizeZ, axis, true);
   currentBlock.direction = 1;
-  camYTarget = Math.max(0, (blocks.length - 4) * BLOCK_HEIGHT * 0.85);
+  camYTarget = Math.max(0, (blocks.length - 4) * BLOCK_HEIGHT);
 }
 
 function dropBlock() {
@@ -554,7 +782,7 @@ function dropBlock() {
     return;
   }
 
-  const curColor = cur.mesh.material.color.clone();
+  const curMat = cur.mesh.material;
 
   // Perfect placement → snap & bonus
   if (absDelta < PERFECT_THRESHOLD) {
@@ -582,14 +810,14 @@ function dropBlock() {
     const newCenter    = (overlapStart + overlapEnd) / 2;
     const newSize      = overlap;
 
-    // Rebuild trimmed top block
-    disposeMesh(cur.mesh);
+    // Rebuild trimmed top block (keep its material/texture)
+    scene.remove(cur.mesh);
+    cur.mesh.geometry.dispose();
     if (axis === 'x') cur.sizeX = newSize;
     else              cur.sizeZ = newSize;
 
     const geo = new THREE.BoxGeometry(cur.sizeX, BLOCK_HEIGHT, cur.sizeZ);
-    const mat = makeMaterial(curColor);
-    cur.mesh = new THREE.Mesh(geo, mat);
+    cur.mesh = new THREE.Mesh(geo, curMat);
     cur.mesh.castShadow = true;
     cur.mesh.receiveShadow = true;
     if (axis === 'x') {
@@ -605,10 +833,10 @@ function dropBlock() {
     const chunkY      = prev.mesh.position.y + BLOCK_HEIGHT;
     if (axis === 'x') {
       addFallingChunk(chunkCenter, chunkY, prev.mesh.position.z, chunkSize, cur.sizeZ,
-                      Math.sign(delta) * 0.08, 0, curColor);
+                      Math.sign(delta) * 0.08, 0, curMat);
     } else {
       addFallingChunk(prev.mesh.position.x, chunkY, chunkCenter, cur.sizeX, chunkSize,
-                      0, Math.sign(delta) * 0.08, curColor);
+                      0, Math.sign(delta) * 0.08, curMat);
     }
     soundDrop();
     soundCut();

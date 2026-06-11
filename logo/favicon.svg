@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="bg" cx="0.3" cy="0.3" r="0.9">
+      <stop offset="0" stop-color="#120e30"/>
+      <stop offset="1" stop-color="#040310"/>
+    </radialGradient>
+    <radialGradient id="sphere" cx="0.34" cy="0.30" r="0.85">
+      <stop offset="0"    stop-color="#dffaff"/>
+      <stop offset="0.18" stop-color="#7df2ff"/>
+      <stop offset="0.5"  stop-color="#5aa8f7"/>
+      <stop offset="0.5"  stop-color="#7d5cf0"/>
+      <stop offset="0.82" stop-color="#5a23b8"/>
+      <stop offset="1"    stop-color="#220a52"/>
+    </radialGradient>
+    <radialGradient id="terminator" cx="0.32" cy="0.28" r="0.9">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1"    stop-color="#05010f" stop-opacity="0.78"/>
+    </radialGradient>
+    <radialGradient id="rim" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.82" stop-color="#00c8ff" stop-opacity="0"/>
+      <stop offset="0.97" stop-color="#7df9ff" stop-opacity="0.9"/>
+      <stop offset="1"    stop-color="#7df9ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ringFront" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00c8ff"/>
+      <stop offset="0.5" stop-color="#7df9ff"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="ringBack" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#1c5a82"/>
+      <stop offset="1" stop-color="#4a2a80"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="0.35" cy="0.3" r="0.85">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="0.5" stop-color="#b9a7ff"/>
+      <stop offset="1" stop-color="#3a1f7a"/>
+    </radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="1.4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <g transform="translate(32,32)">
+    <circle r="27" fill="#00c8ff" opacity="0.16"/>
+    <!-- orbit back -->
+    <g transform="rotate(-24)">
+      <path d="M -25 0 C -25 -8 25 -8 25 0" fill="none" stroke="url(#ringBack)" stroke-width="2.4" opacity="0.7"/>
+      <circle cx="-23" cy="-1.4" r="2" fill="url(#moon)" opacity="0.85"/>
+    </g>
+    <!-- planet -->
+    <circle r="16" fill="url(#sphere)"/>
+    <circle r="16" fill="url(#terminator)"/>
+    <circle r="16" fill="url(#rim)"/>
+    <ellipse cx="-5" cy="-5.5" rx="5" ry="3.4" fill="#fff" opacity="0.55" transform="rotate(-20 -5 -5.5)"/>
+    <!-- orbit front -->
+    <g transform="rotate(-24)" filter="url(#glow)">
+      <path d="M -25 0 C -25 8 25 8 25 0" fill="none" stroke="url(#ringFront)" stroke-width="2.8"/>
+      <g transform="translate(24,1.4)">
+        <circle r="3.2" fill="url(#moon)"/>
+        <ellipse cx="-1" cy="-1" rx="1" ry="0.8" fill="#fff" opacity="0.7"/>
+      </g>
+    </g>
+  </g>
+</svg>
