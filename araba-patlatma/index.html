@@ -329,6 +329,19 @@ const MISSIONS=[
 const c3d=document.getElementById('c3d'),c2d=document.getElementById('c2d');
 const octx=c2d.getContext('2d');
 
+// Belirgin imlec: gri yolda kaybolmamasi icin parlak yesil arti + siyah kontur
+(function(){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">'
+    +'<g stroke="#000" stroke-width="5" stroke-linecap="round">'
+    +'<line x1="17" y1="2" x2="17" y2="12"/><line x1="17" y1="22" x2="17" y2="32"/>'
+    +'<line x1="2" y1="17" x2="12" y2="17"/><line x1="22" y1="17" x2="32" y2="17"/></g>'
+    +'<g stroke="#39ff14" stroke-width="2.4" stroke-linecap="round">'
+    +'<line x1="17" y1="2" x2="17" y2="12"/><line x1="17" y1="22" x2="17" y2="32"/>'
+    +'<line x1="2" y1="17" x2="12" y2="17"/><line x1="22" y1="17" x2="32" y2="17"/></g>'
+    +'<circle cx="17" cy="17" r="2.6" fill="#39ff14" stroke="#000" stroke-width="1.2"/></svg>';
+  c3d.style.cursor='url("data:image/svg+xml,'+encodeURIComponent(svg)+'") 17 17, crosshair';
+})();
+
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x6fa8c9);
 scene.fog=new THREE.Fog(0x8eb4c8,110,260);
@@ -377,7 +390,7 @@ const ambGlow=new THREE.PointLight(0xffccaa,0.2,120);ambGlow.position.set(0,15,3
 
 // Road
 const ROAD_W=44, LANE_COUNT=4, LANE_W=ROAD_W/LANE_COUNT;
-const SPAWN_Z=-180, DESPAWN_Z=35;
+const SPAWN_Z=-80, DESPAWN_Z=35;
 
 const roadGeo=new THREE.PlaneGeometry(ROAD_W,420);
 const roadMat=new THREE.MeshStandardMaterial({color:0x3a3a40,roughness:0.92,metalness:0.05});
@@ -1148,6 +1161,23 @@ function spawnBoss(){
   updateHpBar(car);
 }
 
+// Arabaların birbirinin içinden geçmesini engelle: ayni seritte arkadaki araba ondekinin icine giremez.
+function resolveCarCollisions(){
+  const list=cars3D.filter(c=>c.alive&&!c.isBoss).sort((a,b)=>b.z-a.z); // ondeki (z buyuk) once
+  for(let i=1;i<list.length;i++){
+    const c=list[i];
+    for(let j=0;j<i;j++){
+      const o=list[j]; // c'nin onundeki bir araba
+      const lateral=(c.ct.w+o.ct.w)/2; // x'te ust uste mi (ayni serit mi)
+      if(Math.abs(o.x-c.x)<lateral){
+        const minGap=(c.ct.l+o.ct.l)/2+1.5; // tamponlar arasi guvenli bosluk
+        if(o.z-c.z<minGap)c.z=o.z-minGap; // arkadakini geri it
+      }
+    }
+    c.mesh.position.z=c.z;
+  }
+}
+
 // ═══ POWER-UPS ═══
 const POWERUP_TYPES=[
   {id:'slowtime',color:0x00aaff,label:'YAVAS',duration:5},
@@ -1871,10 +1901,13 @@ function update(dt){
     }
   }
 
+  // Once tum arabalari ilerlet, sonra ust uste binmeyi engelle (despawn/can kaybi kontrolunden once)
+  for(const c of cars3D){if(c.alive)c.z+=c.speed*slow*dt;}
+  resolveCarCollisions();
+
   for(let i=cars3D.length-1;i>=0;i--){
     const c=cars3D[i];
     if(!c.alive){cars3D.splice(i,1);continue;}
-    c.z+=c.speed*slow*dt;
     c.mesh.position.z=c.z;
 
     // Boss movement & shooting
