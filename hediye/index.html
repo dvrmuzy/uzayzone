@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uzay Zone — Hediye Kartı</title>
+<link rel="icon" href="../logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="../logo/favicon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<script src="../analytics.js"></script>
+<script>window.UZD_RENDER_ONLY = true;</script>
+<script src="../destek.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  min-height: 100vh;
+  background: #050510;
+  color: #e8e0f0;
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 16px;
+  overflow-x: hidden;
+}
+.nebula {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 20%, rgba(100, 40, 180, 0.16), transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(0, 100, 220, 0.10), transparent 50%),
+    radial-gradient(ellipse at 60% 40%, rgba(255, 95, 162, 0.06), transparent 60%);
+}
+.yildiz { position: fixed; border-radius: 50%; background: #fff; pointer-events: none; z-index: 0; animation: piril 3s ease-in-out infinite; }
+@keyframes piril { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.9; } }
+.kart {
+  position: relative; z-index: 1;
+  width: min(440px, 100%);
+  background: linear-gradient(165deg, #171029 0%, #0b0818 70%);
+  border: 1px solid rgba(255, 95, 162, 0.3);
+  border-radius: 26px;
+  padding: 36px 30px 30px;
+  text-align: center;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 70px rgba(255, 95, 162, 0.1);
+  animation: giris 0.5s ease;
+}
+@keyframes giris { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: none; } }
+.ust-baslik {
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 1rem;
+  letter-spacing: 0.16em; color: #fff; margin-bottom: 4px;
+  text-shadow: 0 0 20px rgba(255, 95, 162, 0.5);
+}
+.kimden { color: #aaa8c0; font-size: 0.88rem; margin-bottom: 20px; }
+.kimden b { color: #ff8fc2; }
+.gorsel {
+  width: min(280px, 80%); margin: 0 auto 14px; padding: 14px 14px 6px;
+  border-radius: 20px;
+  background: radial-gradient(circle at 50% 35%, rgba(125, 100, 220, 0.12), rgba(5,5,16,0.6) 75%);
+  border: 1px solid rgba(255,255,255,0.09);
+}
+.gorsel svg { width: 100%; height: auto; display: block; }
+.ozet {
+  display: inline-block; font-size: 0.82rem; font-weight: 700; color: #ff8fc2;
+  background: rgba(255, 95, 162, 0.1); border: 1px solid rgba(255, 95, 162, 0.28);
+  border-radius: 20px; padding: 6px 16px; margin-bottom: 16px;
+}
+.mesaj {
+  color: #c8c2dd; font-size: 0.95rem; line-height: 1.65; font-style: italic;
+  white-space: pre-wrap; word-break: break-word; margin-bottom: 6px;
+}
+.tarih { color: #66617f; font-size: 0.76rem; font-weight: 700; margin-bottom: 22px; }
+.site-btn {
+  display: inline-block; text-decoration: none;
+  font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.78rem;
+  letter-spacing: 0.14em; color: #050510;
+  background: linear-gradient(90deg, #ff5fa2, #b44eff);
+  border-radius: 30px; padding: 12px 30px;
+  box-shadow: 0 0 24px rgba(255, 95, 162, 0.3);
+  transition: all 0.25s;
+}
+.site-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 32px rgba(255, 95, 162, 0.5); }
+.hata { color: #8a84a8; font-size: 0.92rem; line-height: 1.7; padding: 20px 0 26px; }
+</style>
+</head>
+<body>
+<div class="nebula"></div>
+<div class="kart">
+  <p class="ust-baslik">🎁 UZAY ZONE HEDİYE KARTI</p>
+  <div id="icerik"></div>
+</div>
+<script>
+(function () {
+  // Arka plana minik yıldızlar serpiştir
+  for (let i = 0; i < 40; i++) {
+    const y = document.createElement('div');
+    y.className = 'yildiz';
+    const b = (Math.random() * 1.6 + 0.6).toFixed(1);
+    y.style.cssText = `left:${Math.random() * 100}vw;top:${Math.random() * 100}vh;` +
+      `width:${b}px;height:${b}px;animation-delay:${(Math.random() * 3).toFixed(1)}s;`;
+    document.body.appendChild(y);
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  const kutu = document.getElementById('icerik');
+  let veri = null;
+  try {
+    const b64 = location.hash.slice(1);
+    if (b64) veri = JSON.parse(decodeURIComponent(escape(atob(b64))));
+  } catch (e) { /* bozuk link */ }
+
+  if (!veri || !veri.hediye) {
+    kutu.innerHTML = `<p class="hata">Hediye bulunamadı ya da bağlantı eksik kopyalanmış.<br>
+      Maildeki bağlantının tamamını kullandığından emin ol.</p>
+      <a class="site-btn" href="../">UZAY ZONE'A GİT →</a>`;
+    return;
+  }
+
+  const D = window.UzayDestek;
+  const tarih = veri.tarih ? new Date(veri.tarih) : null;
+  kutu.innerHTML = `
+    <p class="kimden"><b>${esc(veri.isim || 'Anonim bir ziyaretçi')}</b> geliştiriciye bir hediye gönderdi:</p>
+    <div class="gorsel">${D.renderGift(veri.hediye)}</div>
+    <div><span class="ozet">${esc(D.summarize(veri.hediye))}</span></div>
+    ${veri.mesaj ? `<p class="mesaj">“${esc(veri.mesaj)}”</p>` : ''}
+    ${tarih && !isNaN(tarih) ? `<p class="tarih">${tarih.toLocaleString('tr-TR', { dateStyle: 'long', timeStyle: 'short' })}</p>` : '<div style="height:10px"></div>'}
+    <a class="site-btn" href="../">UZAY ZONE'A GİT →</a>`;
+})();
+</script>
+</body>
+</html>
