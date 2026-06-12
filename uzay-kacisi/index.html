@@ -644,10 +644,14 @@ function setPointer(cx, cy) {
 window.addEventListener('mousemove', e => setPointer(e.clientX, e.clientY));
 window.addEventListener('touchstart', e => {
   ensureAudio();
+  // Buton/link/overlay üzerindeyken preventDefault çağrılırsa click olayı
+  // üretilmez ve FIRLAT butonu dokunmatik ekranda çalışmaz.
+  if (e.target.closest('.overlay, .btn, a')) return;
   e.preventDefault();
   setPointer(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
 window.addEventListener('touchmove', e => {
+  if (e.target.closest('.overlay, .btn, a')) return;
   e.preventDefault();
   setPointer(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
