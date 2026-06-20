@@ -70,6 +70,33 @@
   .hbar.dead{opacity:.4;}
   /* mobile note */
   #mobileNote{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:.7rem;color:#a87;z-index:15;pointer-events:none;}
+  /* in-game control hints (centered below ground line) */
+  #ctrlWrap{position:absolute;bottom:8px;left:14px;right:14px;z-index:15;pointer-events:none;
+    display:flex;gap:16px;justify-content:space-between;align-items:flex-end;}
+  .ctrlhint{background:rgba(10,3,3,.55);border:1px solid rgba(255,255,255,.14);border-radius:12px;
+    padding:6px 11px;backdrop-filter:blur(6px);max-width:42vw;}
+  .ctrlhint .chead{display:flex;align-items:center;gap:6px;font-weight:900;font-size:.8rem;margin-bottom:5px;}
+  .ctrlhint .chead .dot{width:11px;height:11px;}
+  .ctrlhint .crow{font-size:.68rem;color:#e7c8bb;line-height:1.7;}
+  .ctrlhint .crow b{display:inline-block;background:rgba(255,255,255,.12);color:#fff;border-radius:5px;
+    padding:1px 6px;margin:0 1px;font-size:.66rem;border:1px solid rgba(255,255,255,.18);}
+  @media(max-width:560px){ .ctrlhint{display:none;} }
+  /* touch controls */
+  #touch{position:absolute;inset:0;z-index:16;pointer-events:none;}
+  #touch .tpad{position:absolute;bottom:20px;display:grid;gap:9px;}
+  #touch .left{left:18px;grid-template-columns:repeat(3,58px);grid-auto-rows:58px;}
+  #touch .right{right:18px;grid-template-columns:repeat(2,72px);grid-auto-rows:52px;}
+  #touch .left [data-k=up]{grid-column:2;grid-row:1;}
+  #touch .left [data-k=left]{grid-column:1;grid-row:2;}
+  #touch .left [data-k=down]{grid-column:2;grid-row:2;}
+  #touch .left [data-k=right]{grid-column:3;grid-row:2;}
+  .tbtn{pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;
+    border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.13);color:#fff;
+    border-radius:50%;font-family:var(--font);font-size:1.5rem;font-weight:900;
+    display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+    box-shadow:0 4px 14px rgba(0,0,0,.35);}
+  .tbtn.atk{border-radius:14px;font-size:.82rem;background:rgba(255,59,59,.22);border-color:rgba(255,140,46,.5);}
+  .tbtn.on{background:rgba(255,140,46,.5);transform:scale(.94);}
   a.home{position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#ffb199;font-family:var(--font);font-size:.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background .3s,transform .2s;}
 </style>
 </head>
@@ -80,6 +107,26 @@
   <!-- HUD -->
   <div id="hud" class="hidden"></div>
   <div id="mobileNote" class="hidden"></div>
+  <div id="ctrlWrap" class="hidden">
+    <div id="ctrlLeft" class="ctrlhint hidden"></div>
+    <div id="ctrlRight" class="ctrlhint hidden"></div>
+  </div>
+
+  <!-- TOUCH CONTROLS (mobil/tablet, tek oyuncu) -->
+  <div id="touch" class="hidden">
+    <div class="tpad left">
+      <button class="tbtn" data-k="up">▲</button>
+      <button class="tbtn" data-k="left">◀</button>
+      <button class="tbtn" data-k="down">▼</button>
+      <button class="tbtn" data-k="right">▶</button>
+    </div>
+    <div class="tpad right">
+      <button class="tbtn atk" data-k="weapon">Silah</button>
+      <button class="tbtn atk" data-k="head">Kafa</button>
+      <button class="tbtn atk" data-k="punch">Yumruk</button>
+      <button class="tbtn atk" data-k="kick">Tekme</button>
+    </div>
+  </div>
 
   <!-- MENU -->
   <div id="menu" class="overlay">
@@ -136,7 +183,7 @@ let W = 0, H = 0, GROUND = 0;
 function resize(){
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
-  GROUND = H - Math.max(70, H*0.12);
+  GROUND = H - Math.max(120, H*0.18);
 }
 window.addEventListener('resize', resize);
 resize();
@@ -623,6 +670,57 @@ let lastT=0;
 /* ---------------- DOM refs ---------------- */
 const $=id=>document.getElementById(id);
 const menuEl=$('menu'), setupEl=$('setup'), countEl=$('countdown'), overEl=$('over'), hudEl=$('hud'), mobileNote=$('mobileNote');
+const ctrlWrapEl=$('ctrlWrap'), ctrlLeftEl=$('ctrlLeft'), ctrlRightEl=$('ctrlRight');
+
+/* Compact in-game control hint for a fighter */
+function ctrlHintHTML(f){
+  const s=f.scheme;
+  const head=`<div class="chead"><span class="dot" style="background:${f.color};color:${f.color}"></span>${f.name}</div>`;
+  if(s.mouse){
+    return head+`<div class="crow"><b>Fare</b> hareket · imleci başa götür <b>Zıpla</b><br><b>Sol tık</b> Silah · <b>Sağ tık</b> Tekme</div>`;
+  }
+  const key=k=>`<b>${k}</b>`;
+  const move = s.up==='arrowup'
+    ? key('↑')+key('←')+key('↓')+key('→')
+    : key(s.up.toUpperCase())+key(s.left.toUpperCase())+key(s.down.toUpperCase())+key(s.right.toUpperCase());
+  return head+`<div class="crow">
+    Hareket ${move}<br>
+    Silah ${key(s.weapon.toUpperCase())} · Kafa ${key(s.head.toUpperCase())}<br>
+    Yumruk ${key(s.punch.toUpperCase())} · Tekme ${key(s.kick.toUpperCase())}</div>`;
+}
+function showCtrlHints(){
+  const humans=fighters.filter(f=>!f.isBot);
+  if(humans[0]){ ctrlLeftEl.innerHTML=ctrlHintHTML(humans[0]); ctrlLeftEl.classList.remove('hidden'); }
+  else ctrlLeftEl.classList.add('hidden');
+  if(humans[1]){ ctrlRightEl.innerHTML=ctrlHintHTML(humans[1]); ctrlRightEl.classList.remove('hidden'); }
+  else ctrlRightEl.classList.add('hidden');
+  ctrlWrapEl.classList.remove('hidden');
+}
+function hideCtrlHints(){ ctrlWrapEl.classList.add('hidden'); }
+
+/* ---------------- Touch controls (mobil/tablet, tek oyuncu) ---------------- */
+const isTouch = (window.matchMedia && matchMedia('(pointer:coarse)').matches) || ('ontouchstart' in window);
+const touchEl=$('touch');
+(function bindTouch(){
+  if(!isTouch) return;
+  const HUMAN=SCHEMES[0]; // tek oyuncu modunda insan oyuncu Kırmızı şemayı kullanır
+  touchEl.querySelectorAll('.tbtn').forEach(btn=>{
+    const key=HUMAN[btn.dataset.k];
+    if(!key) return;
+    const set=v=>{ keys[key]=v; btn.classList.toggle('on',v); };
+    const press=e=>{ e.preventDefault(); set(true); };
+    const release=e=>{ e.preventDefault(); set(false); };
+    btn.addEventListener('touchstart',press,{passive:false});
+    btn.addEventListener('touchend',release,{passive:false});
+    btn.addEventListener('touchcancel',release,{passive:false});
+  });
+})();
+function showTouchControls(){ if(isTouch && NUM===1){ touchEl.classList.remove('hidden'); ctrlWrapEl.classList.add('hidden'); } }
+function hideTouchControls(){
+  touchEl.classList.add('hidden');
+  // güvenlik: basılı kalan tuşları temizle
+  for(const k of Object.values(SCHEMES[0])){ if(typeof k==='string') keys[k]=false; }
+}
 
 /* Build player-count buttons */
 (function buildCount(){
@@ -723,6 +821,8 @@ function beginPlay(){
   hudEl.classList.remove('hidden');
   mobileNote.classList.remove('hidden');
   mobileNote.textContent = MAP.name + ' • Son ayakta kalan kazanır!';
+  showCtrlHints();
+  showTouchControls();
   lastT=performance.now();
 }
 
@@ -763,6 +863,8 @@ function checkWin(){
         } else { wt.textContent='Berabere!'; wt.style.color='#fff'; ws.textContent=''; }
         Audio.setIntensity(0.5);
         hudEl.classList.add('hidden'); mobileNote.classList.add('hidden');
+        hideCtrlHints();
+        hideTouchControls();
         show('over');
       }, 900);
     }
