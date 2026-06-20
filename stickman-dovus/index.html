@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Stickman Dövüş</title>
+<script src="../analytics.js"></script>
+<style>
+  :root{
+    --red:#ff3b3b; --accent:#ff8c2e; --gold:#ffd24a;
+    --bg0:#160505; --bg1:#260909;
+    --font:'Segoe UI',system-ui,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:#0a0303;font-family:var(--font);color:#fff;}
+  #wrap{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 30%,#2a0a0a,#0a0303 70%);}
+  canvas{display:block;background:#111;touch-action:none;}
+  /* ---- Overlay panels ---- */
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:18px;z-index:20;background:rgba(10,3,3,0.82);backdrop-filter:blur(6px);overflow-y:auto;}
+  .hidden{display:none!important;}
+  h1.logo{font-size:clamp(2.2rem,8vw,5rem);font-weight:900;letter-spacing:2px;line-height:1;
+    background:linear-gradient(180deg,#fff,var(--gold) 45%,var(--red));-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 40px rgba(255,59,59,.4);filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
+  .sub{margin-top:8px;color:#ffb199;font-size:clamp(.8rem,2.5vw,1.1rem);letter-spacing:1px;}
+  .q{margin:22px 0 14px;font-size:clamp(1.05rem,3.6vw,1.5rem);font-weight:700;color:#fff;}
+  .pcount{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+  .pbtn{width:74px;height:88px;border:none;border-radius:16px;cursor:pointer;font-family:var(--font);
+    background:linear-gradient(160deg,#3a1010,#220808);color:#fff;border:2px solid rgba(255,140,46,.35);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:transform .15s,box-shadow .2s,border-color .2s;}
+  .pbtn .n{font-size:2.2rem;font-weight:900;line-height:1;color:var(--gold);}
+  .pbtn .l{font-size:.62rem;color:#ffb199;letter-spacing:.4px;}
+  .pbtn:hover,.pbtn:active{transform:translateY(-4px) scale(1.05);box-shadow:0 8px 24px rgba(255,59,59,.35);border-color:var(--red);}
+  .hint{margin-top:18px;color:#c98;font-size:.8rem;max-width:520px;line-height:1.5;}
+  .tap-start{margin-top:26px;font-size:.9rem;color:var(--gold);animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  /* ---- Setup (weapon + ready) ---- */
+  #setup .slots{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:stretch;max-width:1100px;margin-top:6px;}
+  .slot{width:200px;background:linear-gradient(165deg,#2a0c0c,#180707);border:2px solid rgba(255,255,255,.08);border-radius:18px;padding:14px 12px;display:flex;flex-direction:column;gap:10px;align-items:center;}
+  .slot .ptitle{font-weight:900;font-size:1.05rem;display:flex;align-items:center;gap:8px;}
+  .dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 10px currentColor;}
+  .ctrlbox{font-size:.66rem;color:#d9b3a3;line-height:1.55;background:rgba(0,0,0,.3);border-radius:10px;padding:7px 9px;width:100%;text-align:left;}
+  .ctrlbox b{color:#fff;}
+  .weapons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%;}
+  .wbtn{aspect-ratio:1;border:2px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);border-radius:10px;cursor:pointer;font-size:1.4rem;display:flex;align-items:center;justify-content:center;transition:.15s;}
+  .wbtn small{display:none;}
+  .wbtn.sel{border-color:var(--gold);background:rgba(255,210,74,.18);transform:scale(1.05);}
+  .wname{font-size:.72rem;color:#ffb199;min-height:1em;}
+  .ready{width:100%;padding:9px;border:none;border-radius:12px;cursor:pointer;font-weight:900;font-family:var(--font);font-size:.95rem;
+    background:linear-gradient(160deg,#3a1212,#240a0a);color:#fff;border:2px solid rgba(255,59,59,.4);transition:.15s;letter-spacing:.5px;}
+  .ready:hover{transform:translateY(-2px);}
+  .ready.on{background:linear-gradient(160deg,#1f7a2e,#0f4a1c);border-color:#39d353;color:#eafff0;}
+  .botlabel{font-size:.7rem;color:#9ad;letter-spacing:.5px;}
+  #startRow{margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+  #startBtn{padding:14px 40px;font-size:1.2rem;font-weight:900;border:none;border-radius:40px;cursor:pointer;font-family:var(--font);letter-spacing:1px;
+    background:linear-gradient(160deg,var(--red),#a00);color:#fff;box-shadow:0 8px 30px rgba(255,59,59,.4);transition:.2s;}
+  #startBtn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;}
+  #startBtn:not(:disabled):hover{transform:translateY(-3px) scale(1.04);}
+  .smallbtn{background:none;border:1px solid rgba(255,255,255,.25);color:#ffb199;border-radius:20px;padding:7px 16px;cursor:pointer;font-family:var(--font);font-size:.8rem;margin-top:6px;}
+  /* ---- Countdown ---- */
+  #count{font-size:clamp(5rem,28vw,18rem);font-weight:900;color:#fff;text-shadow:0 0 60px var(--red),0 6px 0 #700;animation:cpop .9s ease-out;}
+  @keyframes cpop{0%{transform:scale(2.4);opacity:0}40%{opacity:1}100%{transform:scale(1);opacity:1}}
+  /* ---- Game over ---- */
+  #winText{font-size:clamp(1.6rem,7vw,3.4rem);font-weight:900;margin-bottom:6px;}
+  /* ---- HUD ---- */
+  #hud{position:absolute;top:10px;left:0;right:0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;z-index:15;padding:0 70px;pointer-events:none;}
+  .hbar{min-width:120px;background:rgba(0,0,0,.5);border-radius:10px;padding:5px 9px;border:1px solid rgba(255,255,255,.12);}
+  .hbar .row{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:800;}
+  .hbar .track{height:8px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:4px;overflow:hidden;}
+  .hbar .fill{height:100%;border-radius:6px;transition:width .12s;}
+  .hbar.dead{opacity:.4;}
+  /* mobile note */
+  #mobileNote{position:absolute;bottom:8px;left:0;right:0;text-align:center;font-size:.7rem;color:#a87;z-index:15;pointer-events:none;}
+  a.home{position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#ffb199;font-family:var(--font);font-size:.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background .3s,transform .2s;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden"></div>
+  <div id="mobileNote" class="hidden"></div>
+
+  <!-- MENU -->
+  <div id="menu" class="overlay">
+    <h1 class="logo">STICKMAN<br>DÖVÜŞ</h1>
+    <div class="sub">SON AYAKTA KALAN KAZANIR</div>
+    <div class="q">Kaç kişi oynayacaksınız?</div>
+    <div class="pcount" id="pcount"></div>
+    <div class="hint">
+      <b>1</b> seçersen bilgisayara karşı oynarsın. <b>2–3</b> seçersen herkese karşı dövüşürsün.<br>
+      <b>1. Oyuncu:</b> W A S D + Q E R F &nbsp;·&nbsp; <b>2. Oyuncu:</b> Ok tuşları + . , M N &nbsp;·&nbsp; <b>3. Oyuncu:</b> Fare (sol tık silah · sağ tık tekme)
+    </div>
+    <div class="tap-start">Bir sayıya dokunarak başla 🔊 (müzik açılır)</div>
+  </div>
+
+  <!-- SETUP -->
+  <div id="setup" class="overlay hidden">
+    <div class="q" style="margin-top:0">Silahını seç ve <b>HAZIR</b>'a bas!</div>
+    <div class="slots" id="slots"></div>
+    <div id="startRow">
+      <button id="startBtn" disabled>BAŞLAT</button>
+      <button class="smallbtn" id="backBtn">← Geri</button>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="countdown" class="overlay hidden" style="background:rgba(10,3,3,0.35)">
+    <div id="count">3</div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="over" class="overlay hidden">
+    <div id="winText">🏆 Kazanan!</div>
+    <div class="sub" id="winSub"></div>
+    <button id="againBtn" class="ready on" style="width:auto;padding:14px 40px;margin-top:24px;font-size:1.1rem;border-radius:40px;">TEKRAR OYNA</button>
+    <button class="smallbtn" id="menuBtn">Ana Menü</button>
+  </div>
+
+  <a class="home" href="../"
+     onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'"
+     onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+</div>
+
+<script>
+/* =========================================================================
+   STICKMAN DÖVÜŞ — tek dosya, vanilla JS + Canvas + Web Audio
+   ========================================================================= */
+(() => {
+"use strict";
+
+/* ---------------- Canvas ---------------- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0, GROUND = 0;
+function resize(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  GROUND = H - Math.max(70, H*0.12);
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- Weapons ---------------- */
+const WEAPONS = {
+  yumruk:  {name:'Eldiven',  icon:'🥊', type:'melee', dmg:9,  range:54,  cd:380, kb:7,  reach:1},
+  kilic:   {name:'Kılıç',    icon:'⚔️', type:'melee', dmg:18, range:78,  cd:560, kb:9,  reach:1.4},
+  sopa:    {name:'Sopa',     icon:'🏏', type:'melee', dmg:13, range:66,  cd:520, kb:16, reach:1.2},
+  mizrak:  {name:'Mızrak',   icon:'🔱', type:'melee', dmg:15, range:100, cd:620, kb:8,  reach:1.7},
+  tabanca: {name:'Tabanca',  icon:'🔫', type:'gun',   dmg:13, range:0,   cd:560, kb:5,  speed:13},
+  balta:   {name:'Balta',    icon:'🪓', type:'melee', dmg:24, range:64,  cd:880, kb:12, reach:1.15},
+};
+const WKEYS = Object.keys(WEAPONS);
+
+/* ---------------- Player colours & control schemes ----------------
+   Tek klavye için her oyuncuya çakışmayan tuşlar atanır.
+   Eylem sırası kullanıcı isteğine göre: silah / kafa / yumruk / tekme.   */
+const SCHEMES = [
+  { color:'#ff4d4d', name:'Kırmızı',
+    up:'w', left:'a', down:'s', right:'d', weapon:'q', head:'e', punch:'r', kick:'f',
+    label:'Hareket <b>W A S D</b> · Silah <b>Q</b> · Kafa <b>E</b> · Yumruk <b>R</b> · Tekme <b>F</b>' },
+  { color:'#4da3ff', name:'Mavi',
+    up:'arrowup', left:'arrowleft', down:'arrowdown', right:'arrowright', weapon:'.', head:',', punch:'m', kick:'n',
+    label:'Hareket <b>Ok tuşları</b> · Silah <b>.</b> · Kafa <b>,</b> · Yumruk <b>M</b> · Tekme <b>N</b>' },
+  { color:'#46e06a', name:'Yeşil', mouse:true,
+    label:'<b>Fare</b> ile oyna · İmleci takip eder · İmleci başının üstüne götürünce <b>Zıplar</b> · <b>Sol tık</b> Silah · <b>Sağ tık</b> Tekme' },
+];
+
+/* ---------------- Maps ---------------- */
+function buildMaps(){
+  const g = GROUND;
+  return [
+    { name:'Çatı', sky:['#3a1a3a','#120615'], ground:'#241026',
+      plats:[ {x:W*0.18,y:g-150,w:W*0.2,h:18}, {x:W*0.62,y:g-150,w:W*0.2,h:18}, {x:W*0.4,y:g-260,w:W*0.2,h:18} ] },
+    { name:'Vadi', sky:['#13314a','#06121f'], ground:'#0c2438',
+      plats:[ {x:W*0.08,y:g-120,w:W*0.16,h:18}, {x:W*0.76,y:g-120,w:W*0.16,h:18}, {x:W*0.42,y:g-200,w:W*0.16,h:18} ] },
+    { name:'Çöl', sky:['#5a3514','#2a1606'], ground:'#3a2410',
+      plats:[ {x:W*0.3,y:g-170,w:W*0.4,h:18}, {x:W*0.05,y:g-90,w:W*0.14,h:18}, {x:W*0.81,y:g-90,w:W*0.14,h:18} ] },
+    { name:'Dojo', sky:['#102a22','#06140f'], ground:'#0c2a1c',
+      plats:[ {x:W*0.22,y:g-130,w:W*0.18,h:18}, {x:W*0.6,y:g-130,w:W*0.18,h:18}, {x:W*0.38,y:g-240,w:W*0.24,h:18} ] },
+    { name:'Kale', sky:['#2a2a3a','#0e0e18'], ground:'#1a1a2a',
+      plats:[ {x:W*0.12,y:g-200,w:W*0.16,h:18}, {x:W*0.72,y:g-200,w:W*0.16,h:18}, {x:W*0.34,y:g-110,w:W*0.32,h:18} ] },
+  ];
+}
+let MAP = null;
+
+/* ---------------- Audio Engine ---------------- */
+const Audio = (() => {
+  let ac=null, master=null, musicGain=null, sfxGain=null;
+  let playing=false, step=0, timer=null, intensity=0.55, targetInt=0.55;
+  function ensure(){
+    if(ac) return;
+    ac = new (window.AudioContext||window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value=0.9; master.connect(ac.destination);
+    musicGain = ac.createGain(); musicGain.gain.value=0; musicGain.connect(master);
+    sfxGain = ac.createGain(); sfxGain.gain.value=0.9; sfxGain.connect(master);
+  }
+  function now(){ return ac.currentTime; }
+  // note helper
+  function tone(freq,t,dur,type,gain,dest){
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.type=type||'square'; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain,t+0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g); g.connect(dest||musicGain); o.start(t); o.stop(t+dur+0.02);
+    return o;
+  }
+  function noise(t,dur,gain,dest,filterFreq){
+    const len=Math.floor(ac.sampleRate*dur);
+    const buf=ac.createBuffer(1,len,ac.sampleRate); const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1);
+    const src=ac.createBufferSource(); src.buffer=buf;
+    const g=ac.createGain(); g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    let node=src;
+    if(filterFreq){ const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=filterFreq; src.connect(f); node=f; }
+    node.connect(g); g.connect(dest||sfxGain); src.start(t); src.stop(t+dur);
+  }
+  // driving action loop
+  const BASS=[55,55,82.4,55, 49,49,73.4,49];       // A / D minor-ish riff
+  const ARP =[440,523,659,523, 392,494,587,494];
+  function schedule(){
+    const t = now()+0.04;
+    const i = step%8;
+    const lvl = intensity;
+    // kick on every beat
+    if(i%2===0){ noise(t,0.13,0.9*lvl,sfxGain,180); tone(60,t,0.12,'sine',0.9*lvl,musicGain); }
+    // snare on off-beats
+    if(i===2||i===6){ noise(t,0.12,0.55*lvl,sfxGain,2600); }
+    // hi-hat
+    noise(t,0.03,0.12*lvl,sfxGain,9000);
+    // bass
+    tone(BASS[i],t,0.22,'sawtooth',0.18*lvl,musicGain);
+    // arp lead
+    tone(ARP[i],t,0.12,'square',0.10*lvl,musicGain);
+    step++;
+    // smooth intensity toward target
+    intensity += (targetInt-intensity)*0.08;
+    musicGain.gain.setTargetAtTime(0.5*intensity+0.15, now(), 0.2);
+  }
+  return {
+    start(){ ensure(); if(ac.state==='suspended') ac.resume();
+      if(playing) return; playing=true; step=0;
+      const interval = (60/140)/2*1000; // 140 bpm, 8th notes
+      timer=setInterval(schedule, interval);
+      musicGain.gain.setTargetAtTime(0.45, now(), 0.6);
+    },
+    setIntensity(v){ targetInt=v; },
+    stop(){ playing=false; if(timer) clearInterval(timer); timer=null;
+      if(musicGain) musicGain.gain.setTargetAtTime(0, now(), 0.3); },
+    /* ---- SFX ---- */
+    punch(){ ensure(); const t=now(); noise(t,0.09,0.5,sfxGain,800); tone(140,t,0.08,'square',0.25,sfxGain); },
+    kick(){ ensure(); const t=now(); noise(t,0.14,0.6,sfxGain,400); tone(90,t,0.13,'sine',0.4,sfxGain); },
+    head(){ ensure(); const t=now(); tone(220,t,0.05,'square',0.4,sfxGain); tone(160,t+0.04,0.07,'square',0.3,sfxGain); },
+    sword(){ ensure(); const t=now(); const o=tone(1400,t,0.18,'sawtooth',0.22,sfxGain); o.frequency.exponentialRampToValueAtTime(500,t+0.18); },
+    gun(){ ensure(); const t=now(); noise(t,0.12,0.6,sfxGain,1500); const o=tone(300,t,0.1,'square',0.3,sfxGain); o.frequency.exponentialRampToValueAtTime(80,t+0.1); },
+    hit(){ ensure(); const t=now(); noise(t,0.1,0.4,sfxGain,1200); tone(200,t,0.06,'triangle',0.25,sfxGain); },
+    beep(hi){ ensure(); const t=now(); tone(hi?880:440,t,0.18,'square',0.4,sfxGain); },
+    go(){ ensure(); const t=now(); const o=tone(440,t,0.5,'sawtooth',0.5,sfxGain); o.frequency.exponentialRampToValueAtTime(1320,t+0.45); },
+    die(){ ensure(); const t=now(); const o=tone(400,t,0.4,'square',0.35,sfxGain); o.frequency.exponentialRampToValueAtTime(60,t+0.4); },
+  };
+})();
+
+/* ---------------- Input ---------------- */
+const keys = {};
+window.addEventListener('keydown', e=>{
+  const k=e.key.toLowerCase();
+  keys[k]=true;
+  if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k)) e.preventDefault();
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+window.addEventListener('blur', ()=>{ for(const k in keys) keys[k]=false; mouse.left=false; mouse.right=false; });
+
+/* ---- Mouse (3. oyuncu) ---- */
+const mouse = { x: 0, y: 0, left:false, right:false };
+window.addEventListener('mousemove', e=>{ mouse.x=e.clientX; mouse.y=e.clientY; });
+window.addEventListener('mousedown', e=>{
+  if(e.button===0) mouse.left=true;
+  else if(e.button===2) mouse.right=true;
+});
+window.addEventListener('mouseup', e=>{
+  if(e.button===0) mouse.left=false;
+  else if(e.button===2) mouse.right=false;
+});
+// sağ tık menüsünü engelle (oyun sırasında)
+canvas.addEventListener('contextmenu', e=> e.preventDefault());
+
+/* ---------------- Fighter ---------------- */
+class Fighter{
+  constructor(idx, scheme, weaponKey, isBot){
+    this.idx=idx; this.scheme=scheme; this.color=scheme.color;
+    this.name = isBot ? 'Bilgisayar' : scheme.name;
+    this.weaponKey=weaponKey; this.weapon=WEAPONS[weaponKey];
+    this.isBot=isBot;
+    this.w=24; this.h=64;
+    this.reset();
+  }
+  reset(){
+    this.x = 100 + this.idx*((W-200)/Math.max(1,(NUM-1)||1));
+    if(NUM===1) this.x = this.idx===0 ? W*0.3 : W*0.7;
+    this.x = Math.min(W-60, Math.max(60, this.x));
+    this.y = GROUND - this.h; this.vx=0; this.vy=0; this.onGround=true;
+    this.face = this.x < W/2 ? 1 : -1;
+    this.hp=100; this.dead=false;
+    this.attack=null;        // {type, t, dur, active, hit:Set}
+    this.cd={};              // cooldown timestamps
+    this.hurtT=0; this.deathT=0;
+    this.aiT=0; this.aiJump=0; this.aiState='chase';
+    this.walkPhase=0;
+  }
+  canAct(type){ return (this.cd[type]||0) <= performance.now() && !this.attack && !this.dead; }
+  startAttack(type){
+    const now=performance.now();
+    let dur, cd;
+    if(type==='weapon'){ cd=this.weapon.cd; dur=Math.min(360,cd*0.6); }
+    else if(type==='kick'){ cd=460; dur=300; }
+    else if(type==='punch'){ cd=320; dur=200; }
+    else { cd=400; dur=260; } // head
+    this.attack={ type, t:now, dur, hit:new Set(), fired:false };
+    this.cd[type]=now+cd;
+    // sound
+    if(type==='kick') Audio.kick();
+    else if(type==='punch') Audio.punch();
+    else if(type==='head') Audio.head();
+    else { // weapon
+      if(this.weapon.type==='gun') Audio.gun();
+      else if(this.weaponKey==='kilic'||this.weaponKey==='balta') Audio.sword();
+      else Audio.kick();
+    }
+    // gun fires a projectile immediately
+    if(type==='weapon' && this.weapon.type==='gun'){
+      projectiles.push(new Projectile(this));
+    }
+  }
+  attackInfo(){
+    // returns {reach, dmg, kb} for current melee attack
+    const a=this.attack; if(!a) return null;
+    if(a.type==='kick') return {reach:48, dmg:11, kb:11, yoff:18};
+    if(a.type==='punch') return {reach:40, dmg:7, kb:7, yoff:-6};
+    if(a.type==='head') return {reach:34, dmg:9, kb:9, yoff:-26};
+    // weapon melee
+    return {reach:this.weapon.range, dmg:this.weapon.dmg, kb:this.weapon.kb, yoff:-4};
+  }
+  cx(){ return this.x + this.w/2; }
+  cy(){ return this.y + this.h/2; }
+  takeHit(dmg, kbx, fromY){
+    if(this.dead) return;
+    this.hp-=dmg; this.hurtT=performance.now();
+    this.vx += kbx; this.vy -= 3.5;
+    Audio.hit();
+    spawnBlood(this.cx(), this.cy(), Math.sign(kbx));
+    if(this.hp<=0){ this.hp=0; this.dead=true; this.deathT=performance.now(); Audio.die(); }
+  }
+  update(dt){
+    if(this.dead){
+      // ragdoll-ish fall
+      this.vy+=0.6; this.y+=this.vy; this.x+=this.vx*0.96; this.vx*=0.92;
+      if(this.y> GROUND-10){ this.y=GROUND-10; this.vy=0; this.vx*=0.7; }
+      return;
+    }
+    if(this.isBot) this.think();
+    else this.control();
+
+    // physics
+    this.vy += 0.7; // gravity
+    this.x += this.vx; this.y += this.vy;
+    this.vx *= 0.82;
+
+    // ground
+    if(this.y + this.h >= GROUND){ this.y=GROUND-this.h; this.vy=0; this.onGround=true; }
+    else this.onGround=false;
+    // platforms (land on top when falling)
+    for(const p of MAP.plats){
+      if(this.vy>=0 && this.x+this.w> p.x && this.x < p.x+p.w){
+        const feet=this.y+this.h;
+        if(feet> p.y && feet < p.y+p.h+this.vy+6 && (feet-this.vy) <= p.y+8){
+          this.y=p.y-this.h; this.vy=0; this.onGround=true;
+        }
+      }
+    }
+    // world bounds
+    if(this.x<10){ this.x=10; this.vx=0; }
+    if(this.x>W-10-this.w){ this.x=W-10-this.w; this.vx=0; }
+
+    // walk anim
+    if(Math.abs(this.vx)>0.6 && this.onGround) this.walkPhase+=0.3;
+
+    // attack lifecycle + melee hit detection
+    if(this.attack){
+      const a=this.attack, age=performance.now()-a.t;
+      if(age>a.dur){ this.attack=null; }
+      else if(this.weapon.type!=='gun' || a.type!=='weapon'){
+        // active hit window middle 60%
+        if(age> a.dur*0.18 && age< a.dur*0.85){
+          const info=this.attackInfo();
+          const hx = this.cx() + this.face*(this.w/2+info.reach*0.5);
+          const hy = this.cy() + (info.yoff||0);
+          for(const f of fighters){
+            if(f===this||f.dead||a.hit.has(f.idx)) continue;
+            const dx=f.cx()-this.cx(), dy=f.cy()-hy;
+            if(Math.sign(dx)!==this.face && Math.abs(dx)>14) continue;
+            if(Math.abs(dx) < info.reach+f.w/2 && Math.abs(dy) < 46){
+              a.hit.add(f.idx);
+              f.takeHit(info.dmg, this.face*info.kb, hy);
+            }
+          }
+        }
+      }
+    }
+  }
+  control(){
+    if(this.scheme.mouse){ this.controlMouse(); return; }
+    const s=this.scheme;
+    let mv=0;
+    if(keys[s.left]) mv-=1;
+    if(keys[s.right]) mv+=1;
+    if(mv!==0){ this.vx += mv*1.6; this.face=mv; }
+    if(keys[s.up] && this.onGround){ this.vy=-15; this.onGround=false; }
+    if(keys[s.down] && !this.onGround){ this.vy+=1.2; }
+    if(keys[s.kick] && this.canAct('kick')) this.startAttack('kick');
+    if(keys[s.punch] && this.canAct('punch')) this.startAttack('punch');
+    if(keys[s.head] && this.canAct('head')) this.startAttack('head');
+    if(keys[s.weapon] && this.canAct('weapon')) this.startAttack('weapon');
+  }
+  controlMouse(){
+    // imlece doğru yürü
+    const dx = mouse.x - this.cx();
+    if(Math.abs(dx) > 14){ const dir = Math.sign(dx); this.vx += dir*1.6; this.face=dir; }
+    // imleç başının üstündeyse zıpla
+    if(mouse.y < this.y - 16 && this.onGround){ this.vy=-15; this.onGround=false; }
+    // havadayken imleç çok aşağıdaysa hızlı in
+    else if(mouse.y > this.y + this.h + 50 && !this.onGround){ this.vy += 1.2; }
+    // saldırılar
+    if(mouse.left && this.canAct('weapon')) this.startAttack('weapon');
+    if(mouse.right && this.canAct('kick')) this.startAttack('kick');
+  }
+  think(){
+    const now=performance.now();
+    // nearest living enemy
+    let tgt=null, best=1e9;
+    for(const f of fighters){ if(f===this||f.dead) continue; const d=Math.abs(f.cx()-this.cx()); if(d<best){best=d;tgt=f;} }
+    if(!tgt){ this.vx*=0.8; return; }
+    const dx = tgt.cx()-this.cx();
+    this.face = dx>=0?1:-1;
+    const range = this.weapon.type==='gun'? 280 : this.weapon.range+20;
+    // movement
+    if(Math.abs(dx) > range*0.8){ this.vx += this.face*1.3; }
+    else if(Math.abs(dx) < 40 && this.weapon.type==='gun'){ this.vx -= this.face*1.0; } // back off with gun
+    else { if(Math.random()<0.02) this.vx += (Math.random()<0.5?-1:1)*1.2; }
+    // jump occasionally or toward higher target
+    if(this.onGround && (tgt.cy() < this.cy()-40 || Math.random()<0.012)){ this.vy=-15; this.onGround=false; }
+    // attacks
+    if(now>this.aiT){
+      this.aiT = now + 200 + Math.random()*400;
+      if(this.weapon.type==='gun'){
+        if(Math.abs(tgt.cy()-this.cy())<60 && this.canAct('weapon')) this.startAttack('weapon');
+      } else {
+        if(Math.abs(dx) < this.weapon.range+30 && Math.abs(tgt.cy()-this.cy())<60){
+          const r=Math.random();
+          if(r<0.45 && this.canAct('weapon')) this.startAttack('weapon');
+          else if(r<0.65 && this.canAct('kick')) this.startAttack('kick');
+          else if(r<0.82 && this.canAct('punch')) this.startAttack('punch');
+          else if(this.canAct('head')) this.startAttack('head');
+        }
+      }
+    }
+  }
+  draw(){
+    const cx=this.cx(), topY=this.y, botY=this.y+this.h;
+    const flash = (performance.now()-this.hurtT<120);
+    ctx.save();
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.strokeStyle = this.dead ? '#777' : (flash?'#fff':this.color);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.lineWidth=6;
+    // shadow
+    ctx.save(); ctx.globalAlpha=0.25; ctx.fillStyle='#000';
+    ctx.beginPath(); ctx.ellipse(cx, GROUND-4, 22, 6, 0,0,7); ctx.fill(); ctx.restore();
+
+    const headR=11;
+    const neckY=topY+headR*2;
+    const hipY=topY+this.h*0.62;
+    // head
+    ctx.beginPath(); ctx.arc(cx, topY+headR, headR, 0, Math.PI*2);
+    this.dead? ctx.stroke(): ctx.fill();
+    // eyes direction marker
+    if(!this.dead){
+      ctx.save(); ctx.fillStyle='#0a0303';
+      ctx.beginPath(); ctx.arc(cx+this.face*4, topY+headR-1, 2.2,0,7); ctx.fill(); ctx.restore();
+    }
+    // spine
+    ctx.beginPath(); ctx.moveTo(cx,neckY); ctx.lineTo(cx,hipY); ctx.stroke();
+
+    // legs (walk anim)
+    const ph=this.walkPhase;
+    const legSwing = this.onGround? Math.sin(ph)*10 : 6;
+    const k = this.attack&&this.attack.type==='kick'?1:0;
+    // kicking leg extends forward
+    ctx.beginPath(); ctx.moveTo(cx,hipY);
+    if(k){ ctx.lineTo(cx+this.face*30, hipY+6); }
+    else ctx.lineTo(cx-legSwing, botY);
+    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,hipY); ctx.lineTo(cx+legSwing, botY); ctx.stroke();
+
+    // arms
+    const shY=neckY+8;
+    let aimAng = 0;
+    const at=this.attack;
+    // back arm
+    ctx.beginPath(); ctx.moveTo(cx,shY); ctx.lineTo(cx-this.face*10, shY+18); ctx.stroke();
+    // front arm depends on attack
+    ctx.beginPath(); ctx.moveTo(cx,shY);
+    if(at&&at.type==='punch'){ ctx.lineTo(cx+this.face*26, shY-2); }
+    else if(at&&at.type==='head'){ ctx.lineTo(cx-this.face*6, shY+16); }
+    else if(at&&at.type==='weapon'){
+      const prog=(performance.now()-at.t)/at.dur;
+      const ang=this.face*(-0.9+prog*1.8);
+      const ex=cx+Math.sin(ang+ (this.face>0?0:Math.PI))*0; // placeholder
+      const ax=cx+this.face*22*Math.cos(ang), ay=shY-18*Math.sin(Math.abs(ang));
+      ctx.lineTo(cx+this.face*20, shY-4);
+      aimAng=ang;
+    }
+    else { ctx.lineTo(cx+this.face*12, shY+16); }
+    ctx.stroke();
+
+    // weapon graphic in front hand
+    if(!this.dead) this.drawWeapon(cx, shY, at);
+
+    ctx.restore();
+  }
+  drawWeapon(cx, shY, at){
+    const f=this.face;
+    const hx = cx + f*(at&&at.type==='punch'?26: (at&&at.type==='weapon'?24:14));
+    const hy = shY + (at&&at.type==='punch'?-2: (at&&at.type==='weapon'?-6:14));
+    ctx.save();
+    ctx.lineWidth=5; ctx.strokeStyle = '#e8e8e8'; ctx.fillStyle='#e8e8e8';
+    const swing = at&&at.type==='weapon' ? (performance.now()-at.t)/at.dur : 0;
+    switch(this.weaponKey){
+      case 'kilic':{
+        const ang = f*(-0.6 + swing*1.6);
+        ctx.translate(hx,hy); ctx.rotate(ang*(f>0?1:1));
+        ctx.strokeStyle='#cfe3ff'; ctx.lineWidth=4;
+        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(f*46,-4); ctx.stroke();
+        ctx.strokeStyle='#8a5a2a'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(0,4); ctx.lineTo(0,-4); ctx.stroke();
+        break; }
+      case 'balta':{
+        const ang=f*(-0.5+swing*1.7); ctx.translate(hx,hy); ctx.rotate(ang);
+        ctx.strokeStyle='#a9744a'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(f*30,-14); ctx.stroke();
+        ctx.fillStyle='#cdd6df'; ctx.beginPath(); ctx.moveTo(f*22,-22); ctx.lineTo(f*40,-20); ctx.lineTo(f*30,-2); ctx.closePath(); ctx.fill();
+        break; }
+      case 'sopa':{
+        const ang=f*(-0.5+swing*1.6); ctx.translate(hx,hy); ctx.rotate(ang);
+        ctx.strokeStyle='#b07a3a'; ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(0,6); ctx.lineTo(f*40,-10); ctx.stroke();
+        break; }
+      case 'mizrak':{
+        const ang=f*(-0.2+swing*0.5); ctx.translate(hx,hy); ctx.rotate(ang);
+        ctx.strokeStyle='#9a7b50'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(-f*14,4); ctx.lineTo(f*70,-6); ctx.stroke();
+        ctx.fillStyle='#dfe6ee'; ctx.beginPath(); ctx.moveTo(f*70,-10); ctx.lineTo(f*84,-6); ctx.lineTo(f*70,-2); ctx.closePath(); ctx.fill();
+        break; }
+      case 'tabanca':{
+        ctx.translate(hx,hy);
+        ctx.fillStyle='#2b2b30'; ctx.fillRect(0, -4, f*18, 7); ctx.fillRect(f*2,2,5,9);
+        break; }
+      case 'yumruk':{
+        ctx.fillStyle=this.color; ctx.beginPath(); ctx.arc(hx,hy,6,0,7); ctx.fill();
+        break; }
+    }
+    ctx.restore();
+  }
+}
+
+/* ---------------- Projectile (gun) ---------------- */
+class Projectile{
+  constructor(owner){
+    this.owner=owner; this.dmg=owner.weapon.dmg; this.kb=owner.weapon.kb;
+    this.face=owner.face; this.vx=owner.face*owner.weapon.speed;
+    this.x=owner.cx()+owner.face*26; this.y=owner.cy()-22; this.dead=false; this.life=120;
+  }
+  update(){
+    this.x+=this.vx; this.life--;
+    if(this.x<0||this.x>W||this.life<=0){ this.dead=true; return; }
+    for(const f of fighters){
+      if(f===this.owner||f.dead) continue;
+      if(Math.abs(f.cx()-this.x)<f.w/2+8 && Math.abs(f.cy()-this.y)<32){
+        f.takeHit(this.dmg, this.face*this.kb, this.y); this.dead=true; return;
+      }
+    }
+  }
+  draw(){
+    ctx.save(); ctx.fillStyle='#ffd24a'; ctx.shadowColor='#ff8c2e'; ctx.shadowBlur=10;
+    ctx.beginPath(); ctx.arc(this.x,this.y,4,0,7); ctx.fill();
+    ctx.fillStyle='rgba(255,140,46,.5)'; ctx.fillRect(this.x-this.face*10,this.y-1.5,10,3);
+    ctx.restore();
+  }
+}
+
+/* ---------------- Particles (blood/impact) ---------------- */
+const particles=[];
+function spawnBlood(x,y,dir){
+  for(let i=0;i<10;i++){
+    particles.push({x,y,vx:dir*Math.random()*4+(Math.random()-0.5)*3,vy:(Math.random()-0.7)*5,life:30,c: Math.random()<0.5?'#ff3b3b':'#ffb199'});
+  }
+}
+function updateParticles(){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i]; p.vy+=0.4; p.x+=p.vx; p.y+=p.vy; p.life--;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+function drawParticles(){
+  for(const p of particles){ ctx.globalAlpha=Math.max(0,p.life/30); ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,3,3); }
+  ctx.globalAlpha=1;
+}
+
+/* ---------------- Game state ---------------- */
+let NUM=2;                 // chosen player count
+let fighters=[];
+let projectiles=[];
+let STATE='menu';          // menu|setup|countdown|playing|over
+let selWeapons=[];         // chosen weapon per slot
+let ready=[];              // ready flags per slot
+let lastT=0;
+
+/* ---------------- DOM refs ---------------- */
+const $=id=>document.getElementById(id);
+const menuEl=$('menu'), setupEl=$('setup'), countEl=$('countdown'), overEl=$('over'), hudEl=$('hud'), mobileNote=$('mobileNote');
+
+/* Build player-count buttons */
+(function buildCount(){
+  const c=$('pcount');
+  for(let n=1;n<=3;n++){
+    const b=document.createElement('button'); b.className='pbtn';
+    b.innerHTML=`<span class="n">${n}</span><span class="l">${n===1?'vs Bilgisayar':n+' Kişi'}</span>`;
+    b.onclick=()=>{ Audio.start(); Audio.setIntensity(0.55); chooseCount(n); };
+    c.appendChild(b);
+  }
+})();
+
+function chooseCount(n){
+  NUM=n; STATE='setup';
+  selWeapons=[]; ready=[];
+  // bot only in 1-player mode (slot 1 = bot)
+  for(let i=0;i<(n===1?2:n);i++){ selWeapons[i]='yumruk'; ready[i]=false; }
+  buildSetup();
+  show('setup');
+}
+
+function buildSetup(){
+  const slots=$('slots'); slots.innerHTML='';
+  const count = NUM===1?2:NUM;
+  for(let i=0;i<count;i++){
+    const isBot = (NUM===1 && i===1);
+    const sc=SCHEMES[i];
+    const slot=document.createElement('div'); slot.className='slot';
+    slot.innerHTML=`
+      <div class="ptitle"><span class="dot" style="color:${sc.color};background:${sc.color}"></span>
+        ${isBot?'Bilgisayar 🤖':'Oyuncu '+(i+1)}</div>
+      <div class="weapons"></div>
+      <div class="wname">${WEAPONS[selWeapons[i]].name}</div>
+      ${isBot? `<div class="botlabel">Otomatik hazır</div>`
+             : `<div class="ctrlbox">${sc.label}</div>`}
+      ${isBot? '' : `<button class="ready">HAZIR DEĞİL</button>`}`;
+    // weapon buttons
+    const wbox=slot.querySelector('.weapons');
+    WKEYS.forEach(wk=>{
+      const wb=document.createElement('button'); wb.className='wbtn'+(selWeapons[i]===wk?' sel':'');
+      wb.textContent=WEAPONS[wk].icon; wb.title=WEAPONS[wk].name;
+      wb.onclick=()=>{ if(ready[i]) return; selWeapons[i]=wk;
+        wbox.querySelectorAll('.wbtn').forEach(x=>x.classList.remove('sel'));
+        wb.classList.add('sel'); slot.querySelector('.wname').textContent=WEAPONS[wk].name; Audio.beep(false); };
+      wbox.appendChild(wb);
+    });
+    if(isBot){ ready[i]=true; }
+    else{
+      const rb=slot.querySelector('.ready');
+      rb.onclick=()=>{ ready[i]=!ready[i]; rb.classList.toggle('on',ready[i]);
+        rb.textContent=ready[i]?'✓ HAZIR':'HAZIR DEĞİL'; Audio.beep(ready[i]); refreshStart(); };
+    }
+    slots.appendChild(slot);
+  }
+  refreshStart();
+}
+function refreshStart(){
+  const count=NUM===1?2:NUM;
+  let all=true; for(let i=0;i<count;i++) if(!ready[i]) all=false;
+  $('startBtn').disabled=!all;
+}
+$('startBtn').onclick=()=>{ if(!$('startBtn').disabled) startCountdown(); };
+$('backBtn').onclick=()=>{ STATE='menu'; show('menu'); };
+$('againBtn').onclick=()=>{ startCountdown(); };
+$('menuBtn').onclick=()=>{ STATE='menu'; Audio.setIntensity(0.55); show('menu'); };
+
+/* ---------------- Start round ---------------- */
+function startCountdown(){
+  // pick random map
+  const maps=buildMaps(); MAP=maps[Math.floor(Math.random()*maps.length)];
+  // build fighters
+  NUM_setup();
+  STATE='countdown';
+  Audio.setIntensity(0.7);
+  show('countdown');
+  buildHud();
+  let n=3;
+  const cEl=$('count'); cEl.textContent='3'; cEl.style.animation='none'; void cEl.offsetWidth; cEl.style.animation='';
+  Audio.beep(false);
+  const tick=()=>{
+    n--;
+    if(n>0){ cEl.textContent=n; cEl.style.animation='none'; void cEl.offsetWidth; cEl.style.animation=''; Audio.beep(false); setTimeout(tick,900); }
+    else if(n===0){ cEl.textContent='GO!'; cEl.style.animation='none'; void cEl.offsetWidth; cEl.style.animation=''; Audio.go(); Audio.setIntensity(1.0); setTimeout(()=>{ beginPlay(); },650); }
+  };
+  setTimeout(tick,900);
+}
+function NUM_setup(){
+  fighters=[]; projectiles=[]; particles.length=0;
+  const count=NUM===1?2:NUM;
+  for(let i=0;i<count;i++){
+    const isBot=(NUM===1 && i===1);
+    fighters.push(new Fighter(i, SCHEMES[i], selWeapons[i], isBot));
+  }
+}
+function beginPlay(){
+  STATE='playing';
+  hide('countdown');
+  hudEl.classList.remove('hidden');
+  mobileNote.classList.remove('hidden');
+  mobileNote.textContent = MAP.name + ' • Son ayakta kalan kazanır!';
+  lastT=performance.now();
+}
+
+/* ---------------- HUD ---------------- */
+function buildHud(){
+  hudEl.innerHTML='';
+  for(const f of fighters){
+    const d=document.createElement('div'); d.className='hbar'; d.id='hb'+f.idx;
+    d.innerHTML=`<div class="row"><span class="dot" style="background:${f.color};color:${f.color}"></span>
+       <span>${f.name}</span><span style="margin-left:auto">${f.weapon.icon}</span></div>
+       <div class="track"><div class="fill" style="background:${f.color}"></div></div>`;
+    hudEl.appendChild(d);
+  }
+}
+function updateHud(){
+  for(const f of fighters){
+    const el=$('hb'+f.idx); if(!el) continue;
+    el.querySelector('.fill').style.width=(f.hp)+'%';
+    el.classList.toggle('dead',f.dead);
+  }
+}
+
+/* ---------------- Win check ---------------- */
+let overShown=false;
+function checkWin(){
+  const alive=fighters.filter(f=>!f.dead);
+  if(alive.length<=1){
+    if(!overShown){
+      overShown=true;
+      setTimeout(()=>{
+        STATE='over';
+        const w=alive[0];
+        const wt=$('winText'), ws=$('winSub');
+        if(w){
+          wt.textContent = (w.isBot?'🤖 Bilgisayar Kazandı!': '🏆 '+w.name+' Kazandı!');
+          wt.style.color=w.color;
+          ws.textContent = w.weapon.name+' ile zafer!';
+        } else { wt.textContent='Berabere!'; wt.style.color='#fff'; ws.textContent=''; }
+        Audio.setIntensity(0.5);
+        hudEl.classList.add('hidden'); mobileNote.classList.add('hidden');
+        show('over');
+      }, 900);
+    }
+  }
+}
+
+/* ---------------- Loop ---------------- */
+function loop(t){
+  requestAnimationFrame(loop);
+  const dt=Math.min(2,(t-lastT)/16.67); lastT=t;
+
+  // draw background always (under overlays)
+  drawScene();
+
+  if(STATE==='playing'){
+    for(const f of fighters) f.update(dt);
+    // simple body separation
+    for(let i=0;i<fighters.length;i++) for(let j=i+1;j<fighters.length;j++){
+      const a=fighters[i],b=fighters[j]; if(a.dead||b.dead) continue;
+      const dx=b.cx()-a.cx();
+      if(Math.abs(dx)<a.w && Math.abs(a.cy()-b.cy())<40){
+        const push=(a.w-Math.abs(dx))*0.1*Math.sign(dx||1);
+        a.vx-=push; b.vx+=push;
+      }
+    }
+    for(let i=projectiles.length-1;i>=0;i--){ projectiles[i].update(); if(projectiles[i].dead) projectiles.splice(i,1); }
+    updateParticles();
+    updateHud();
+    checkWin();
+  } else {
+    updateParticles();
+  }
+}
+// fix overShown reset: only reset when a new round begins
+function resetOver(){ overShown=false; }
+
+function drawScene(){
+  if(!MAP){
+    // idle menu bg
+    ctx.fillStyle='#160505'; ctx.fillRect(0,0,W,H); return;
+  }
+  // sky
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,MAP.sky[0]); g.addColorStop(1,MAP.sky[1]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // ground
+  ctx.fillStyle=MAP.ground; ctx.fillRect(0,GROUND,W,H-GROUND);
+  ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(0,GROUND,W,4);
+  // platforms
+  for(const p of MAP.plats){
+    ctx.fillStyle=MAP.ground; ctx.fillRect(p.x,p.y,p.w,p.h);
+    ctx.fillStyle='rgba(255,255,255,.1)'; ctx.fillRect(p.x,p.y,p.w,3);
+  }
+  // entities
+  if(STATE==='playing'||STATE==='countdown'||STATE==='over'){
+    for(const pr of projectiles) pr.draw();
+    // draw dead first so alive on top
+    fighters.filter(f=>f.dead).forEach(f=>f.draw());
+    fighters.filter(f=>!f.dead).forEach(f=>f.draw());
+    drawParticles();
+  }
+}
+
+/* hook countdown start to reset over flag */
+const _startCountdown=startCountdown;
+startCountdown=function(){ resetOver(); hide('over'); _startCountdown(); };
+
+/* ---------------- Overlay show/hide ---------------- */
+function show(name){
+  [menuEl,setupEl,countEl,overEl].forEach(e=>e.classList.add('hidden'));
+  if(name==='menu') menuEl.classList.remove('hidden');
+  if(name==='setup') setupEl.classList.remove('hidden');
+  if(name==='countdown') countEl.classList.remove('hidden');
+  if(name==='over') overEl.classList.remove('hidden');
+}
+function hide(name){
+  if(name==='countdown') countEl.classList.add('hidden');
+  if(name==='over') overEl.classList.add('hidden');
+}
+
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -496,11 +496,53 @@ const GAMES = [
       bar: 'linear-gradient(90deg, #e8402a, #ff7b29, #ffd24a)',
       border: 'rgba(255,210,74,0.25)'
     }
+  },
+  {
+    title: 'Stickman Dövüş',
+    genre: 'Aksiyon / Dövüş',
+    desc: '1-5 kişilik çöp adam dövüşü! Bilgisayara veya arkadaşlarına karşı silah seç, geri sayımdan sonra son ayakta kalan kazansın.',
+    href: 'stickman-dovus/',
+    icon: '🥊',
+    colors: {
+      bg: 'linear-gradient(135deg, #1a0606, #2a0a0a)',
+      accent: '#ff3b3b',
+      glow: 'rgba(255,59,59,0.22)',
+      bar: 'linear-gradient(90deg, #ff3b3b, #ff8c2e, #ffd24a)',
+      border: 'rgba(255,59,59,0.25)'
+    }
+  },
+  {
+    title: 'Roket Görevi',
+    genre: '3D Simülasyon / Uzay',
+    desc: 'Yıldız gemisi ORION\'un içindesin! WASD ile dolaş, görevlileri dinle: renkli kabloları bağla, oksijen tüplerini aç. Meteorlar gövdeye çarpar, warning sesleri çalar!',
+    href: 'roket-ucusu/',
+    icon: '🛰️',
+    colors: {
+      bg: 'linear-gradient(135deg, #04030f, #0a0828)',
+      accent: '#00f0ff',
+      glow: 'rgba(0,240,255,0.22)',
+      bar: 'linear-gradient(90deg, #00f0ff, #b44eff, #ff5e3a)',
+      border: 'rgba(0,240,255,0.25)'
+    }
+  },
+  {
+    title: 'Bilgisayar Toplama',
+    genre: '3D Eğitici / Bulmaca',
+    desc: 'Three.js ile 3D! Tornavidayla kasayı aç, parçaları sürükleyip yuvalarına tak: anakart, işlemci, RAM, ekran & ses kartı, güç kaynağı, disk. Bilgisayarı çalıştır!',
+    href: 'bilgisayar-toplama/',
+    icon: '🖥️',
+    colors: {
+      bg: 'linear-gradient(135deg, #0a1f1a, #06140f)',
+      accent: '#2bd9a0',
+      glow: 'rgba(43,217,160,0.22)',
+      bar: 'linear-gradient(90deg, #2bd9a0, #3da8ff, #ffd24a)',
+      border: 'rgba(43,217,160,0.25)'
+    }
   }
 ];
 
 // Son eklenen kaç oyun "YENİ" olarak vurgulansın (array'in sonundakiler)
-const NEW_COUNT = 2;
+const NEW_COUNT = 3;
 
 // ─── Render Cards ───
 function renderCards() {
