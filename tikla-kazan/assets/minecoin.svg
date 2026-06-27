@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <defs>
+    <radialGradient id="face" cx="42%" cy="36%" r="70%">
+      <stop offset="0%" stop-color="#ffe27a"/>
+      <stop offset="55%" stop-color="#ffc233"/>
+      <stop offset="100%" stop-color="#e89a16"/>
+    </radialGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffd24a"/>
+      <stop offset="100%" stop-color="#b9740c"/>
+    </linearGradient>
+  </defs>
+  <!-- dış kenar -->
+  <circle cx="120" cy="120" r="112" fill="url(#rim)"/>
+  <circle cx="120" cy="120" r="112" fill="none" stroke="#8a560a" stroke-width="4"/>
+  <!-- iç yüzey -->
+  <circle cx="120" cy="120" r="92" fill="url(#face)" stroke="#c9851a" stroke-width="6"/>
+  <!-- üst parlama -->
+  <ellipse cx="98" cy="84" rx="46" ry="26" fill="#fff" opacity="0.28"/>
+  <!-- M harfi -->
+  <path d="M70 168 V92 h22 l28 40 28-40 h22 v76 h-24 v-40 l-26 36 -26-36 v40 z"
+        fill="#fff8e1" stroke="#8a560a" stroke-width="4" stroke-linejoin="round"/>
+</svg>
