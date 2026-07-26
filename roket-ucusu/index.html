@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Roket Görevi 🚀 | Uzay Zone</title>
+<style>
+  :root{ --accent:#00f0ff; --warn:#ff2e2e; --gold:#ffd24a; --font:'Segoe UI','Trebuchet MS',system-ui,sans-serif; }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;overflow:hidden;background:#000;font-family:var(--font);color:#eaf6ff;cursor:default;}
+  #c{display:block;width:100vw;height:100vh;}
+
+  /* Nişangah */
+  #cross{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;pointer-events:none;
+    width:22px;height:22px;}
+  #cross::before,#cross::after{content:'';position:absolute;background:rgba(255,255,255,.7);}
+  #cross::before{left:50%;top:0;width:2px;height:22px;transform:translateX(-50%);}
+  #cross::after{top:50%;left:0;height:2px;width:22px;transform:translateY(-50%);}
+  #cross.hot::before,#cross.hot::after{background:var(--gold);box-shadow:0 0 8px var(--gold);}
+
+  /* Görev paneli sağ üst */
+  #mission{position:fixed;top:14px;right:14px;z-index:30;width:min(330px,72vw);
+    background:linear-gradient(135deg,rgba(6,14,26,.92),rgba(10,22,40,.92));
+    border:1px solid rgba(0,240,255,.35);border-radius:14px;padding:14px 16px;
+    box-shadow:0 0 26px rgba(0,240,255,.18);backdrop-filter:blur(6px);}
+  #mission h3{font-size:.72rem;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:6px;
+    display:flex;align-items:center;gap:6px;}
+  #mGiver{font-size:.78rem;color:var(--gold);font-weight:700;margin-bottom:4px;}
+  #mText{font-size:.92rem;line-height:1.35;font-weight:600;}
+  #mList{margin-top:8px;display:flex;flex-direction:column;gap:4px;}
+  .mItem{font-size:.82rem;display:flex;align-items:center;gap:7px;opacity:.9;}
+  .mDot{width:11px;height:11px;border-radius:50%;border:2px solid #fff;flex:0 0 auto;}
+  .mItem.done{opacity:.5;text-decoration:line-through;}
+  .mItem.done .mDot{background:#3ad17a;border-color:#3ad17a;}
+
+  /* HUD alt: oksijen + hasar */
+  #hud{position:fixed;left:14px;bottom:14px;z-index:30;display:flex;flex-direction:column;gap:8px;width:min(260px,60vw);}
+  .bar{background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:4px 6px;
+    display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:700;}
+  .bar .track{flex:1;height:9px;background:rgba(255,255,255,.12);border-radius:6px;overflow:hidden;}
+  .bar .fill{height:100%;width:100%;border-radius:6px;transition:width .3s;}
+  #o2Fill{background:linear-gradient(90deg,#00d4ff,#39ffd0);}
+  #hullFill{background:linear-gradient(90deg,#ffd24a,#ff7b29);}
+
+  /* Etkileşim ipucu */
+  #prompt{position:fixed;left:50%;bottom:23%;transform:translateX(-50%);z-index:25;
+    background:rgba(0,0,0,.6);border:1px solid var(--gold);color:#fff;padding:8px 16px;border-radius:30px;
+    font-size:.9rem;font-weight:700;display:none;backdrop-filter:blur(4px);box-shadow:0 0 16px rgba(255,210,74,.3);}
+  #prompt b{color:var(--gold);}
+
+  /* Konuşma balonu */
+  #speech{position:fixed;left:50%;top:16%;transform:translateX(-50%);z-index:28;max-width:80vw;text-align:center;
+    background:rgba(8,16,30,.9);border:1px solid rgba(0,240,255,.4);border-radius:14px;padding:10px 18px;
+    font-size:.95rem;display:none;backdrop-filter:blur(6px);box-shadow:0 0 20px rgba(0,240,255,.2);}
+  #speech b{color:var(--gold);}
+
+  /* Uyarı kırmızı flaş */
+  #warn{position:fixed;inset:0;z-index:15;pointer-events:none;background:radial-gradient(ellipse at center,transparent 40%,rgba(255,0,0,.55));opacity:0;}
+  #warnTxt{position:fixed;top:38%;left:50%;transform:translate(-50%,-50%);z-index:40;color:#ff3b3b;
+    font-size:clamp(1.6rem,7vw,3rem);font-weight:900;letter-spacing:4px;text-shadow:0 0 20px #ff0000;display:none;}
+
+  /* Overlay ekranlar */
+  .overlay{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;gap:18px;padding:26px;background:rgba(3,6,16,.82);backdrop-filter:blur(8px);}
+  .overlay.hidden{display:none;}
+  .big{font-size:clamp(2rem,8vw,3.6rem);font-weight:900;letter-spacing:2px;line-height:1.05;
+    background:linear-gradient(90deg,#00f0ff,#b44eff,#ff7b29);-webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 30px rgba(0,240,255,.2);}
+  .sub{font-size:clamp(.95rem,3.6vw,1.12rem);opacity:.88;max-width:560px;line-height:1.55;}
+  .keys{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;font-size:.85rem;opacity:.85;}
+  .key{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:6px 12px;}
+  .btn{cursor:pointer;border:none;font-family:var(--font);font-weight:800;letter-spacing:1px;font-size:1.15rem;
+    padding:14px 40px;border-radius:40px;color:#021018;background:linear-gradient(90deg,#00f0ff,#b44eff);
+    box-shadow:0 0 26px rgba(0,240,255,.45);transition:transform .15s;}
+  .btn:hover{transform:scale(1.05);}
+  .btn:active{transform:scale(.97);}
+
+  #homeBtn{position:fixed;top:14px;left:14px;z-index:70;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+    background:rgba(0,0,0,.55);color:var(--accent);font-family:var(--font);font-size:.85rem;font-weight:700;border-radius:30px;
+    text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);transition:background .3s,transform .2s;}
+  #soundBtn{position:fixed;bottom:14px;right:14px;z-index:70;width:42px;height:42px;cursor:pointer;display:flex;align-items:center;
+    justify-content:center;font-size:1.2rem;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.15);border-radius:50%;
+    backdrop-filter:blur(8px);color:#eaf6ff;}
+  #hint{position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:25;font-size:.72rem;opacity:.5;pointer-events:none;}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="cross"></div>
+
+<div id="mission">
+  <h3>🛰️ GÖREV</h3>
+  <div id="mGiver">Kaptan Vega</div>
+  <div id="mText">Bekleniyor…</div>
+  <div id="mList"></div>
+</div>
+
+<div id="hud">
+  <div class="bar">O₂ <div class="track"><div class="fill" id="o2Fill"></div></div></div>
+  <div class="bar">GÖVDE <div class="track"><div class="fill" id="hullFill"></div></div></div>
+</div>
+
+<div id="prompt"></div>
+<div id="speech"></div>
+<div id="warn"></div>
+<div id="warnTxt">⚠ WARNING ⚠</div>
+
+<div class="overlay" id="startScreen">
+  <div class="big">ROKET GÖREVİ</div>
+  <p class="sub">Yıldız gemisi <b style="color:var(--gold)">ORION</b>'un içindesin. Etrafına bak, görevlilerin verdiği görevleri yap: renkli kabloları bağla, oksijen tüplerini aç. Dikkat — meteorlar gövdeye çarpabilir!</p>
+  <div class="keys">
+    <span class="key">W A S D — Hareket</span>
+    <span class="key">Fare — Bak</span>
+    <span class="key">E / Tık — Etkileşim</span>
+  </div>
+  <button class="btn" id="startBtn">GÖREVE BAŞLA</button>
+  <p class="sub" style="font-size:.8rem;opacity:.6">Başlamak için tıkla (fare kilidi açılır). Çıkmak için ESC.</p>
+</div>
+
+<div class="overlay hidden" id="overScreen">
+  <div class="big" id="overTitle">DÜŞTÜK!</div>
+  <p class="sub" id="overText"></p>
+  <p class="sub" style="font-size:1rem">Tamamlanan görev: <b id="overScore" style="color:var(--gold)">0</b></p>
+  <button class="btn" id="retryBtn">TEKRAR DENE</button>
+</div>
+
+<a id="homeBtn" href="../"
+   onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'"
+   onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+<div id="soundBtn" title="Ses">🔊</div>
+<div id="hint">Hareket: WASD · Bak: Fare · Etkileşim: E</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="../analytics.js"></script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+(function(){
+'use strict';
+
+// ───────────────────────── Temel kurulum ─────────────────────────
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02030a);
+scene.fog = new THREE.FogExp2(0x03040f, 0.0); // kokpit içinde sis yok
+
+const camera = new THREE.PerspectiveCamera(72, window.innerWidth/window.innerHeight, 0.05, 3000);
+camera.position.set(0, 1.7, 3);
+
+// PBR ortam haritası — metal yüzeylerde gerçekçi yansımalar
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// Bloom (parlama) post-process pipeline
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloomPass = new UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth, window.innerHeight), 0.55, 0.75, 0.82);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass()); // ton eşleme + sRGB (son aşama)
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  composer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// ───────────────────────── Ses ─────────────────────────
+let actx=null, muted = localStorage.getItem('roket_muted')==='1';
+function ac(){ if(!actx){ try{actx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){} } return actx; }
+function tone(freq,dur,type,vol,slide){
+  if(muted) return; const a=ac(); if(!a) return;
+  const o=a.createOscillator(), g=a.createGain();
+  o.type=type||'sine'; o.frequency.value=freq;
+  if(slide) o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+dur);
+  g.gain.setValueAtTime(vol||.18,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+dur);
+  o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime+dur);
+}
+const sClick = ()=>tone(420,.08,'square',.12,620);
+const sConnect = ()=>{ tone(540,.09,'triangle',.14); setTimeout(()=>tone(820,.13,'triangle',.14),80); };
+const sHiss = ()=>{ // oksijen tıslama (gürültü)
+  if(muted) return; const a=ac(); if(!a) return;
+  const buf=a.createBuffer(1,a.sampleRate*0.6,a.sampleRate); const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,2);
+  const s=a.createBufferSource(); s.buffer=buf; const g=a.createGain(); g.gain.value=.18;
+  const f=a.createBiquadFilter(); f.type='highpass'; f.frequency.value=1200;
+  s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+};
+const sImpact = ()=>{ tone(90,.5,'sawtooth',.3,30); setTimeout(()=>tone(140,.3,'square',.2,50),60); };
+// Sürekli motor uğultusu (ambient)
+let humNodes=null;
+function startHum(){
+  const a=ac(); if(!a||humNodes) return;
+  const o1=a.createOscillator(); o1.type='sawtooth'; o1.frequency.value=46;
+  const o2=a.createOscillator(); o2.type='sine'; o2.frequency.value=92;
+  const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=220;
+  const g=a.createGain(); g.gain.value=muted?0:0.05;
+  o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(a.destination);
+  o1.start(); o2.start();
+  humNodes={g};
+}
+function setHumMuted(m){ if(humNodes) humNodes.g.gain.value = m?0:0.05; }
+const sWin = ()=>[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.14,'triangle',.14),i*70));
+function siren(){ if(muted) return; tone(660,.35,'sawtooth',.18,990); }
+function speakWarning(){
+  if(muted) return;
+  try{ if(window.speechSynthesis){ const u=new SpeechSynthesisUtterance('Warning. Warning.'); u.rate=1.05; u.pitch=.7; u.volume=.9; window.speechSynthesis.speak(u);} }catch(e){}
+}
+const soundBtn=document.getElementById('soundBtn');
+function paintSound(){ soundBtn.textContent = muted?'🔇':'🔊'; }
+paintSound();
+soundBtn.addEventListener('click',e=>{ e.stopPropagation(); muted=!muted; localStorage.setItem('roket_muted',muted?'1':'0'); paintSound(); setHumMuted(muted); if(!muted) tone(700,.1,'sine',.1); });
+
+// ───────────────────────── Işıklar ─────────────────────────
+scene.add(new THREE.AmbientLight(0x5566aa, 0.6));
+const keyLight = new THREE.DirectionalLight(0xbfe6ff, 0.5);
+keyLight.position.set(4,8,4); scene.add(keyLight);
+// kokpit iç ışıkları
+const ceilLight1 = new THREE.PointLight(0x88ccff, 0.9, 14); ceilLight1.position.set(0,2.4,0); scene.add(ceilLight1);
+const ceilLight2 = new THREE.PointLight(0xffd9a0, 0.5, 12); ceilLight2.position.set(0,2.3,-4); scene.add(ceilLight2);
+// kırmızı alarm ışığı (uyarıda yanar)
+const alarmLight = new THREE.PointLight(0xff0000, 0, 16); alarmLight.position.set(0,2.4,-2); scene.add(alarmLight);
+
+// ───────────────────────── UZAY MANZARASI (camlardan görünür) ─────────────────────────
+const spaceGroup = new THREE.Group(); scene.add(spaceGroup);
+
+// Yıldızlar
+(function(){
+  const g=new THREE.BufferGeometry(); const N=2600; const pos=new Float32Array(N*3); const col=new Float32Array(N*3);
+  for(let i=0;i<N;i++){
+    const r=400+Math.random()*1600;
+    const th=Math.random()*Math.PI*2, ph=Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=r*Math.cos(ph); pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+    const t=Math.random(); col[i*3]=0.7+0.3*t; col[i*3+1]=0.8+0.2*t; col[i*3+2]=1.0;
+  }
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const m=new THREE.PointsMaterial({size:2.4,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:.95});
+  spaceGroup.add(new THREE.Points(g,m));
+})();
+
+// Galaksi diski (parçacık spirali)
+(function(){
+  const g=new THREE.BufferGeometry(); const N=4000; const pos=new Float32Array(N*3); const col=new Float32Array(N*3);
+  const arms=3;
+  for(let i=0;i<N;i++){
+    const t=Math.pow(Math.random(),0.6); const arm=Math.floor(Math.random()*arms);
+    const ang=t*7 + arm*(Math.PI*2/arms) + (Math.random()-0.5)*0.4;
+    const rad=t*260;
+    pos[i*3]=Math.cos(ang)*rad + (Math.random()-0.5)*20;
+    pos[i*3+1]=(Math.random()-0.5)*16*(1-t);
+    pos[i*3+2]=Math.sin(ang)*rad + (Math.random()-0.5)*20;
+    const c=t; col[i*3]=0.6+0.4*c; col[i*3+1]=0.4+0.3*(1-c); col[i*3+2]=0.9;
+  }
+  g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.BufferAttribute(col,3));
+  const m=new THREE.PointsMaterial({size:2.0,sizeAttenuation:false,vertexColors:true,transparent:true,opacity:.8});
+  const galaxy=new THREE.Points(g,m);
+  galaxy.position.set(-700,260,-900); galaxy.rotation.x=0.7; galaxy.rotation.z=0.3;
+  spaceGroup.add(galaxy);
+})();
+
+// Gezegenler — atmosferi yanan turuncu/kırmızı
+function makePlanet(x,y,z,radius,baseColor){
+  const grp=new THREE.Group();
+  const planet=new THREE.Mesh(
+    new THREE.SphereGeometry(radius,40,40),
+    new THREE.MeshStandardMaterial({color:baseColor,roughness:.9,metalness:.1,emissive:0x110800,emissiveIntensity:.3})
+  );
+  grp.add(planet);
+  // yanan atmosfer halkası (turuncu-kırmızı glow)
+  const atmo=new THREE.Mesh(
+    new THREE.SphereGeometry(radius*1.13,40,40),
+    new THREE.MeshBasicMaterial({color:0xff5510, transparent:true, opacity:.28, side:THREE.BackSide, blending:THREE.AdditiveBlending})
+  );
+  grp.add(atmo);
+  const atmo2=new THREE.Mesh(
+    new THREE.SphereGeometry(radius*1.06,40,40),
+    new THREE.MeshBasicMaterial({color:0xffaa22, transparent:true, opacity:.22, side:THREE.BackSide, blending:THREE.AdditiveBlending})
+  );
+  grp.add(atmo2);
+  grp.position.set(x,y,z); spaceGroup.add(grp);
+  return {grp, planet};
+}
+const planets=[
+  makePlanet(-260,40,-520,90,0x7a3b2a),
+  makePlanet(380,120,-700,150,0x8a4a2a),
+  makePlanet(120,-180,-420,60,0x5a2a1a),
+];
+// yıldız (parlak güneş) — sıcak kaynak
+(function(){
+  const sun=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
+    new THREE.MeshBasicMaterial({color:0xfff0c0}));
+  sun.position.set(520,300,-1100); spaceGroup.add(sun);
+  const halo=new THREE.Mesh(new THREE.SphereGeometry(70,32,32),
+    new THREE.MeshBasicMaterial({color:0xffcc66,transparent:true,opacity:.3,blending:THREE.AdditiveBlending,side:THREE.BackSide}));
+  halo.position.copy(sun.position); spaceGroup.add(halo);
+  const sl=new THREE.PointLight(0xffe0a0,1.2,3000); sl.position.copy(sun.position); spaceGroup.add(sl);
+})();
+
+// Uzaktaki meteor sürüsü (dekoratif, sürekli akar)
+const driftMeteors=[];
+(function(){
+  const geo=new THREE.IcosahedronGeometry(1,0);
+  const mat=new THREE.MeshStandardMaterial({color:0x665544,roughness:1,flatShading:true});
+  for(let i=0;i<40;i++){
+    const m=new THREE.Mesh(geo,mat);
+    const s=2+Math.random()*8; m.scale.set(s,s*0.8,s*1.1);
+    m.position.set((Math.random()-0.5)*900, (Math.random()-0.5)*500, -120-Math.random()*700);
+    m.userData.vel=new THREE.Vector3((Math.random()-0.5)*0.3, (Math.random()-0.5)*0.2, 0.4+Math.random()*0.6);
+    m.userData.rot=new THREE.Vector3(Math.random()*.02,Math.random()*.02,Math.random()*.02);
+    spaceGroup.add(m); driftMeteors.push(m);
+  }
+})();
+
+// ───────────────────────── KOKPİT ─────────────────────────
+const cockpit = new THREE.Group(); scene.add(cockpit);
+const ROOM = {w:14, h:4.2, d:14}; // x,y,z
+
+// Prosedürel panel + perçin dokusu (color + roughness + bump)
+function makePanelTexture(){
+  const S=512, cv=document.createElement('canvas'); cv.width=cv.height=S; const c=cv.getContext('2d');
+  // taban metal + ince gürültü
+  c.fillStyle='#444b57'; c.fillRect(0,0,S,S);
+  for(let i=0;i<9000;i++){ const v=120+Math.random()*60; c.fillStyle='rgba('+v+','+v+','+(v+8)+',0.05)';
+    c.fillRect(Math.random()*S,Math.random()*S,1,1); }
+  // panel hatları (ızgara)
+  c.strokeStyle='rgba(20,24,30,0.9)'; c.lineWidth=3;
+  const cells=4, step=S/cells;
+  for(let i=0;i<=cells;i++){ c.beginPath(); c.moveTo(i*step,0); c.lineTo(i*step,S); c.stroke();
+    c.beginPath(); c.moveTo(0,i*step); c.lineTo(S,i*step); c.stroke(); }
+  // panel iç gölge/parlama
+  c.strokeStyle='rgba(255,255,255,0.06)'; c.lineWidth=1;
+  for(let i=0;i<=cells;i++){ c.beginPath(); c.moveTo(i*step+2,0); c.lineTo(i*step+2,S); c.stroke(); }
+  // perçinler
+  for(let gx=0;gx<cells;gx++) for(let gy=0;gy<cells;gy++){
+    for(let k=0;k<4;k++){
+      const rx=gx*step + (k%2? step-14:14), ry=gy*step + (k<2?14:step-14);
+      const g=c.createRadialGradient(rx-1.5,ry-1.5,0,rx,ry,4);
+      g.addColorStop(0,'rgba(220,225,235,0.8)'); g.addColorStop(1,'rgba(20,22,28,0.6)');
+      c.fillStyle=g; c.beginPath(); c.arc(rx,ry,3.2,0,Math.PI*2); c.fill();
+    }
+  }
+  // arada uyarı şeridi
+  c.fillStyle='rgba(255,200,40,0.15)'; c.fillRect(0,step*2-3,S,6);
+  const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace;
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping; tex.anisotropy=8;
+  return tex;
+}
+function makeRoughTexture(){
+  const S=256, cv=document.createElement('canvas'); cv.width=cv.height=S; const c=cv.getContext('2d');
+  c.fillStyle='#888'; c.fillRect(0,0,S,S);
+  for(let i=0;i<14000;i++){ const v=110+Math.random()*120; c.fillStyle='rgba('+v+','+v+','+v+',0.5)';
+    c.fillRect(Math.random()*S,Math.random()*S,1,1); }
+  const tex=new THREE.CanvasTexture(cv); tex.wrapS=tex.wrapT=THREE.RepeatWrapping; return tex;
+}
+const panelTex=makePanelTexture(); panelTex.repeat.set(2,1);
+const roughTex=makeRoughTexture(); roughTex.repeat.set(3,3);
+
+const metalMat = new THREE.MeshStandardMaterial({color:0x4a5260, roughness:.62, metalness:.78,
+  map:panelTex, roughnessMap:roughTex, bumpMap:panelTex, bumpScale:0.02, envMapIntensity:1.1});
+const darkMat  = new THREE.MeshStandardMaterial({color:0x252b34, roughness:.65, metalness:.6,
+  roughnessMap:roughTex, envMapIntensity:.8});
+const floorMat = new THREE.MeshStandardMaterial({color:0x2a2f38, roughness:.5, metalness:.45,
+  roughnessMap:roughTex, envMapIntensity:1.0});
+const trimMat  = new THREE.MeshStandardMaterial({color:0x556070, roughness:.35, metalness:.9, emissive:0x0a1420, emissiveIntensity:.4, envMapIntensity:1.3});
+
+function box(w,h,d,mat,x,y,z){
+  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat||metalMat);
+  m.position.set(x,y,z); m.castShadow=true; m.receiveShadow=true; cockpit.add(m); return m;
+}
+
+// Zemin & tavan
+const floor=box(ROOM.w,0.3,ROOM.d,floorMat,0,-0.15,0);
+box(ROOM.w,0.25,ROOM.d,darkMat,0,ROOM.h,0); // tavan
+// zemin ızgara çizgileri
+(function(){
+  const grid=new THREE.GridHelper(ROOM.w,14,0x335577,0x223344); grid.position.y=0.02; cockpit.add(grid);
+})();
+
+// Duvar yardımcı: pencere boşluklu ön/yan duvar (çerçeve parçaları)
+function windowWall(cx,cy,cz,wallW,wallH,winW,winH,rotY){
+  const g=new THREE.Group();
+  const t=0.25; // çerçeve kalınlığı
+  const sideW=(wallW-winW)/2;
+  const topH=(wallH-winH)/2;
+  // sol/sağ
+  g.add(panel(sideW,wallH,-(winW/2+sideW/2),0));
+  g.add(panel(sideW,wallH, (winW/2+sideW/2),0));
+  // üst/alt
+  g.add(panel(winW,topH,0, winH/2+topH/2));
+  g.add(panel(winW,topH,0,-(winH/2+topH/2)));
+  // cam (hafif mavi, additive değil; sadece çerçeve içi tint)
+  const glass=new THREE.Mesh(new THREE.PlaneGeometry(winW,winH),
+    new THREE.MeshBasicMaterial({color:0x224466,transparent:true,opacity:0.06,side:THREE.DoubleSide}));
+  g.add(glass);
+  function panel(pw,ph,px,py){
+    const m=new THREE.Mesh(new THREE.BoxGeometry(pw,ph,t),metalMat);
+    m.position.set(px,py,0); m.castShadow=true; m.receiveShadow=true; return m;
+  }
+  g.position.set(cx,cy,cz); g.rotation.y=rotY||0;
+  cockpit.add(g); return g;
+}
+// not: panel fonksiyonu hoisting ile çalışır (function declaration)
+
+// ÖN windshield (z = -ROOM.d/2), büyük geniş pencere
+windowWall(0, ROOM.h/2, -ROOM.d/2, ROOM.w, ROOM.h, 9.5, 2.6, 0);
+// ARKA duvar (z = +ROOM.d/2) — kapılı, küçük pencere
+windowWall(0, ROOM.h/2, ROOM.d/2, ROOM.w, ROOM.h, 3.0, 1.6, Math.PI);
+// SOL duvar (x = -ROOM.w/2)
+windowWall(-ROOM.w/2, ROOM.h/2, 0, ROOM.d, ROOM.h, 5.0, 2.0, Math.PI/2);
+// SAĞ duvar (x = +ROOM.w/2)
+windowWall(ROOM.w/2, ROOM.h/2, 0, ROOM.d, ROOM.h, 5.0, 2.0, -Math.PI/2);
+
+// Pencere çerçevesi neon şeritleri (ön)
+(function(){
+  const neon=new THREE.MeshBasicMaterial({color:0x00e0ff});
+  function strip(w,h,x,y,z){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,0.05),neon); m.position.set(x,y,z); cockpit.add(m); }
+  const z=-ROOM.d/2+0.18, y=ROOM.h/2;
+  strip(9.6,0.06,0,y+1.35,z); strip(9.6,0.06,0,y-1.35,z);
+})();
+
+// ── Zemin çevresi neon şerit (ambient kaçak ışık) ──
+(function(){
+  const neon=new THREE.MeshBasicMaterial({color:0x0a4a66});
+  const h=0.05;
+  [[ROOM.w,0,-ROOM.d/2+0.15,0],[ROOM.w,0,ROOM.d/2-0.15,0],
+   [ROOM.d,-ROOM.w/2+0.15,0,Math.PI/2],[ROOM.d,ROOM.w/2-0.15,0,Math.PI/2]].forEach(s=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(s[0],h,0.05),neon);
+    m.position.set(s[1],0.08,s[2]); m.rotation.y=s[3]; cockpit.add(m);
+  });
+})();
+
+// ── Tavan boruları + kablolar (gerçekçilik) ──
+(function(){
+  const pipeMat=new THREE.MeshStandardMaterial({color:0x6a7280,roughness:.35,metalness:.9});
+  const pipeMat2=new THREE.MeshStandardMaterial({color:0x3a3030,roughness:.5,metalness:.6});
+  function pipe(x,mat,r){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,ROOM.d-1.2,16),mat);
+    m.rotation.x=Math.PI/2; m.position.set(x,ROOM.h-0.25,0); m.castShadow=true; cockpit.add(m);
+    // bağlantı bilezikleri
+    for(let z=-5;z<=5;z+=2.5){
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(r*1.4,r*0.4,8,16),trimMat);
+      ring.position.set(x,ROOM.h-0.25,z); ring.rotation.y=Math.PI/2; cockpit.add(ring);
+    }
+  }
+  pipe(-5.4,pipeMat,0.13); pipe(-5.0,pipeMat2,0.08);
+  pipe(5.4,pipeMat,0.13); pipe(5.0,pipeMat2,0.08);
+  // çapraz tavan kirişleri
+  const beamMat=new THREE.MeshStandardMaterial({color:0x2a3038,roughness:.5,metalness:.7});
+  for(let z=-5;z<=5;z+=2.5){
+    const beam=new THREE.Mesh(new THREE.BoxGeometry(ROOM.w-0.5,0.18,0.18),beamMat);
+    beam.position.set(0,ROOM.h-0.15,z); cockpit.add(beam);
+  }
+})();
+
+// ── Ön pencereden süzülen ışık huzmeleri (god rays) ──
+(function(){
+  const rayMat=new THREE.MeshBasicMaterial({color:0x3a6a99,transparent:true,opacity:0.05,
+    blending:THREE.AdditiveBlending,side:THREE.DoubleSide,depthWrite:false});
+  for(let i=0;i<3;i++){
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(1.6,7,16,1,true),rayMat);
+    cone.position.set(-3+i*3, ROOM.h/2+0.3, -ROOM.d/2+3.4);
+    cone.rotation.x=-Math.PI/2.2; cone.rotation.z=(i-1)*0.15;
+    cockpit.add(cone);
+  }
+})();
+
+// ── Canlı veri ekranları (CanvasTexture, animasyonlu) ──
+const liveScreens=[];
+function makeScreen(x,y,z,w,h,kind,color){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=160;
+  const tex=new THREE.CanvasTexture(cv); tex.colorSpace=THREE.SRGBColorSpace;
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:tex}));
+  mesh.position.set(x,y,z); mesh.rotation.x=-0.32; cockpit.add(mesh);
+  // çerçeve
+  const fr=new THREE.Mesh(new THREE.BoxGeometry(w+0.08,h+0.08,0.04),
+    new THREE.MeshStandardMaterial({color:0x10141a,roughness:.5,metalness:.7}));
+  fr.position.set(x,y,z-0.03); fr.rotation.x=-0.32; cockpit.add(fr);
+  liveScreens.push({cv,ctx:cv.getContext('2d'),tex,kind,color,t:Math.random()*100});
+  return mesh;
+}
+function drawScreens(){
+  liveScreens.forEach(s=>{
+    const c=s.ctx, W=256, H=160; s.t+=1;
+    c.fillStyle='#03070d'; c.fillRect(0,0,W,H);
+    const col=s.color;
+    if(s.kind==='radar'){
+      c.strokeStyle='rgba(0,240,255,0.25)'; c.lineWidth=1;
+      for(let r=20;r<=70;r+=18){ c.beginPath(); c.arc(W/2,H/2,r,0,Math.PI*2); c.stroke(); }
+      const ang=(s.t*0.06)%(Math.PI*2);
+      const grad=c.createLinearGradient(W/2,H/2, W/2+Math.cos(ang)*70, H/2+Math.sin(ang)*70);
+      grad.addColorStop(0,'rgba(0,255,200,0.6)'); grad.addColorStop(1,'rgba(0,255,200,0)');
+      c.strokeStyle=grad; c.lineWidth=3; c.beginPath(); c.moveTo(W/2,H/2);
+      c.lineTo(W/2+Math.cos(ang)*72,H/2+Math.sin(ang)*72); c.stroke();
+      // blip'ler
+      for(let i=0;i<4;i++){ const a=i*1.7+s.t*0.01; const rr=25+i*12;
+        c.fillStyle='rgba(0,255,180,0.9)'; c.beginPath();
+        c.arc(W/2+Math.cos(a)*rr,H/2+Math.sin(a)*rr,2.5,0,Math.PI*2); c.fill(); }
+      c.fillStyle=col; c.font='bold 14px monospace'; c.fillText('RADAR',8,18);
+    } else if(s.kind==='wave'){
+      c.fillStyle=col; c.font='bold 14px monospace'; c.fillText('NAVİGASYON',8,18);
+      c.strokeStyle=col; c.lineWidth=2; c.beginPath();
+      for(let x=0;x<W;x++){ const yy=H/2+Math.sin(x*0.05+s.t*0.08)*28*Math.sin(x*0.01+s.t*0.02);
+        x===0?c.moveTo(x,yy):c.lineTo(x,yy); } c.stroke();
+      c.fillStyle='rgba(0,240,255,0.5)'; c.font='10px monospace';
+      c.fillText('HIZ 27.4 km/s',8,H-12);
+    } else { // bars
+      c.fillStyle=col; c.font='bold 14px monospace'; c.fillText('SİSTEMLER',8,18);
+      const names=['GÜÇ','İTKİ','SOĞUTMA','KALKAN'];
+      for(let i=0;i<4;i++){ const val=0.5+0.45*Math.sin(s.t*0.03+i*1.3);
+        c.fillStyle='rgba(255,255,255,0.6)'; c.font='10px monospace'; c.fillText(names[i],8,46+i*26);
+        c.fillStyle='rgba(255,255,255,0.12)'; c.fillRect(80,38+i*26,150,12);
+        c.fillStyle=['#39d17a','#ffd24a','#2e8bff','#ff7b29'][i]; c.fillRect(80,38+i*26,150*val,12); }
+    }
+    // tarama çizgisi efekti
+    c.fillStyle='rgba(120,200,255,0.04)';
+    for(let y=0;y<H;y+=3) c.fillRect(0,y,W,1);
+    s.tex.needsUpdate=true;
+  });
+}
+makeScreen(-3.2,1.32,-ROOM.d/2+1.55, 1.0,0.62,'radar',0x00f0ff);
+makeScreen(0,1.32,-ROOM.d/2+1.55, 1.0,0.62,'wave',0x39ffd0);
+makeScreen(3.2,1.32,-ROOM.d/2+1.55, 1.0,0.62,'bars',0xffd24a);
+setInterval(drawScreens, 90);
+drawScreens();
+
+// ── Ana kontrol konsolu (ön pencere altı) ──
+const interactables=[]; // raycast hedefleri
+function makeButton(x,y,z,color,label,onUse,size){
+  const s=size||0.16;
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(s,s,0.08,16),
+    new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.6,roughness:.4}));
+  base.rotation.x=Math.PI/2; base.position.set(x,y,z);
+  base.userData={interact:true, type:'button', label:label||'Düğme', use:onUse, baseColor:color};
+  cockpit.add(base); interactables.push(base); return base;
+}
+
+// konsol gövdesi
+const console1=box(9.5,0.9,1.4, darkMat, 0,0.55,-ROOM.d/2+1.1);
+console1.geometry = new THREE.BoxGeometry(9.5,0.9,1.4);
+// eğik üst panel
+const slope=new THREE.Mesh(new THREE.BoxGeometry(9.5,0.1,1.0),
+  new THREE.MeshStandardMaterial({color:0x161b22,roughness:.5,metalness:.6}));
+slope.position.set(0,1.05,-ROOM.d/2+1.4); slope.rotation.x=-0.5; cockpit.add(slope);
+
+// bir sürü ışıklı düğme (dekor + bazıları etkileşimli)
+const btnColors=[0xff3b3b,0x39d17a,0x2e8bff,0xffd24a,0xff7b29,0xb44eff,0x00e0ff];
+for(let i=0;i<22;i++){
+  const x=-4.2+ (i%11)*0.84;
+  const row=Math.floor(i/11);
+  const z=-ROOM.d/2+1.25 - row*0.32;
+  const y=1.0 - row*0.12;
+  const c=btnColors[i%btnColors.length];
+  const b=makeButton(x,y,z,c,'Kontrol düğmesi', ()=>{ sClick(); blinkButton(b); }, 0.11);
+}
+function blinkButton(b){
+  const m=b.material; const old=m.emissiveIntensity; m.emissiveIntensity=1.6;
+  setTimeout(()=>{ m.emissiveIntensity=old; },140);
+}
+
+// ── Konsol kenar tutamakları + havalandırma ızgaraları (detay) ──
+(function(){
+  const rail=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,9.4,12),trimMat);
+  rail.rotation.z=Math.PI/2; rail.position.set(0,1.42,-ROOM.d/2+1.0); cockpit.add(rail);
+  for(let x=-4;x<=4;x+=2){
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.035,0.4,10),trimMat);
+    post.position.set(x,1.25,-ROOM.d/2+1.0); cockpit.add(post);
+  }
+  // havalandırma ızgaraları (yan duvarlarda)
+  const ventMat=new THREE.MeshStandardMaterial({color:0x12161c,roughness:.6,metalness:.7});
+  [[-ROOM.w/2+0.1,1.0,3.5,Math.PI/2],[-ROOM.w/2+0.1,1.0,-3.5,Math.PI/2],
+   [ROOM.w/2-0.1,1.0,3.5,-Math.PI/2],[ROOM.w/2-0.1,1.0,-3.5,-Math.PI/2]].forEach(v=>{
+    const grp=new THREE.Group(); grp.position.set(v[0],v[1],v[2]); grp.rotation.y=v[3];
+    const back=new THREE.Mesh(new THREE.BoxGeometry(1.0,0.7,0.05),ventMat); grp.add(back);
+    for(let i=0;i<6;i++){ const sl=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.06,0.08),
+      new THREE.MeshStandardMaterial({color:0x2a3038,roughness:.5,metalness:.7}));
+      sl.position.set(0,0.26-i*0.1,0.03); sl.rotation.x=0.5; grp.add(sl); }
+    cockpit.add(grp);
+  });
+})();
+
+// ── Pilot koltukları ──
+function makeSeat(x,z,rotY){
+  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rotY;
+  const seatMat=new THREE.MeshStandardMaterial({color:0x1a1e26,roughness:.85,metalness:.2});
+  const cushMat=new THREE.MeshStandardMaterial({color:0x2a3442,roughness:.9,metalness:.1});
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.26,0.5,16),seatMat); base.position.y=0.25; g.add(base);
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.16,0.7,2,1,2),cushMat); seat.position.y=0.56; g.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(0.7,1.0,0.18),cushMat); back.position.set(0,1.05,-0.32); back.rotation.x=-0.12; g.add(back);
+  // yan destekler
+  [-0.32,0.32].forEach(sx=>{ const a=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.7,0.6),seatMat);
+    a.position.set(sx,1.0,-0.28); a.rotation.x=-0.12; g.add(a); });
+  // kол dayama
+  [-0.36,0.36].forEach(sx=>{ const arm=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.5),seatMat);
+    arm.position.set(sx,0.66,-0.05); g.add(arm); });
+  cockpit.add(g); return g;
+}
+makeSeat(-1.4,-ROOM.d/2+2.6, 0);
+makeSeat( 1.4,-ROOM.d/2+2.6, 0);
+
+// ── Tavan anahtar paneli (bir sürü minik switch) ──
+const blinkers=[]; // yanıp sönen gösterge LED'leri
+(function(){
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(5.0,0.12,1.4),
+    new THREE.MeshStandardMaterial({color:0x191e26,roughness:.5,metalness:.7}));
+  panel.position.set(0,ROOM.h-0.45,-ROOM.d/2+2.0); panel.rotation.x=0.32; cockpit.add(panel);
+  const swMat=new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.4,metalness:.7});
+  const ledColors=[0xff3b3b,0x39d17a,0xffd24a,0x00f0ff];
+  for(let r=0;r<2;r++) for(let i=0;i<14;i++){
+    // toggle switch
+    const sw=new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.025,0.09,8),swMat);
+    sw.position.set(-2.3+i*0.354, ROOM.h-0.40+r*0.0, -ROOM.d/2+1.65 - r*0.36);
+    sw.rotation.x=0.32 + (Math.random()<0.5?0.5:-0.5); cockpit.add(sw);
+    // LED
+    const col=ledColors[(r*14+i)%ledColors.length];
+    const led=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),
+      new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:1.2}));
+    led.position.set(-2.3+i*0.354, ROOM.h-0.44+r*0.0, -ROOM.d/2+1.78 - r*0.36); cockpit.add(led);
+    if(Math.random()<0.5) blinkers.push({mesh:led,phase:Math.random()*6,speed:1+Math.random()*3});
+  }
+})();
+
+// ── Duvarlara dağınık gösterge LED'leri (yanıp söner) ──
+(function(){
+  for(let i=0;i<24;i++){
+    const col=[0x39d17a,0xff3b3b,0xffd24a,0x00f0ff][i%4];
+    const led=new THREE.Mesh(new THREE.SphereGeometry(0.03,8,8),
+      new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:1.4}));
+    const side=i%4;
+    if(side===0) led.position.set(-ROOM.w/2+0.08,0.6+Math.random()*2.8,(Math.random()-0.5)*10);
+    else if(side===1) led.position.set(ROOM.w/2-0.08,0.6+Math.random()*2.8,(Math.random()-0.5)*10);
+    else if(side===2) led.position.set((Math.random()-0.5)*10,0.6+Math.random()*2.8,ROOM.d/2-0.08);
+    else led.position.set((Math.random()-0.5)*8,2.6+Math.random()*1.2,-ROOM.d/2+0.1);
+    cockpit.add(led);
+    blinkers.push({mesh:led,phase:Math.random()*6,speed:0.5+Math.random()*2.5});
+  }
+})();
+
+// ── SOS BÜYÜK KIRMIZI DÜĞME (sağ konsol) ──
+let sosUsed=false;
+const sosBase=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.4,0.18,24),
+  new THREE.MeshStandardMaterial({color:0x550000,roughness:.4,metalness:.5}));
+sosBase.position.set(3.4,1.0,-ROOM.d/2+1.5); sosBase.rotation.x=-0.5; cockpit.add(sosBase);
+const sosBtn=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,0.16,24),
+  new THREE.MeshStandardMaterial({color:0xff1111,emissive:0xff0000,emissiveIntensity:.7,roughness:.3}));
+sosBtn.position.set(3.4,1.08,-ROOM.d/2+1.42); sosBtn.rotation.x=-0.5;
+sosBtn.userData={interact:true,type:'sos',label:'SOS — İmdat sinyali gönder', use:fireSOS};
+cockpit.add(sosBtn); interactables.push(sosBtn);
+function fireSOS(){
+  siren(); speakWarning();
+  showSpeech('<b>SOS GÖNDERİLDİ!</b> İmdat sinyali tüm frekanslara yayıldı. 📡', 2600);
+  flashWarn(1.0);
+}
+
+// ── KABLO PANELİ (sol duvar) — renkli kablo bağlama görevi ──
+const cableColors={kirmizi:0xff3b3b, yesil:0x39d17a, mavi:0x2e8bff, sari:0xffd24a};
+const cableNames={kirmizi:'Kırmızı', yesil:'Yeşil', mavi:'Mavi', sari:'Sarı'};
+const cablePanel=new THREE.Group();
+cablePanel.position.set(-ROOM.w/2+0.35, 1.6, 0); cablePanel.rotation.y=Math.PI/2;
+cockpit.add(cablePanel);
+// panel arkalık
+const cpBack=new THREE.Mesh(new THREE.BoxGeometry(3.2,1.8,0.12),
+  new THREE.MeshStandardMaterial({color:0x12161d,roughness:.6,metalness:.5}));
+cablePanel.add(cpBack);
+const cableMeshes={};
+(function(){
+  const keys=Object.keys(cableColors);
+  keys.forEach((k,i)=>{
+    const y=0.6 - i*0.42;
+    const col=cableColors[k];
+    // sol soket
+    const sock=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.16,16),
+      new THREE.MeshStandardMaterial({color:0x222,roughness:.7}));
+    sock.rotation.z=Math.PI/2; sock.position.set(-1.2,y,0.08); cablePanel.add(sock);
+    const sockRing=new THREE.Mesh(new THREE.TorusGeometry(0.14,0.03,8,20),
+      new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.5}));
+    sockRing.position.set(-1.2,y,0.16); cablePanel.add(sockRing);
+    // sağ hedef soket
+    const tgt=new THREE.Mesh(new THREE.TorusGeometry(0.14,0.03,8,20),
+      new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.25}));
+    tgt.position.set(1.2,y,0.16); cablePanel.add(tgt);
+    // kablo plug (bağlanacak uç) — tıklanabilir
+    const plug=new THREE.Mesh(new THREE.SphereGeometry(0.15,16,16),
+      new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.6,roughness:.4}));
+    plug.position.set(-1.2,y,0.32);
+    plug.userData={interact:true,type:'cable',color:k,label:cableNames[k]+' kabloyu bağla',connected:false,
+      y:y, use:()=>connectCable(k)};
+    cablePanel.add(plug); interactables.push(plug);
+    // kablo gövdesi (eğri çizgi) — başta sol tarafta sarkık
+    const curve=makeCableTube(new THREE.Vector3(-1.2,y,0.3), new THREE.Vector3(-1.2,y-0.3,0.5), new THREE.Vector3(-1.2,y,0.32), col);
+    cablePanel.add(curve.mesh);
+    cableMeshes[k]={plug, target:tgt, tube:curve, y};
+  });
+})();
+function makeCableTube(p0,p1,p2,col){
+  const curve=new THREE.QuadraticBezierCurve3(p0,p1,p2);
+  const geo=new THREE.TubeGeometry(curve,20,0.05,8,false);
+  const mesh=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.3,roughness:.5}));
+  return {mesh, curve};
+}
+
+// ── OKSİJEN TÜPLERİ (sağ/arka) — E ile kapağını aç ──
+const oxyTanks=[];
+(function(){
+  const positions=[[ROOM.w/2-0.9,0.9,-3.2],[ROOM.w/2-0.9,0.9,-2.0],[3.2,0.9,ROOM.d/2-0.9],[1.8,0.9,ROOM.d/2-0.9]];
+  positions.forEach((p,i)=>{
+    const grp=new THREE.Group(); grp.position.set(p[0],p[1],p[2]);
+    const body=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,1.5,20),
+      new THREE.MeshStandardMaterial({color:0x2e8bff,roughness:.4,metalness:.5,emissive:0x05203a,emissiveIntensity:.3}));
+    grp.add(body);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.2,0.3,16),
+      new THREE.MeshStandardMaterial({color:0xcccccc,roughness:.3,metalness:.8}));
+    cap.position.y=0.9; grp.add(cap);
+    const valve=new THREE.Mesh(new THREE.TorusGeometry(0.12,0.04,8,16),
+      new THREE.MeshStandardMaterial({color:0xff3b3b,emissive:0x550000}));
+    valve.position.y=1.05; valve.rotation.x=Math.PI/2; grp.add(valve);
+    const label=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.18),
+      new THREE.MeshBasicMaterial({color:0xffffff})); label.position.set(0,0.2,0.29); grp.add(label);
+    cockpit.add(grp);
+    body.userData={interact:true,type:'oxygen',label:'Oksijen tüpünü aç (E)',opened:false,grp,valve,index:i,
+      use:()=>openOxygen(body)};
+    interactables.push(body);
+    oxyTanks.push(body);
+  });
+})();
+// oksijen partikülleri (açılınca yükselen)
+const o2Particles=[];
+
+// ── KAPI (arka) — tamir görevinde açılır ──
+const door=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.6,0.12),
+  new THREE.MeshStandardMaterial({color:0x4a5260,roughness:.5,metalness:.7}));
+door.position.set(0,1.3,ROOM.d/2-0.12); cockpit.add(door);
+door.userData={baseX:0};
+
+// ── HASARLI PANEL (meteor sonrası tamir) ──
+const repairPanel=new THREE.Mesh(new THREE.BoxGeometry(1.1,0.9,0.15),
+  new THREE.MeshStandardMaterial({color:0x333,emissive:0x000,roughness:.6}));
+repairPanel.position.set(-2.5,1.7,-ROOM.d/2+0.2); repairPanel.visible=false;
+repairPanel.userData={interact:false,type:'repair',label:'Hasarı tamir et (E)',use:doRepair};
+cockpit.add(repairPanel);
+// kıvılcım partikülleri
+const sparks=[];
+
+// ───────────────────────── GÖREVLİLER (astronotlar) ─────────────────────────
+const crew=[];
+function makeCrew(name,color,x,z,suited){
+  const g=new THREE.Group();
+  const suit=new THREE.MeshStandardMaterial({color:suited?0xeeeeee:color,roughness:.6,metalness:.2});
+  // gövde
+  const torso=new THREE.Mesh(new THREE.CapsuleGeometry(0.28,0.5,6,12),suit); torso.position.y=1.05; g.add(torso);
+  // kafa/kask
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.24,20,20),
+    suited? new THREE.MeshStandardMaterial({color:0xffffff,roughness:.4}) : new THREE.MeshStandardMaterial({color:0xffcca0,roughness:.7}));
+  head.position.y=1.6; g.add(head);
+  if(suited){ // kask camı
+    const visor=new THREE.Mesh(new THREE.SphereGeometry(0.25,20,20,Math.PI*0.2,Math.PI*0.6,Math.PI*0.25,Math.PI*0.5),
+      new THREE.MeshStandardMaterial({color:0x0a2030,roughness:.1,metalness:.6,transparent:true,opacity:.8}));
+    visor.position.y=1.6; visor.rotation.y=Math.PI; g.add(visor);
+  }
+  // kollar
+  [-0.36,0.36].forEach(sx=>{
+    const arm=new THREE.Mesh(new THREE.CapsuleGeometry(0.1,0.5,4,8),suit);
+    arm.position.set(sx,1.0,0); g.add(arm);
+  });
+  // bacaklar
+  [-0.15,0.15].forEach(sx=>{
+    const leg=new THREE.Mesh(new THREE.CapsuleGeometry(0.12,0.55,4,8),new THREE.MeshStandardMaterial({color:0x222831,roughness:.7}));
+    leg.position.set(sx,0.4,0); g.add(leg);
+  });
+  // isim etiketi (sprite)
+  const tag=makeTextSprite(name,color);
+  tag.position.set(0,2.05,0); tag.scale.set(1.3,0.33,1); g.add(tag);
+  g.position.set(x,0,z);
+  g.userData={name,color,suited,bobOffset:Math.random()*Math.PI*2, suit, head, visorBase:head};
+  cockpit.add(g); crew.push(g); return g;
+}
+function makeTextSprite(text,color){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=64; const cx=cv.getContext('2d');
+  cx.fillStyle='rgba(0,0,0,0.0)'; cx.fillRect(0,0,256,64);
+  cx.font='bold 34px Segoe UI, sans-serif'; cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillStyle='#'+('000000'+color.toString(16)).slice(-6); cx.shadowColor='#000'; cx.shadowBlur=6;
+  cx.fillText(text,128,34);
+  const tex=new THREE.CanvasTexture(cv);
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  return spr;
+}
+const captain = makeCrew('Kaptan Vega', 0xffd24a, -3.0, -1.0, false);
+const eng1     = makeCrew('Mühendis Ay', 0x39d17a, 4.0, -1.5, false);
+const eng2     = makeCrew('Teknisyen Roz', 0xb44eff, 2.5, 2.5, false);
+captain.rotation.y = 0.4;
+eng1.rotation.y = -0.6;
+eng2.rotation.y = Math.PI;
+
+// ───────────────────────── FPS KONTROL (pointer lock) ─────────────────────────
+let yaw=Math.PI, pitch=0, locked=false;
+const move={f:false,b:false,l:false,r:false};
+const PLAYER={speed:3.2, radius:0.4, eye:1.7};
+const bounds={x:ROOM.w/2-0.7, z:ROOM.d/2-0.7};
+
+canvas.addEventListener('click', ()=>{ if(running && !locked) canvas.requestPointerLock(); });
+document.addEventListener('pointerlockchange', ()=>{ locked = (document.pointerLockElement===canvas); });
+document.addEventListener('mousemove', e=>{
+  if(!locked) return;
+  yaw   -= e.movementX*0.0023;
+  pitch -= e.movementY*0.0023;
+  pitch = Math.max(-1.2, Math.min(1.2, pitch));
+});
+// dokunmatik bakış (mobil): tek parmak sürükle
+let touchLook=null;
+canvas.addEventListener('touchstart',e=>{ if(running){ const t=e.touches[0]; touchLook={x:t.clientX,y:t.clientY}; } },{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(!touchLook||!running) return; const t=e.touches[0];
+  yaw   -= (t.clientX-touchLook.x)*0.005;
+  pitch -= (t.clientY-touchLook.y)*0.005;
+  pitch=Math.max(-1.2,Math.min(1.2,pitch));
+  touchLook={x:t.clientX,y:t.clientY};
+},{passive:true});
+canvas.addEventListener('touchend',()=>{ touchLook=null; },{passive:true});
+
+window.addEventListener('keydown', e=>{
+  switch(e.code){
+    case 'KeyW': case 'ArrowUp': move.f=true; break;
+    case 'KeyS': case 'ArrowDown': move.b=true; break;
+    case 'KeyA': case 'ArrowLeft': move.l=true; break;
+    case 'KeyD': case 'ArrowRight': move.r=true; break;
+    case 'KeyE': case 'Space': e.preventDefault(); tryInteract(); break;
+  }
+});
+window.addEventListener('keyup', e=>{
+  switch(e.code){
+    case 'KeyW': case 'ArrowUp': move.f=false; break;
+    case 'KeyS': case 'ArrowDown': move.b=false; break;
+    case 'KeyA': case 'ArrowLeft': move.l=false; break;
+    case 'KeyD': case 'ArrowRight': move.r=false; break;
+  }
+});
+// tık ile etkileşim (masaüstü + mobil)
+canvas.addEventListener('pointerdown', e=>{ if(running && locked) tryInteract(); });
+document.getElementById('cross').style.display='block';
+
+// ───────────────────────── ETKİLEŞİM (raycast) ─────────────────────────
+const raycaster=new THREE.Raycaster();
+let hovered=null;
+function updateHover(){
+  raycaster.setFromCamera({x:0,y:0}, camera);
+  const hits=raycaster.intersectObjects(interactables.filter(o=>o.userData.interact && o.visible!==false), false);
+  let h=null;
+  if(hits.length){
+    const d=hits[0].distance;
+    if(d<3.2) h=hits[0].object;
+  }
+  hovered=h;
+  const cross=document.getElementById('cross');
+  const prompt=document.getElementById('prompt');
+  if(h){
+    cross.classList.add('hot');
+    prompt.style.display='block';
+    prompt.innerHTML='<b>[E]</b> '+(h.userData.label||'Kullan');
+  } else {
+    cross.classList.remove('hot');
+    prompt.style.display='none';
+  }
+}
+function tryInteract(){
+  if(hovered && hovered.userData.use){ hovered.userData.use(); }
+}
+
+// ───────────────────────── GÖREV SİSTEMİ ─────────────────────────
+const mGiver=document.getElementById('mGiver');
+const mText=document.getElementById('mText');
+const mList=document.getElementById('mList');
+let score=0;
+let mission=null; // {type, giver, text, items:[{key,label,done}], check}
+
+function setMission(m){
+  mission=m;
+  mGiver.textContent=m.giver||'Kaptan Vega';
+  mText.textContent=m.text;
+  renderMissionList();
+  showSpeech('<b>'+(m.giver||'Kaptan')+':</b> '+m.text, 3200);
+}
+function renderMissionList(){
+  if(!mission||!mission.items){ mList.innerHTML=''; return; }
+  mList.innerHTML=mission.items.map(it=>{
+    const col = it.color!=null ? '#'+('000000'+it.color.toString(16)).slice(-6) : '#fff';
+    return `<div class="mItem ${it.done?'done':''}"><span class="mDot" style="border-color:${col};${it.done?'background:#3ad17a;border-color:#3ad17a':''}"></span>${it.label}</div>`;
+  }).join('');
+}
+function missionComplete(){
+  score++;
+  sWin();
+  showSpeech('<b>Görev tamam!</b> Aferin. ✅', 2200);
+  setTimeout(nextMission, 2600);
+}
+
+// Görev tipleri
+function missionCables(){
+  // tüm kabloları sıfırla
+  Object.keys(cableMeshes).forEach(k=>{
+    const cm=cableMeshes[k]; cm.plug.userData.connected=false;
+    cm.plug.position.set(-1.2,cm.y,0.32);
+    cm.target.material.emissiveIntensity=0.25;
+    rebuildCable(k);
+  });
+  const keys=Object.keys(cableColors);
+  setMission({
+    type:'cable', giver:'Mühendis Ay',
+    text:'Sol panelde kopan renkli kabloları yerine bağla. Her renkli ucu sağ sokete tak.',
+    items: keys.map(k=>({key:k,color:cableColors[k],label:cableNames[k]+' kablo',done:false})),
+  });
+}
+function connectCable(k){
+  if(!mission||mission.type!=='cable') return;
+  const cm=cableMeshes[k];
+  if(cm.plug.userData.connected) return;
+  cm.plug.userData.connected=true;
+  cm.plug.position.set(1.2,cm.y,0.32);
+  cm.target.material.emissiveIntensity=0.9;
+  rebuildCable(k,true);
+  sConnect();
+  const item=mission.items.find(it=>it.key===k); if(item) item.done=true;
+  renderMissionList();
+  if(mission.items.every(it=>it.done)) missionComplete();
+}
+function rebuildCable(k,connected){
+  const cm=cableMeshes[k]; const col=cableColors[k];
+  if(cm.tube && cm.tube.mesh){ cablePanel.remove(cm.tube.mesh); cm.tube.mesh.geometry.dispose(); }
+  let p0,p1,p2;
+  if(connected){ p0=new THREE.Vector3(-1.2,cm.y,0.18); p1=new THREE.Vector3(0,cm.y+0.1,0.5); p2=new THREE.Vector3(1.2,cm.y,0.18); }
+  else { p0=new THREE.Vector3(-1.2,cm.y,0.18); p1=new THREE.Vector3(-1.2,cm.y-0.35,0.55); p2=new THREE.Vector3(-1.2,cm.y,0.32); }
+  cm.tube=makeCableTube(p0,p1,p2,col); cablePanel.add(cm.tube.mesh);
+}
+
+function missionOxygen(){
+  // 2 rastgele tüp kapalı yap
+  oxyTanks.forEach(t=>{ t.userData.opened=false; });
+  const pick=oxyTanks.slice().sort(()=>Math.random()-0.5).slice(0,2);
+  pick.forEach(t=>t.userData.required=true);
+  oxyTanks.forEach(t=>{ if(!pick.includes(t)) t.userData.required=false; });
+  setMission({
+    type:'oxygen', giver:'Teknisyen Roz',
+    text:'Oksijen seviyesi düşüyor! İşaretli oksijen tüplerinin yanına git ve [E] ile valfini aç.',
+    items: pick.map((t,i)=>({key:'o'+t.userData.index,label:'Oksijen tüpü #'+(t.userData.index+1),done:false})),
+  });
+  // işaretli tüplerin valfini parlat
+  oxyTanks.forEach(t=>{ t.userData.valve.material.emissiveIntensity = t.userData.required?1.2:0.2; });
+}
+function openOxygen(tank){
+  if(tank.userData.opened) return;
+  if(mission && mission.type==='oxygen' && !tank.userData.required){
+    showSpeech('Bu tüp şu an gerekmiyor.', 1400); return;
+  }
+  tank.userData.opened=true;
+  tank.userData.valve.material.color.set(0x39d17a);
+  tank.userData.valve.material.emissive.set(0x114422);
+  sHiss();
+  // oksijen partikülü fışkırt
+  spawnO2(tank.userData.grp.position);
+  o2 = Math.min(100, o2+22); updateBars();
+  if(mission && mission.type==='oxygen'){
+    const item=mission.items.find(it=>it.key==='o'+tank.userData.index);
+    if(item){ item.done=true; renderMissionList(); }
+    if(mission.items.every(it=>it.done)) missionComplete();
+  }
+}
+function spawnO2(pos){
+  for(let i=0;i<24;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6),
+      new THREE.MeshBasicMaterial({color:0x9fe8ff,transparent:true,opacity:.8}));
+    p.position.set(pos.x+(Math.random()-0.5)*0.2, pos.y+0.9, pos.z+(Math.random()-0.5)*0.2);
+    p.userData={vy:0.02+Math.random()*0.03, vx:(Math.random()-0.5)*0.02, vz:(Math.random()-0.5)*0.02, life:1};
+    cockpit.add(p); o2Particles.push(p);
+  }
+}
+
+// Tamir görevi (meteor sonrası)
+let underRepair=false;
+function missionRepair(){
+  underRepair=true;
+  repairPanel.visible=true; repairPanel.userData.interact=true;
+  repairPanel.material.color.set(0x552200); repairPanel.material.emissive.set(0xff3300); repairPanel.material.emissiveIntensity=0.8;
+  // görevliler astronot kıyafeti giysin
+  crew.forEach(c=>suitUp(c,true));
+  setMission({
+    giver:'Kaptan Vega', type:'repair',
+    text:'GÖVDE HASARLI! Mürettebat skafandr giydi. Ön sol duvardaki kıvılcımlanan panele git ve [E] ile tamir et.',
+    items:[{key:'fix',label:'Hasarlı paneli tamir et',done:false}],
+  });
+}
+function doRepair(){
+  if(!underRepair) return;
+  underRepair=false;
+  repairPanel.visible=false; repairPanel.userData.interact=false;
+  sConnect();
+  hull=Math.min(100,hull+30); updateBars();
+  crew.forEach(c=>suitUp(c,false));
+  const item=mission.items.find(it=>it.key==='fix'); if(item){item.done=true; renderMissionList();}
+  missionComplete();
+}
+function suitUp(c,on){
+  // basitçe kafayı beyaz kask yap / geri al
+  const head=c.userData.head;
+  head.material.color.set(on?0xffffff:0xffcca0);
+  c.userData.suited=on;
+}
+
+// Görev döngüsü
+const missionPool=[missionCables, missionOxygen, missionCables, missionOxygen];
+let mIdx=0;
+function nextMission(){
+  if(!running) return;
+  if(underRepair) return; // tamir bitene kadar yeni görev verme
+  const fn=missionPool[mIdx % missionPool.length]; mIdx++;
+  fn();
+}
+
+// ───────────────────────── METEOR ÇARPMASI & UYARI ─────────────────────────
+let hull=100, o2=100;
+const o2El=document.getElementById('o2Fill'), hullEl=document.getElementById('hullFill');
+function updateBars(){
+  o2El.style.width=o2+'%'; hullEl.style.width=hull+'%';
+}
+const warnEl=document.getElementById('warn'), warnTxt=document.getElementById('warnTxt');
+let warnAmt=0;
+function flashWarn(amount){ warnAmt=Math.max(warnAmt,amount); }
+
+let nextMeteorAt=performance.now()+9000+Math.random()*6000;
+const impactMeteors=[]; // gerçek çarpan meteorlar
+function spawnImpactMeteor(){
+  // uyarı başlat
+  warnTxt.style.display='block'; siren(); speakWarning();
+  // kameraya doğru gelen meteor
+  const m=new THREE.Mesh(new THREE.IcosahedronGeometry(4,0),
+    new THREE.MeshStandardMaterial({color:0x7a5a3a,roughness:1,flatShading:true,emissive:0x331100,emissiveIntensity:.4}));
+  // ön pencereden gelsin
+  m.position.set((Math.random()-0.5)*60, 10+Math.random()*20, -260);
+  const target=new THREE.Vector3((Math.random()-0.5)*4, ROOM.h/2, -ROOM.d/2-2);
+  m.userData={vel:target.clone().sub(m.position).normalize().multiplyScalar(2.6), hit:false, target};
+  spaceGroup.add(m); impactMeteors.push(m);
+}
+function meteorHit(m){
+  m.userData.hit=true;
+  sImpact(); flashWarn(1.0);
+  // kamera sarsıntısı
+  shake=0.5;
+  hull=Math.max(0, hull-22); updateBars();
+  spaceGroup.remove(m);
+  warnTxt.style.display='none';
+  // alev partikülleri pencerede
+  for(let i=0;i<30;i++){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.1+Math.random()*0.15,6,6),
+      new THREE.MeshBasicMaterial({color:Math.random()<0.5?0xff5510:0xffaa22,transparent:true,opacity:.9,blending:THREE.AdditiveBlending}));
+    p.position.set((Math.random()-0.5)*8, ROOM.h/2+(Math.random()-0.5)*2, -ROOM.d/2+0.4);
+    p.userData={vy:(Math.random()-0.3)*0.05,vx:(Math.random()-0.5)*0.08,vz:0.03+Math.random()*0.05,life:1};
+    cockpit.add(p); sparks.push(p);
+  }
+  if(hull<=0){ crash('hull'); return; }
+  // tamir görevi başlat
+  setTimeout(()=>{ if(running) missionRepair(); }, 600);
+}
+
+// ───────────────────────── DÜŞÜŞ (CRASH) ─────────────────────────
+let shake=0, falling=false;
+const environments=[
+  {name:'şehir', text:'Roket bir metropolün ortasına düştü! Gökdelenlerin arasında dumanlar yükseliyor… 🏙️', color:0x445566},
+  {name:'orman', text:'Roket yemyeşil bir ormana çakıldı! Ağaçların arasından buhar tütüyor… 🌲', color:0x2a4a2a},
+  {name:'çöl', text:'Roket uçsuz bucaksız bir çöle indi! Kumlar cayır cayır yanıyor… 🏜️', color:0x8a6a3a},
+  {name:'okyanus', text:'Roket okyanusa düştü! Dalgalar gövdeyi yalıyor… 🌊', color:0x1a3a5a},
+];
+function crash(reason){
+  if(falling) return; falling=true; running=false;
+  document.exitPointerLock && document.exitPointerLock();
+  warnTxt.style.display='block'; flashWarn(1.0); siren(); speakWarning();
+  // alarm ışığı sürekli yak
+  let t=0; const env=environments[Math.floor(Math.random()*environments.length)];
+  const fallInt=setInterval(()=>{
+    t+=0.05; shake=0.6;
+    scene.background.lerp(new THREE.Color(env.color), 0.04);
+  },50);
+  setTimeout(()=>{
+    clearInterval(fallInt); shake=0; warnTxt.style.display='none';
+    const title=document.getElementById('overTitle');
+    title.textContent = reason==='oxygen'?'OKSİJEN BİTTİ!':'GÖVDE PARÇALANDI!';
+    document.getElementById('overText').textContent='ORION '+env.text;
+    document.getElementById('overScore').textContent=score;
+    document.getElementById('overScreen').classList.remove('hidden');
+    document.getElementById('mission').style.display='none';
+  }, 3200);
+}
+
+// ───────────────────────── KONUŞMA / İPUCU ─────────────────────────
+const speechEl=document.getElementById('speech');
+let speechTimer=null;
+function showSpeech(html,ms){
+  speechEl.innerHTML=html; speechEl.style.display='block';
+  clearTimeout(speechTimer); speechTimer=setTimeout(()=>{ speechEl.style.display='none'; }, ms||2500);
+}
+
+// ───────────────────────── OYUN AKIŞI ─────────────────────────
+let running=false;
+function startGame(){
+  running=true; falling=false; underRepair=false;
+  score=0; hull=100; o2=100; mIdx=0; updateBars();
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('overScreen').classList.add('hidden');
+  document.getElementById('mission').style.display='block';
+  camera.position.set(0,1.7,3); yaw=Math.PI; pitch=0;
+  nextMeteorAt=performance.now()+10000+Math.random()*6000;
+  if(ac() && actx.state==='suspended') actx.resume();
+  startHum();
+  canvas.requestPointerLock();
+  setTimeout(()=>{
+    showSpeech('<b>Kaptan Vega:</b> Hoş geldin teknisyen! Etrafına bak, görevleri tamamla. İyi şanslar. 🚀', 4000);
+    setTimeout(nextMission, 2000);
+  }, 400);
+}
+document.getElementById('startBtn').addEventListener('click', e=>{ e.stopPropagation(); startGame(); });
+document.getElementById('retryBtn').addEventListener('click', e=>{ e.stopPropagation(); startGame(); });
+
+// ───────────────────────── ANA DÖNGÜ ─────────────────────────
+const clock=new THREE.Clock();
+const camDir=new THREE.Vector3();
+let bobT=0;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(0.05, clock.getDelta());
+  const now=performance.now();
+
+  // kamera yön (yaw/pitch)
+  const cx=Math.cos(pitch);
+  camDir.set(Math.sin(yaw)*cx, Math.sin(pitch), Math.cos(yaw)*cx);
+
+  if(running){
+    // hareket (yatay düzlemde)
+    const fwd=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw));
+    const right=new THREE.Vector3(Math.sin(yaw-Math.PI/2),0,Math.cos(yaw-Math.PI/2));
+    const v=new THREE.Vector3();
+    if(move.f) v.add(fwd); if(move.b) v.sub(fwd);
+    if(move.r) v.add(right); if(move.l) v.sub(right);
+    if(v.lengthSq()>0){ v.normalize().multiplyScalar(PLAYER.speed*dt); camera.position.add(v); }
+    // sınırlar (konsol bölgesini de engelle: ön z sınırı)
+    camera.position.x=Math.max(-bounds.x,Math.min(bounds.x,camera.position.x));
+    camera.position.z=Math.max(-bounds.z+0.3,Math.min(bounds.z,camera.position.z));
+    // ön konsola girmeyi engelle
+    if(camera.position.z < -ROOM.d/2+2.0 && Math.abs(camera.position.x)<4.8) camera.position.z=-ROOM.d/2+2.0;
+    // yürürken kafa sallanması (head bob)
+    if(v.lengthSq()>0){ bobT += dt*9; } else { bobT += dt*1.6; }
+    const bob = (v.lengthSq()>0 ? Math.sin(bobT)*0.045 : Math.sin(bobT)*0.008);
+    camera.position.y = PLAYER.eye + bob;
+
+    // oksijen yavaş azalır
+    o2=Math.max(0,o2 - dt*1.1);
+    if(o2<=0){ crash('oxygen'); }
+    updateBars();
+
+    // meteor zamanlayıcı
+    if(now>nextMeteorAt && !underRepair){
+      spawnImpactMeteor();
+      nextMeteorAt=now+14000+Math.random()*9000;
+    }
+    updateHover();
+  }
+
+  // sarsıntı
+  let sx=0,sy=0;
+  if(shake>0){ sx=(Math.random()-0.5)*shake*0.3; sy=(Math.random()-0.5)*shake*0.3; shake=Math.max(0,shake-dt*1.5); }
+  camera.lookAt(camera.position.x+camDir.x+sx, camera.position.y+camDir.y+sy, camera.position.z+camDir.z);
+
+  // uyarı flaş & alarm ışığı
+  if(warnAmt>0){
+    const f=Math.abs(Math.sin(now*0.012))*warnAmt;
+    warnEl.style.opacity=f*0.8;
+    alarmLight.intensity=f*3;
+    warnAmt=Math.max(0,warnAmt-dt*0.5);
+  } else { warnEl.style.opacity=0; alarmLight.intensity=0; }
+
+  // uzay animasyon: dekor meteorları
+  driftMeteors.forEach(m=>{
+    m.position.add(m.userData.vel);
+    m.rotation.x+=m.userData.rot.x; m.rotation.y+=m.userData.rot.y;
+    if(m.position.z>200){ m.position.z=-700; m.position.x=(Math.random()-0.5)*900; m.position.y=(Math.random()-0.5)*500; }
+  });
+  // gezegen dönüşü
+  planets.forEach(p=>{ p.planet.rotation.y+=0.0015; });
+  spaceGroup.rotation.y += 0.00006; // çok hafif evren kayması
+
+  // çarpan meteorlar
+  for(let i=impactMeteors.length-1;i>=0;i--){
+    const m=impactMeteors[i];
+    if(m.userData.hit){ impactMeteors.splice(i,1); continue; }
+    m.position.add(m.userData.vel); m.rotation.x+=0.03; m.rotation.y+=0.02;
+    // ön pencereye ulaştı mı
+    if(m.position.z > -ROOM.d/2-3){ meteorHit(m); impactMeteors.splice(i,1); }
+  }
+
+  // oksijen partikülleri
+  for(let i=o2Particles.length-1;i>=0;i--){
+    const p=o2Particles[i]; p.position.y+=p.userData.vy; p.position.x+=p.userData.vx; p.position.z+=p.userData.vz;
+    p.userData.life-=dt*0.5; p.material.opacity=Math.max(0,p.userData.life*0.8);
+    if(p.userData.life<=0){ cockpit.remove(p); o2Particles.splice(i,1); }
+  }
+  // kıvılcımlar
+  for(let i=sparks.length-1;i>=0;i--){
+    const p=sparks[i]; p.position.y+=p.userData.vy; p.position.x+=p.userData.vx; p.position.z+=p.userData.vz;
+    p.userData.vy-=0.003; p.userData.life-=dt*1.2; p.material.opacity=Math.max(0,p.userData.life);
+    if(p.userData.life<=0){ cockpit.remove(p); sparks.splice(i,1); }
+  }
+  // hasarlı panel kıvılcım üret
+  if(underRepair && Math.random()<0.3){
+    const p=new THREE.Mesh(new THREE.SphereGeometry(0.04,5,5),
+      new THREE.MeshBasicMaterial({color:0xffdd55,transparent:true,blending:THREE.AdditiveBlending}));
+    p.position.copy(repairPanel.position); p.position.x+=(Math.random()-0.5)*0.8; p.position.y+=(Math.random()-0.5)*0.6;
+    p.userData={vy:0.02+Math.random()*0.03,vx:(Math.random()-0.5)*0.06,vz:0.02,life:0.6};
+    cockpit.add(p); sparks.push(p);
+  }
+
+  // görevliler nefes/sallanma animasyonu
+  crew.forEach(c=>{
+    c.userData.bobOffset+=dt*2;
+    c.position.y=Math.sin(c.userData.bobOffset)*0.02;
+  });
+
+  composer.render();
+}
+animate();
+updateBars();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uzay Zone — Logo Seçenekleri</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#050510; color:#e8e0f0; font-family:'Nunito',sans-serif;
+  min-height:100vh; padding:48px 20px 80px;
+  background-image:
+    radial-gradient(ellipse at 15% 20%, rgba(100,40,180,0.14), transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(0,100,220,0.10), transparent 50%);
+}
+h1 {
+  font-family:'Orbitron',sans-serif; font-weight:900; text-align:center;
+  font-size:2.4rem; letter-spacing:0.12em; margin-bottom:8px;
+  background:linear-gradient(135deg,#00c8ff,#a855f7,#00c8ff);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.sub { text-align:center; color:#8888aa; letter-spacing:0.2em; font-family:'Orbitron'; font-size:0.8rem; text-transform:uppercase; margin-bottom:48px; }
+.grid {
+  max-width:1080px; margin:0 auto; display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(440px,1fr)); gap:28px;
+}
+.card {
+  background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.08);
+  border-radius:18px; padding:24px; transition:.3s;
+}
+.card:hover { border-color:rgba(0,200,255,0.4); box-shadow:0 0 30px rgba(120,60,200,0.18); }
+.tag {
+  font-family:'Orbitron'; font-size:0.7rem; letter-spacing:0.15em; color:#7df9ff;
+  text-transform:uppercase; margin-bottom:4px;
+}
+.name { font-family:'Orbitron'; font-weight:700; font-size:1.1rem; margin-bottom:16px; color:#fff; }
+.frame {
+  border-radius:12px; overflow:hidden; background:#050510;
+  border:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center;
+}
+.frame svg { width:100%; height:auto; display:block; }
+.note { color:#9a98b4; font-size:0.85rem; margin-top:14px; line-height:1.5; }
+.dl { display:inline-block; margin-top:12px; font-family:'Orbitron'; font-size:0.72rem; letter-spacing:0.1em;
+  color:#a855f7; text-decoration:none; border:1.5px solid #a855f7; border-radius:20px; padding:7px 20px; transition:.3s; }
+.dl:hover { background:#a855f7; color:#050510; }
+</style>
+</head>
+<body>
+  <h1>UZAY ZONE</h1>
+  <p class="sub">Logo Seçenekleri · 4 Konsept</p>
+  <div class="grid">
+
+    <div class="card">
+      <div class="tag">Konsept 1 · Yatay Lockup</div>
+      <div class="name">Yörünge / Orbit</div>
+      <div class="frame"><object type="image/svg+xml" data="logo1-orbit.svg"></object></div>
+      <p class="note">Gezegen + yörünge halkası amblemi, yanında iki satır wordmark. Site başlığı için ideal yatay kullanım.</p>
+      <a class="dl" href="logo1-orbit.svg" download>SVG İNDİR</a>
+    </div>
+
+    <div class="card">
+      <div class="tag">Konsept 2 · Kare Amblem</div>
+      <div class="name">Portal Z</div>
+      <div class="frame"><object type="image/svg+xml" data="logo2-portal.svg"></object></div>
+      <p class="note">Parlayan portal halkası içinde kayan yıldız izinden oluşan "Z". Favicon / app ikonu için güçlü.</p>
+      <a class="dl" href="logo2-portal.svg" download>SVG İNDİR</a>
+    </div>
+
+    <div class="card">
+      <div class="tag">Konsept 3 · Yatay Wordmark</div>
+      <div class="name">Satürn</div>
+      <div class="frame"><object type="image/svg+xml" data="logo3-saturn.svg"></object></div>
+      <p class="note">ZONE'un "O" harfi halkalı bir gezegene dönüşüyor. Sıcak turuncu gezegen, soğuk gradyan tipografiyle kontrast.</p>
+      <a class="dl" href="logo3-saturn.svg" download>SVG İNDİR</a>
+    </div>
+
+    <div class="card">
+      <div class="tag">Konsept 4 · Kare Amblem</div>
+      <div class="name">Roket Rozet</div>
+      <div class="frame"><object type="image/svg+xml" data="logo4-rocket.svg"></object></div>
+      <p class="note">Altıgen rozet içinde kalkışa geçen roket, altında wordmark. Oyun portalı enerjisini en çok yansıtan seçenek.</p>
+      <a class="dl" href="logo4-rocket.svg" download>SVG İNDİR</a>
+    </div>
+
+  </div>
+</body>
+</html>

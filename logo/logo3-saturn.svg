@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 200" width="680" height="200" font-family="Orbitron, sans-serif">
+  <defs>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&amp;display=swap');</style>
+    <linearGradient id="g3grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00c8ff"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <radialGradient id="g3planet" cx="0.35" cy="0.3" r="0.85">
+      <stop offset="0" stop-color="#ffd27d"/>
+      <stop offset="0.5" stop-color="#ff9a3c"/>
+      <stop offset="1" stop-color="#a8431f"/>
+    </radialGradient>
+    <filter id="g3glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="680" height="200" fill="#050510"/>
+  <g fill="#cdd6ff">
+    <circle cx="40" cy="50" r="1.2"/><circle cx="650" cy="40" r="1.3"/><circle cx="620" cy="160" r="1"/>
+    <circle cx="80" cy="150" r="1"/><circle cx="500" cy="25" r="1.1"/>
+  </g>
+  <!-- UZAY -->
+  <text x="44" y="112" font-size="60" font-weight="900" letter-spacing="4" fill="url(#g3grad)">UZAY</text>
+  <!-- ZONE with saturn as the O -->
+  <text x="318" y="112" font-size="60" font-weight="900" letter-spacing="4" fill="#e8e0f0">Z</text>
+  <g transform="translate(404,90)" filter="url(#g3glow)">
+    <circle r="32" fill="url(#g3planet)"/>
+    <ellipse rx="56" ry="15" fill="none" stroke="#7df9ff" stroke-width="5" transform="rotate(-18)"/>
+  </g>
+  <text x="448" y="112" font-size="60" font-weight="900" letter-spacing="4" fill="#e8e0f0">NE</text>
+  <text x="48" y="148" font-size="14" font-weight="400" letter-spacing="13" fill="#8888aa">OYUN PORTALI</text>
+</svg>

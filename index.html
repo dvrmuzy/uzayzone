@@ -4,7 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Uzay Zone - Oyun Portalı</title>
+<link rel="icon" href="logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="logo/favicon-16.png">
+<link rel="icon" type="image/svg+xml" href="logo/favicon.svg">
+<link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="analytics.js"></script>
+<script src="destek.js" defer></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -51,29 +58,19 @@ header {
   padding-top: 30px;
 }
 
-.site-title {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 900;
-  font-size: 3.6rem;
-  letter-spacing: 0.15em;
-  background: linear-gradient(135deg, #00c8ff, #a855f7, #00c8ff, #a855f7);
-  background-size: 300% 300%;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmerTitle 4s ease infinite;
-  text-shadow: none;
-  filter: drop-shadow(0 0 30px rgba(0, 200, 255, 0.25));
+.site-logo {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  filter: drop-shadow(0 0 40px rgba(0, 200, 255, 0.18));
+  animation: logoFloat 5s ease-in-out infinite;
 }
 
-.subtitle {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 400;
-  font-size: 1rem;
-  letter-spacing: 0.35em;
-  color: #8888aa;
-  margin-top: 10px;
-  text-transform: uppercase;
+.site-title-fallback { display: none; }
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
 /* ─── Games Grid ─── */
@@ -182,6 +179,44 @@ header {
   box-shadow: 0 0 20px var(--card-glow);
 }
 
+/* ─── New Game Highlight ─── */
+.game-card.is-new {
+  border-color: var(--card-accent);
+  box-shadow: 0 0 24px var(--card-glow);
+}
+
+.game-card.is-new::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: inset 0 0 0 1.5px var(--card-accent);
+  animation: newRing 1.8s ease-in-out infinite;
+}
+
+.game-card.is-new:hover {
+  box-shadow: 0 20px 60px var(--card-glow), 0 0 50px var(--card-glow);
+}
+
+.new-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  color: #050510;
+  background: var(--card-accent);
+  padding: 4px 11px;
+  border-radius: 20px;
+  box-shadow: 0 0 14px var(--card-glow);
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
+
 /* ─── Footer ─── */
 footer {
   text-align: center;
@@ -192,12 +227,6 @@ footer {
 }
 
 /* ─── Animations ─── */
-@keyframes shimmerTitle {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-8px); }
@@ -214,10 +243,19 @@ footer {
   }
 }
 
+@keyframes newRing {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px var(--card-accent); opacity: 0.7; }
+  50% { box-shadow: inset 0 0 0 2.5px var(--card-accent); opacity: 1; }
+}
+
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
-  .site-title { font-size: 2.4rem; }
-  .subtitle { font-size: 0.8rem; }
+  .site-logo { max-width: 88%; }
   header { margin-bottom: 40px; padding-top: 20px; }
   .games-grid { gap: 24px; }
   .card-body { padding: 24px 20px 16px; }
@@ -226,7 +264,6 @@ footer {
 }
 
 @media (max-width: 380px) {
-  .site-title { font-size: 1.8rem; letter-spacing: 0.08em; }
   .games-grid { grid-template-columns: 1fr; }
 }
 </style>
@@ -238,8 +275,8 @@ footer {
 
 <div class="container">
   <header>
-    <h1 class="site-title">UZAY ZONE</h1>
-    <p class="subtitle">Oyun Portalı</p>
+    <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
+    <h1 class="site-title-fallback">UZAY ZONE</h1>
   </header>
   <section class="games-grid" id="gamesGrid"></section>
   <footer>
@@ -254,7 +291,7 @@ const GAMES = [
     title: 'Çöp Cümbüşü',
     genre: 'Bulmaca',
     desc: 'Kibritleri hareket ettirerek hedef sayıya ulaş! Üç farklı zorluk seviyesiyle bulmaca çöz.',
-    href: 'kibrit-oyunu/index.html',
+    href: 'kibrit-oyunu/',
     icon: '🔥',
     colors: {
       bg: 'linear-gradient(135deg, #2a1f14, #1a1208)',
@@ -268,7 +305,7 @@ const GAMES = [
     title: 'NEONBALL',
     genre: 'Arcade',
     desc: 'Neon topla tuğlaları kır, seviyeleri geç! Klasik brick-breaker neon stilde.',
-    href: 'neonball/index.html',
+    href: 'neonball/',
     icon: '🏓',
     colors: {
       bg: 'linear-gradient(135deg, #04060f, #0a1028)',
@@ -282,7 +319,7 @@ const GAMES = [
     title: 'XOX',
     genre: 'Strateji',
     desc: 'Klasik XOX oyunu! Yapay zekaya karşı oyna veya arkadaşınla yarış.',
-    href: 'xox/index.html',
+    href: 'xox/',
     icon: '⭕',
     colors: {
       bg: 'linear-gradient(135deg, #1a1a2e, #0f3460)',
@@ -296,7 +333,7 @@ const GAMES = [
     title: 'Bilgi Yarışı',
     genre: 'Eğitici / Arcade',
     desc: 'Arabayı sür, soruları çöz! Sınıfını seç, yanlış cevap verirsen afetler seni bekliyor.',
-    href: 'araba-yarisi/index.html',
+    href: 'araba-yarisi/',
     icon: '🏎️',
     colors: {
       bg: 'linear-gradient(135deg, #1a0a2e, #2a1a0e)',
@@ -310,7 +347,7 @@ const GAMES = [
     title: 'Araba Patlatma',
     genre: 'Aksiyon / Arcade',
     desc: '30 level, 7 silah! Arabalara tiklayip patlat, arkadaslarinla yaris!',
-    href: 'araba-patlatma/index.html',
+    href: 'araba-patlatma/',
     icon: '💣',
     colors: {
       bg: 'linear-gradient(135deg, #1a0a0a, #2a1000)',
@@ -324,7 +361,7 @@ const GAMES = [
     title: 'Kule Yığını',
     genre: '3D Arcade',
     desc: 'Three.js ile 3D blok yığma! Hareket eden blokları mükemmel hizala, taşan kısım düşer.',
-    href: 'kule-yigini/index.html',
+    href: 'kule-yigini/',
     icon: '🏗️',
     colors: {
       bg: 'linear-gradient(135deg, #0a0a2a, #2a1858)',
@@ -333,15 +370,205 @@ const GAMES = [
       bar: 'linear-gradient(90deg, #7df9ff, #ff7df9)',
       border: 'rgba(125,249,255,0.2)'
     }
+  },
+  {
+    title: 'Yıldız Avcısı',
+    genre: 'Aksiyon / Uzay',
+    desc: 'Uzay gemini sür, asteroidleri ve düşmanları yok et! Power-up topla, dalgaları aş.',
+    href: 'yildiz-avcisi/',
+    icon: '🚀',
+    colors: {
+      bg: 'linear-gradient(135deg, #04031a, #1a0838)',
+      accent: '#7df9ff',
+      glow: 'rgba(180,78,255,0.18)',
+      bar: 'linear-gradient(90deg, #7df9ff, #b44eff, #ff4f8a)',
+      border: 'rgba(180,78,255,0.25)'
+    }
+  },
+  {
+    title: 'Uzay Kaçışı',
+    genre: '3D Aksiyon',
+    desc: 'Three.js ile 3D asteroid dodger! Uzay gemini sür, taşlardan kaç, halkalardan geç.',
+    href: 'uzay-kacisi/',
+    icon: '🛸',
+    colors: {
+      bg: 'linear-gradient(135deg, #02020a, #1a0a3a)',
+      accent: '#8effb6',
+      glow: 'rgba(142,255,182,0.18)',
+      bar: 'linear-gradient(90deg, #8effb6, #7df9ff, #b44eff)',
+      border: 'rgba(142,255,182,0.2)'
+    }
+  },
+  {
+    title: 'Hafıza Bahçesi',
+    genre: 'Bulmaca / Hafıza',
+    desc: 'Hayvanları eşleştir, bahçeyi keşfet! 3 zorluk seviyesi, süre ve hamle rekoru.',
+    href: 'hafiza-bahcesi/',
+    icon: '🌻',
+    colors: {
+      bg: 'linear-gradient(135deg, #3a1a08, #5a2a18)',
+      accent: '#f0a14a',
+      glow: 'rgba(240,161,74,0.20)',
+      bar: 'linear-gradient(90deg, #8acf6f, #f0a14a, #d65a4a)',
+      border: 'rgba(240,161,74,0.25)'
+    }
+  },
+  {
+    title: 'Mini Mimar',
+    genre: '3D Yaratıcılık',
+    desc: 'Voxel bloklarla kule, köprü, saray inşa et! 5 şekil · 10 renk · hazır şablonlar.',
+    href: 'mini-mimar/',
+    icon: '🏰',
+    colors: {
+      bg: 'linear-gradient(135deg, #3a2818, #1a2838)',
+      accent: '#f0a14a',
+      glow: 'rgba(240,161,74,0.20)',
+      bar: 'linear-gradient(90deg, #4ec0e8, #f0a14a, #d65a4a)',
+      border: 'rgba(240,161,74,0.25)'
+    }
+  },
+  {
+    title: 'Helezon',
+    genre: '3D Arcade',
+    desc: 'Sonsuz düşüş! Kuleyi döndür, boşluklardan geç, kırmızıdan kaç. 3 kombo = Smash Modu ⚡',
+    href: 'helezon/',
+    icon: '🌀',
+    colors: {
+      bg: 'linear-gradient(135deg, #1a0530, #2a0a48)',
+      accent: '#ff00ea',
+      glow: 'rgba(255,0,234,0.22)',
+      bar: 'linear-gradient(90deg, #ff00ea, #00f0ff, #fff700)',
+      border: 'rgba(255,0,234,0.28)'
+    }
+  },
+  {
+    title: 'Simya',
+    genre: 'Bulmaca / Keşif',
+    desc: '4 elementten 25 elemente! Su, ateş, toprak, hava ile başla. Karıştır, dünyayı keşfet.',
+    href: 'simya/',
+    icon: '⚗️',
+    colors: {
+      bg: 'linear-gradient(135deg, #1a1438, #2a1850)',
+      accent: '#ffaa30',
+      glow: 'rgba(255,170,48,0.22)',
+      bar: 'linear-gradient(90deg, #ffaa30, #ff60a8, #b060ff)',
+      border: 'rgba(255,170,48,0.25)'
+    }
+  },
+  {
+    title: 'Havai Fişek',
+    genre: 'Festival / Rahatlatıcı',
+    desc: 'Gece şehrinin üstünde havai fişek patlat! Ekrana tıkla, renkler dans etsin. 6 şehir · yağmur, kar, açık hava.',
+    href: 'havai-fisek/',
+    icon: '🎆',
+    colors: {
+      bg: 'linear-gradient(135deg, #1a0530, #3a0a50)',
+      accent: '#ff60c8',
+      glow: 'rgba(255,96,200,0.25)',
+      bar: 'linear-gradient(90deg, #ff3d8a, #ffd700, #60d4ff, #b060ff)',
+      border: 'rgba(255,96,200,0.3)'
+    }
+  },
+  {
+    title: 'Mermi Kesici',
+    genre: '3D Aksiyon / Refleks',
+    desc: 'Katanalı samuraysın! Düşmanlar sana ateş ediyor, gelen mermileri havada ikiye böl. Her level daha çok düşman, daha hızlı mermi.',
+    href: 'mermi-kesici/',
+    icon: '⚔️',
+    colors: {
+      bg: 'linear-gradient(135deg, #0d0820, #1a0a1e)',
+      accent: '#00f0ff',
+      glow: 'rgba(0,240,255,0.20)',
+      bar: 'linear-gradient(90deg, #00f0ff, #b44eff, #ff3d6e)',
+      border: 'rgba(0,240,255,0.22)'
+    }
+  },
+  {
+    title: 'Süper Şef',
+    genre: '3D Restoran / Yönetim',
+    desc: 'Kendi restoranını işlet! Salata yap, doğra, pişir, rendele. Müşterileri mutlu et, dükkanını büyüt!',
+    href: 'super-sef/',
+    icon: '👨‍🍳',
+    colors: {
+      bg: 'linear-gradient(135deg, #2a1205, #3a1a0a)',
+      accent: '#ffd24a',
+      glow: 'rgba(255,210,74,0.22)',
+      bar: 'linear-gradient(90deg, #e8402a, #ff7b29, #ffd24a)',
+      border: 'rgba(255,210,74,0.25)'
+    }
+  },
+   {
+     title: 'Stickman Dövüş',
+     genre: 'Aksiyon / Dövüş',
+     desc: '1-5 kişilik çöp adam dövüşü! Bilgisayara veya arkadaşlarına karşı silah seç, geri sayımdan sonra son ayakta kalan kazansın.',
+     href: 'stickman-dovus/',
+     icon: '🥊',
+     colors: {
+       bg: 'linear-gradient(135deg, #1a0606, #2a0a0a)',
+       accent: '#ff3b3b',
+       glow: 'rgba(255,59,59,0.22)',
+       bar: 'linear-gradient(90deg, #ff3b3b, #ff8c2e, #ffd24a)',
+       border: 'rgba(255,59,59,0.25)'
+     }
+   },
+   {
+     title: 'Roket Görevi',
+     genre: '3D Simülasyon / Uzay',
+     desc: 'Yıldız gemisi ORION\'un içindesin! WASD ile dolaş, görevlileri dinle: renkli kabloları bağla, oksijen tüplerini aç. Meteorlar gövdeye çarpar, warning sesleri çalar!',
+     href: 'roket-ucusu/',
+     icon: '🛰️',
+     colors: {
+       bg: 'linear-gradient(135deg, #04030f, #0a0828)',
+       accent: '#00f0ff',
+       glow: 'rgba(0,240,255,0.22)',
+       bar: 'linear-gradient(90deg, #00f0ff, #b44eff, #ff5e3a)',
+       border: 'rgba(0,240,255,0.25)'
+     }
+   },
+   {
+     title: 'Bilgisayar Toplama',
+     genre: '3D Eğitici / Bulmaca',
+     desc: 'Three.js ile 3D! Tornavidayla kasayı aç, parçaları sürükleyip yuvalarına tak: anakart, işlemci, RAM, ekran & ses kartı, güç kaynağı, disk. Bilgisayarı çalıştır!',
+     href: 'bilgisayar-toplama/',
+     icon: '🖥️',
+     colors: {
+       bg: 'linear-gradient(135deg, #0a1f1a, #06140f)',
+       accent: '#2bd9a0',
+       glow: 'rgba(43,217,160,0.22)',
+       bar: 'linear-gradient(90deg, #2bd9a0, #3da8ff, #ffd24a)',
+       border: 'rgba(43,217,160,0.25)'
+     }
+   },
+   {
+    title: 'Tıkla Kazan',
+    genre: 'Clicker / Eğlence',
+    desc: 'Robux, Minecoin ya da Brawl Stars elması seç, tıklaya tıklaya topla! 70\'te 2\'li tıklama, 200\'de otomatik. 10.000\'de Uzaycoin açılır!',
+    href: 'tikla-kazan/',
+    icon: '🪙',
+    colors: {
+      bg: 'linear-gradient(135deg, #0a1f3a, #1a0a30)',
+      accent: '#5db4ff',
+      glow: 'rgba(93,180,255,0.22)',
+      bar: 'linear-gradient(90deg, #3df07d, #5db4ff, #c98aff)',
+      border: 'rgba(93,180,255,0.25)'
+    }
   }
 ];
+
+// Son eklenen kaç oyun "YENİ" olarak vurgulansın (array'in sonundakiler)
+const NEW_COUNT = 4;
 
 // ─── Render Cards ───
 function renderCards() {
   const grid = document.getElementById('gamesGrid');
-  grid.innerHTML = GAMES.map((g, i) => `
-    <a href="${g.href}" class="game-card"
+  // En son eklenen oyunlar (array'in sonundakiler) en başta gözüksün
+  const ordered = GAMES
+    .map((g, idx) => ({ ...g, isNew: idx >= GAMES.length - NEW_COUNT }))
+    .reverse();
+  grid.innerHTML = ordered.map((g, i) => `
+    <a href="${g.href}" class="game-card${g.isNew ? ' is-new' : ''}"
        style="--card-bg:${g.colors.bg};--card-accent:${g.colors.accent};--card-glow:${g.colors.glow};--card-bar:${g.colors.bar};--card-border:${g.colors.border};animation-delay:${i * 0.12}s">
+      ${g.isNew ? '<span class="new-badge">YENİ</span>' : ''}
       <div class="card-top-bar"></div>
       <div class="card-body">
         <div class="card-icon">${g.icon}</div>
@@ -356,11 +583,18 @@ function renderCards() {
   `).join('');
 }
 
-// ─── Starfield ───
+// ─── Uzay Sahnesi ───
 const canvas = document.getElementById('starfield');
 const ctx = canvas.getContext('2d');
 let stars = [];
 let shootingStars = [];
+let planets = [];
+let asteroids = [];
+let astronauts = [];
+let shuttles = [];
+let meteors = [];
+let sparks = [];
+let explosions = [];
 let W, H;
 
 function resize() {
@@ -384,22 +618,339 @@ function createStars() {
   }
 }
 
-function spawnShootingStar() {
-  shootingStars.push({
-    x: Math.random() * W * 0.8,
-    y: Math.random() * H * 0.3,
-    len: Math.random() * 80 + 40,
-    speed: Math.random() * 6 + 4,
-    angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
-    opacity: 1,
-    life: 1
+// ─── Gezegenler ───
+const PLANET_PALETTES = [
+  { base: '#7b4fc9', mid: '#5a35a0', dark: '#3a2068', ring: 'rgba(190,160,255,0.45)' },
+  { base: '#e08a3c', mid: '#b5601f', dark: '#7a3d10', ring: 'rgba(255,200,140,0.45)' },
+  { base: '#3c9ee0', mid: '#2570ab', dark: '#144a78', ring: null },
+  { base: '#d05a78', mid: '#a03a58', dark: '#6a2038', ring: null },
+  { base: '#4fc9a0', mid: '#35a07a', dark: '#206850', ring: 'rgba(160,255,220,0.4)' }
+];
+
+function createPlanets() {
+  planets = [];
+  const count = W < 700 ? 2 : 3;
+  for (let i = 0; i < count; i++) {
+    const pal = PLANET_PALETTES[Math.floor(Math.random() * PLANET_PALETTES.length)];
+    planets.push({
+      x: (i + 0.5) / count * W + (Math.random() - 0.5) * W * 0.2,
+      y: Math.random() * H,
+      r: Math.random() * 22 + 18,
+      vx: (Math.random() - 0.5) * 0.08,
+      vy: Math.random() * 0.05 + 0.02,
+      pal,
+      hasRing: pal.ring !== null && Math.random() < 0.8,
+      ringTilt: Math.random() * 0.5 + 0.25,
+      spots: Array.from({ length: 3 }, () => ({
+        a: Math.random() * Math.PI * 2,
+        d: Math.random() * 0.6 + 0.1,
+        r: Math.random() * 0.25 + 0.1
+      })),
+      hitFlash: 0
+    });
+  }
+}
+
+function drawPlanet(p) {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  // Halkanın arka yarısı
+  if (p.hasRing) {
+    ctx.strokeStyle = p.pal.ring;
+    ctx.lineWidth = p.r * 0.18;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, p.r * 1.7, p.r * 1.7 * p.ringTilt, -0.3, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Gövde
+  const grad = ctx.createRadialGradient(-p.r * 0.35, -p.r * 0.35, p.r * 0.1, 0, 0, p.r);
+  grad.addColorStop(0, p.pal.base);
+  grad.addColorStop(0.6, p.pal.mid);
+  grad.addColorStop(1, p.pal.dark);
+  ctx.beginPath();
+  ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Yüzey lekeleri
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  for (const sp of p.spots) {
+    ctx.beginPath();
+    ctx.ellipse(Math.cos(sp.a) * p.r * sp.d, Math.sin(sp.a) * p.r * sp.d, p.r * sp.r * 1.6, p.r * sp.r, sp.a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+  // Çarpma parlaması
+  if (p.hitFlash > 0) {
+    ctx.beginPath();
+    ctx.arc(0, 0, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 200, 120, ${p.hitFlash * 0.55})`;
+    ctx.fill();
+  }
+  // Halkanın ön yarısı
+  if (p.hasRing) {
+    ctx.strokeStyle = p.pal.ring;
+    ctx.lineWidth = p.r * 0.18;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, p.r * 1.7, p.r * 1.7 * p.ringTilt, -0.3, 0, Math.PI);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── Asteroidler ───
+function createAsteroids() {
+  asteroids = [];
+  const count = W < 700 ? 3 : 5;
+  for (let i = 0; i < count; i++) {
+    const r = Math.random() * 7 + 5;
+    const verts = [];
+    const n = 8;
+    for (let j = 0; j < n; j++) {
+      verts.push(r * (0.75 + Math.random() * 0.4));
+    }
+    asteroids.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r, verts,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.01
+    });
+  }
+}
+
+function drawAsteroid(a) {
+  ctx.save();
+  ctx.translate(a.x, a.y);
+  ctx.rotate(a.rot);
+  ctx.beginPath();
+  const n = a.verts.length;
+  for (let j = 0; j < n; j++) {
+    const ang = (j / n) * Math.PI * 2;
+    const d = a.verts[j];
+    if (j === 0) ctx.moveTo(Math.cos(ang) * d, Math.sin(ang) * d);
+    else ctx.lineTo(Math.cos(ang) * d, Math.sin(ang) * d);
+  }
+  ctx.closePath();
+  const grad = ctx.createRadialGradient(-a.r * 0.3, -a.r * 0.3, a.r * 0.1, 0, 0, a.r * 1.2);
+  grad.addColorStop(0, '#9a8a7a');
+  grad.addColorStop(1, '#4a4038');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Kraterler
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.arc(a.r * 0.3, -a.r * 0.2, a.r * 0.2, 0, Math.PI * 2);
+  ctx.arc(-a.r * 0.35, a.r * 0.3, a.r * 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── Astronotlar ───
+function createAstronauts() {
+  astronauts = [];
+  const count = W < 700 ? 1 : 2;
+  for (let i = 0; i < count; i++) {
+    astronauts.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      s: Math.random() * 0.4 + 0.8,
+      vx: (Math.random() - 0.5) * 0.25,
+      vy: (Math.random() - 0.5) * 0.15,
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.006,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function drawAstronaut(a) {
+  ctx.save();
+  ctx.translate(a.x, a.y + Math.sin(a.bobPhase) * 4);
+  ctx.rotate(a.rot);
+  ctx.scale(a.s, a.s);
+  ctx.lineCap = 'round';
+  // Sırt çantası
+  ctx.fillStyle = '#8a93a8';
+  ctx.fillRect(-9, -8, 18, 14);
+  // Kollar
+  ctx.strokeStyle = '#dde3ee';
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.moveTo(-6, -2); ctx.lineTo(-13, 5);
+  ctx.moveTo(6, -2); ctx.lineTo(13, 4);
+  ctx.stroke();
+  // Bacaklar
+  ctx.beginPath();
+  ctx.moveTo(-3.5, 9); ctx.lineTo(-6, 18);
+  ctx.moveTo(3.5, 9); ctx.lineTo(6, 18);
+  ctx.stroke();
+  // Gövde
+  ctx.fillStyle = '#e8ecf5';
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 8, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Kask
+  ctx.beginPath();
+  ctx.arc(0, -10, 7.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Vizör
+  ctx.fillStyle = '#1a2a50';
+  ctx.beginPath();
+  ctx.ellipse(0, -10, 5.5, 4.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Vizör yansıması
+  ctx.fillStyle = 'rgba(160,210,255,0.7)';
+  ctx.beginPath();
+  ctx.ellipse(-1.8, -11.5, 1.8, 1.1, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── Uzay Mekikleri ───
+function spawnShuttle() {
+  const fromLeft = Math.random() < 0.5;
+  const angle = (fromLeft ? 0 : Math.PI) + (Math.random() - 0.5) * 0.5;
+  shuttles.push({
+    x: fromLeft ? -50 : W + 50,
+    y: Math.random() * H * 0.7 + H * 0.1,
+    angle,
+    speed: Math.random() * 1 + 1.2,
+    s: Math.random() * 0.4 + 0.8,
+    flame: 0
   });
+}
+
+function drawShuttle(sh) {
+  ctx.save();
+  ctx.translate(sh.x, sh.y);
+  ctx.rotate(sh.angle);
+  ctx.scale(sh.s, sh.s);
+  // Alev
+  sh.flame += 0.3;
+  const fl = 12 + Math.sin(sh.flame) * 4;
+  const fgrad = ctx.createLinearGradient(-18, 0, -18 - fl, 0);
+  fgrad.addColorStop(0, 'rgba(255,200,80,0.95)');
+  fgrad.addColorStop(0.5, 'rgba(255,120,40,0.7)');
+  fgrad.addColorStop(1, 'rgba(255,80,20,0)');
+  ctx.fillStyle = fgrad;
+  ctx.beginPath();
+  ctx.moveTo(-17, -4);
+  ctx.lineTo(-18 - fl, 0);
+  ctx.lineTo(-17, 4);
+  ctx.closePath();
+  ctx.fill();
+  // Kanatlar
+  ctx.fillStyle = '#c44a5a';
+  ctx.beginPath();
+  ctx.moveTo(-8, -5); ctx.lineTo(-18, -12); ctx.lineTo(-16, -3);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-8, 5); ctx.lineTo(-18, 12); ctx.lineTo(-16, 3);
+  ctx.closePath(); ctx.fill();
+  // Gövde
+  const bgrad = ctx.createLinearGradient(0, -6, 0, 6);
+  bgrad.addColorStop(0, '#f0f3fa');
+  bgrad.addColorStop(1, '#b8c0d0');
+  ctx.fillStyle = bgrad;
+  ctx.beginPath();
+  ctx.moveTo(-17, -5);
+  ctx.lineTo(8, -5);
+  ctx.quadraticCurveTo(20, 0, 8, 5);
+  ctx.lineTo(-17, 5);
+  ctx.closePath();
+  ctx.fill();
+  // Burun
+  ctx.fillStyle = '#c44a5a';
+  ctx.beginPath();
+  ctx.moveTo(8, -5);
+  ctx.quadraticCurveTo(20, 0, 8, 5);
+  ctx.quadraticCurveTo(13, 0, 8, -5);
+  ctx.closePath();
+  ctx.fill();
+  // Pencere
+  ctx.fillStyle = '#1a2a50';
+  ctx.beginPath();
+  ctx.arc(2, 0, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(160,210,255,0.8)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ─── Meteorlar ve Patlamalar ───
+function spawnMeteor() {
+  const x = Math.random() * W;
+  const y = -30;
+  let angle, target = null;
+  // Bazen bir gezegeni hedef al
+  if (planets.length && Math.random() < 0.45) {
+    target = planets[Math.floor(Math.random() * planets.length)];
+    angle = Math.atan2(target.y - y, target.x - x);
+  } else {
+    angle = Math.PI / 2 + (Math.random() - 0.5) * 1.4;
+  }
+  meteors.push({
+    x, y, angle, target,
+    speed: Math.random() * 2 + 2.5,
+    size: Math.random() * 2.5 + 2,
+    len: Math.random() * 50 + 50
+  });
+}
+
+function explode(x, y, power) {
+  explosions.push({ x, y, age: 0, max: 45, power });
+  const n = Math.floor(power * 8 + 12);
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2;
+    const sp = Math.random() * power * 1.2 + 0.5;
+    sparks.push({
+      x, y,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp,
+      life: 1,
+      decay: Math.random() * 0.02 + 0.015,
+      r: Math.random() * 2 + 1,
+      hue: Math.random() * 40 + 15
+    });
+  }
+}
+
+function drawMeteor(m) {
+  const tailX = m.x - Math.cos(m.angle) * m.len;
+  const tailY = m.y - Math.sin(m.angle) * m.len;
+  const grad = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
+  grad.addColorStop(0, 'rgba(255,100,30,0)');
+  grad.addColorStop(0.6, 'rgba(255,140,50,0.45)');
+  grad.addColorStop(1, 'rgba(255,220,150,0.95)');
+  ctx.beginPath();
+  ctx.moveTo(tailX, tailY);
+  ctx.lineTo(m.x, m.y);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = m.size * 1.4;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Kor halindeki kaya
+  const hgrad = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.size * 2);
+  hgrad.addColorStop(0, 'rgba(255,240,200,1)');
+  hgrad.addColorStop(0.5, 'rgba(255,160,60,0.8)');
+  hgrad.addColorStop(1, 'rgba(255,100,30,0)');
+  ctx.beginPath();
+  ctx.arc(m.x, m.y, m.size * 2, 0, Math.PI * 2);
+  ctx.fillStyle = hgrad;
+  ctx.fill();
 }
 
 function animate() {
   ctx.clearRect(0, 0, W, H);
 
-  // Draw stars
+  // Yıldızlar
   for (const s of stars) {
     s.y += s.speed;
     s.twinklePhase += s.twinkleSpeed;
@@ -412,7 +963,57 @@ function animate() {
     ctx.fill();
   }
 
-  // Draw shooting stars
+  // Gezegenler
+  for (const p of planets) {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.hitFlash > 0) p.hitFlash -= 0.02;
+    const m = p.r * 2.2;
+    if (p.y - m > H) { p.y = -m; p.x = Math.random() * W; }
+    if (p.x - m > W) p.x = -m;
+    if (p.x + m < 0) p.x = W + m;
+    drawPlanet(p);
+  }
+
+  // Asteroidler
+  for (const a of asteroids) {
+    a.x += a.vx;
+    a.y += a.vy;
+    a.rot += a.rotSpeed;
+    if (a.x - a.r > W) a.x = -a.r;
+    if (a.x + a.r < 0) a.x = W + a.r;
+    if (a.y - a.r > H) a.y = -a.r;
+    if (a.y + a.r < 0) a.y = H + a.r;
+    drawAsteroid(a);
+  }
+
+  // Astronotlar
+  for (const a of astronauts) {
+    a.x += a.vx;
+    a.y += a.vy;
+    a.rot += a.rotSpeed;
+    a.bobPhase += 0.02;
+    const m = 30 * a.s;
+    if (a.x - m > W) a.x = -m;
+    if (a.x + m < 0) a.x = W + m;
+    if (a.y - m > H) a.y = -m;
+    if (a.y + m < 0) a.y = H + m;
+    drawAstronaut(a);
+  }
+
+  // Uzay mekikleri
+  for (let i = shuttles.length - 1; i >= 0; i--) {
+    const sh = shuttles[i];
+    sh.x += Math.cos(sh.angle) * sh.speed;
+    sh.y += Math.sin(sh.angle) * sh.speed;
+    if (sh.x < -80 || sh.x > W + 80 || sh.y < -80 || sh.y > H + 80) {
+      shuttles.splice(i, 1);
+      continue;
+    }
+    drawShuttle(sh);
+  }
+
+  // Kayan yıldızlar
   for (let i = shootingStars.length - 1; i >= 0; i--) {
     const ss = shootingStars[i];
     ss.x += Math.cos(ss.angle) * ss.speed;
@@ -433,16 +1034,102 @@ function animate() {
     ctx.stroke();
   }
 
-  // Random shooting star
+  // Meteorlar
+  for (let i = meteors.length - 1; i >= 0; i--) {
+    const m = meteors[i];
+    m.x += Math.cos(m.angle) * m.speed;
+    m.y += Math.sin(m.angle) * m.speed;
+    // Hedef gezegen hareket ettiyse rotayı hafifçe düzelt
+    if (m.target) {
+      m.angle = Math.atan2(m.target.y - m.y, m.target.x - m.x);
+      const dx = m.target.x - m.x;
+      const dy = m.target.y - m.y;
+      if (dx * dx + dy * dy < m.target.r * m.target.r) {
+        m.target.hitFlash = 1;
+        explode(m.x, m.y, m.size);
+        meteors.splice(i, 1);
+        continue;
+      }
+    }
+    if (m.x < -100 || m.x > W + 100 || m.y > H + 100) {
+      meteors.splice(i, 1);
+      continue;
+    }
+    drawMeteor(m);
+  }
+
+  // Kıvılcımlar
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const sp = sparks[i];
+    sp.x += sp.vx;
+    sp.y += sp.vy;
+    sp.vx *= 0.97;
+    sp.vy *= 0.97;
+    sp.life -= sp.decay;
+    if (sp.life <= 0) { sparks.splice(i, 1); continue; }
+    ctx.beginPath();
+    ctx.arc(sp.x, sp.y, sp.r * sp.life, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${sp.hue}, 100%, ${55 + sp.life * 30}%, ${sp.life})`;
+    ctx.fill();
+  }
+
+  // Patlama halkaları
+  for (let i = explosions.length - 1; i >= 0; i--) {
+    const ex = explosions[i];
+    ex.age++;
+    if (ex.age > ex.max) { explosions.splice(i, 1); continue; }
+    const t = ex.age / ex.max;
+    // Parlak merkez
+    if (t < 0.3) {
+      const fgrad = ctx.createRadialGradient(ex.x, ex.y, 0, ex.x, ex.y, ex.power * 8);
+      fgrad.addColorStop(0, `rgba(255,250,220,${(1 - t / 0.3) * 0.9})`);
+      fgrad.addColorStop(1, 'rgba(255,150,60,0)');
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, ex.power * 8, 0, Math.PI * 2);
+      ctx.fillStyle = fgrad;
+      ctx.fill();
+    }
+    // Şok dalgası
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, t * ex.power * 14, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 190, 110, ${(1 - t) * 0.7})`;
+    ctx.lineWidth = 2 * (1 - t) + 0.5;
+    ctx.stroke();
+  }
+
+  // Rastgele olaylar
   if (Math.random() < 0.003) spawnShootingStar();
+  if (Math.random() < 0.0025) spawnMeteor();
+  if (shuttles.length < 2 && Math.random() < 0.0009) spawnShuttle();
 
   requestAnimationFrame(animate);
 }
 
+function spawnShootingStar() {
+  shootingStars.push({
+    x: Math.random() * W * 0.8,
+    y: Math.random() * H * 0.3,
+    len: Math.random() * 80 + 40,
+    speed: Math.random() * 6 + 4,
+    angle: Math.PI / 4 + (Math.random() - 0.5) * 0.3,
+    opacity: 1,
+    life: 1
+  });
+}
+
 // ─── Init ───
-window.addEventListener('resize', () => { resize(); createStars(); });
+window.addEventListener('resize', () => {
+  resize();
+  createStars();
+  createPlanets();
+  createAsteroids();
+  createAstronauts();
+});
 resize();
 createStars();
+createPlanets();
+createAsteroids();
+createAstronauts();
 renderCards();
 animate();
 </script>

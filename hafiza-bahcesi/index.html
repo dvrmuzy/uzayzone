@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Hafıza Bahçesi</title>
+<link rel="icon" href="../logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../logo/favicon-16.png">
+<link rel="icon" type="image/svg+xml" href="../logo/favicon.svg">
+<link rel="apple-touch-icon" href="../logo/apple-touch-icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: 'Nunito', sans-serif;
+  color: #2d3a2f;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 18% 12%, rgba(255,180,120,0.35), transparent 55%),
+    radial-gradient(ellipse at 82% 88%, rgba(255,140,170,0.25), transparent 55%),
+    radial-gradient(ellipse at 50% 60%, rgba(255,235,180,0.20), transparent 70%),
+    linear-gradient(180deg, #fff5e1 0%, #ffe8c8 50%, #ffd9b5 100%);
+  min-height: 100vh;
+}
+
+canvas#petals {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 70px 18px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 2.6rem;
+  letter-spacing: 0.04em;
+  color: #d65a4a;
+  text-shadow: 0 3px 0 rgba(255,255,255,0.6), 0 0 24px rgba(255,140,80,0.25);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.title .emoji {
+  font-size: 2rem;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+  animation: bounce 2.5s ease-in-out infinite;
+}
+
+.subtitle {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: #7c5a44;
+  margin-top: 4px;
+  margin-bottom: 22px;
+}
+
+.diff-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.diff-btn {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  color: #7c5a44;
+  background: rgba(255,255,255,0.6);
+  border: 2px solid rgba(214,90,74,0.25);
+  border-radius: 20px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.diff-btn:hover { border-color: #d65a4a; color: #d65a4a; transform: translateY(-1px); }
+.diff-btn.active { transform: scale(1.06); font-weight: 700; }
+.diff-btn.active.easy   { background: #8acf6f; border-color: #5fb045; color: #ffffff; box-shadow: 0 4px 18px rgba(95,176,69,0.45); }
+.diff-btn.active.medium { background: #f0a14a; border-color: #d6822b; color: #ffffff; box-shadow: 0 4px 18px rgba(214,130,43,0.45); }
+.diff-btn.active.hard   { background: #d65a4a; border-color: #b03a2a; color: #ffffff; box-shadow: 0 4px 18px rgba(214,90,74,0.45); }
+
+.stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.stat-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 18px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.7);
+  border: 2px solid rgba(214,90,74,0.18);
+  min-width: 90px;
+  box-shadow: 0 2px 10px rgba(180,90,40,0.08);
+}
+.stat-pill .lab {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: #b07a5a;
+  text-transform: uppercase;
+}
+.stat-pill .val {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #d65a4a;
+}
+
+.board {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  max-width: 540px;
+  perspective: 1000px;
+}
+
+.board.easy   { grid-template-columns: repeat(4, 1fr); max-width: 380px; }
+.board.medium { grid-template-columns: repeat(4, 1fr); max-width: 440px; }
+.board.hard   { grid-template-columns: repeat(6, 1fr); max-width: 560px; }
+
+.card {
+  aspect-ratio: 1;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+.card.flipped { transform: rotateY(180deg); }
+.card.matched { transform: rotateY(180deg); cursor: default; }
+.card.matched .face-front {
+  box-shadow: 0 0 22px rgba(95,176,69,0.5), inset 0 0 14px rgba(95,176,69,0.18);
+  border-color: #5fb045;
+  animation: matchedPulse 1.5s ease-in-out infinite;
+}
+
+.face {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.face-back {
+  background: linear-gradient(135deg, #f0a14a, #d65a4a);
+  border: 3px solid rgba(255,255,255,0.6);
+  box-shadow: 0 4px 14px rgba(180,90,40,0.3), inset 0 -4px 0 rgba(0,0,0,0.08);
+  font-size: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.face-back::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.25), transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.08), transparent 50%);
+}
+.face-back::after {
+  content: '🌻';
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+.card:hover .face-back {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(180,90,40,0.4);
+}
+
+.face-front {
+  background: linear-gradient(180deg, #fff9ed, #ffe8c8);
+  border: 3px solid #f0a14a;
+  box-shadow: 0 4px 14px rgba(180,90,40,0.2), inset 0 -3px 0 rgba(0,0,0,0.05);
+  transform: rotateY(180deg);
+  font-size: 2.6rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+}
+
+.bottom-row {
+  margin-top: 22px;
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  font-family: 'Fredoka', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  background: linear-gradient(180deg, #f0a14a, #d65a4a);
+  border: none;
+  border-radius: 30px;
+  padding: 14px 36px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 14px rgba(214,90,74,0.4), inset 0 -3px 0 rgba(0,0,0,0.12);
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+}
+.btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 22px rgba(214,90,74,0.55), inset 0 -3px 0 rgba(0,0,0,0.12);
+}
+.btn:active { transform: translateY(0) scale(1); }
+
+.overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(255,235,200,0.55);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+
+.win-panel {
+  text-align: center;
+  padding: 40px 48px;
+  max-width: 90%;
+  background: rgba(255,255,255,0.92);
+  border-radius: 28px;
+  border: 3px solid #f0a14a;
+  box-shadow: 0 20px 60px rgba(180,90,40,0.25);
+  position: relative;
+}
+.win-panel .crown {
+  font-size: 3.4rem;
+  margin-bottom: 6px;
+  display: inline-block;
+  animation: bounce 1.8s ease-in-out infinite;
+}
+.win-panel h2 {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #d65a4a;
+  margin-bottom: 6px;
+}
+.win-panel .tag {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.92rem;
+  color: #7c5a44;
+  margin-bottom: 28px;
+}
+.win-panel .stats-grid {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+.win-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.win-stat .lab {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: #b07a5a;
+  text-transform: uppercase;
+}
+.win-stat .val {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #d65a4a;
+}
+.win-stat .val.best { color: #5fb045; }
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes matchedPulse {
+  0%, 100% { box-shadow: 0 0 18px rgba(95,176,69,0.4), inset 0 0 12px rgba(95,176,69,0.14); }
+  50% { box-shadow: 0 0 30px rgba(95,176,69,0.7), inset 0 0 18px rgba(95,176,69,0.20); }
+}
+@keyframes shake {
+  0%, 100% { transform: rotateY(180deg) translateX(0); }
+  25% { transform: rotateY(180deg) translateX(-6px); }
+  75% { transform: rotateY(180deg) translateX(6px); }
+}
+.card.shake { animation: shake 0.4s ease; }
+.card.shake .face-front {
+  border-color: #d65a4a;
+  box-shadow: 0 0 18px rgba(214,90,74,0.5), inset 0 0 14px rgba(214,90,74,0.18);
+}
+
+@media (max-width: 640px) {
+  .title { font-size: 1.9rem; }
+  .title .emoji { font-size: 1.5rem; }
+  .subtitle { font-size: 0.82rem; }
+  .stat-pill { padding: 6px 14px; min-width: 78px; }
+  .stat-pill .val { font-size: 1rem; }
+  .face-back { font-size: 1.4rem; }
+  .face-front { font-size: 2rem; }
+  .board { gap: 8px; }
+  .board.hard { gap: 6px; }
+  .win-panel { padding: 30px 30px; }
+  .win-panel h2 { font-size: 1.8rem; }
+  .win-panel .stats-grid { gap: 18px; }
+  .win-stat .val { font-size: 1.4rem; }
+  .diff-btn { font-size: 0.75rem; padding: 9px 18px; }
+}
+</style>
+<script src="../analytics.js"></script>
+</head>
+<body>
+
+<canvas id="petals"></canvas>
+
+<div class="wrap">
+  <h1 class="title"><span class="emoji">🌻</span>HAFIZA BAHÇESİ<span class="emoji">🦊</span></h1>
+  <div class="subtitle">Hayvanları eşleştir, bahçeyi keşfet!</div>
+
+  <div class="diff-row">
+    <button class="diff-btn easy" data-diff="easy">KOLAY · 4×3</button>
+    <button class="diff-btn medium active" data-diff="medium">ORTA · 4×4</button>
+    <button class="diff-btn hard" data-diff="hard">ZOR · 6×4</button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat-pill">
+      <div class="lab">SÜRE</div>
+      <div class="val" id="timeVal">0:00</div>
+    </div>
+    <div class="stat-pill">
+      <div class="lab">HAMLE</div>
+      <div class="val" id="movesVal">0</div>
+    </div>
+    <div class="stat-pill">
+      <div class="lab">EŞLEŞME</div>
+      <div class="val" id="pairsVal">0 / 8</div>
+    </div>
+  </div>
+
+  <div class="board medium" id="board"></div>
+
+  <div class="bottom-row">
+    <button class="btn" id="restartBtn">YENİ OYUN</button>
+  </div>
+</div>
+
+<div class="overlay" id="winOverlay">
+  <div class="win-panel">
+    <div class="crown">🏆</div>
+    <h2>BAŞARDIN!</h2>
+    <div class="tag" id="winTag">Bahçe seni gururlandırdı</div>
+    <div class="stats-grid">
+      <div class="win-stat">
+        <div class="lab">SÜRE</div>
+        <div class="val" id="winTime">0:00</div>
+      </div>
+      <div class="win-stat">
+        <div class="lab">HAMLE</div>
+        <div class="val" id="winMoves">0</div>
+      </div>
+      <div class="win-stat">
+        <div class="lab">REKOR</div>
+        <div class="val best" id="winBest">—</div>
+      </div>
+    </div>
+    <button class="btn" id="winRestart">TEKRAR OYNA</button>
+  </div>
+</div>
+
+<a href="../" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,0.85);color:#d65a4a;font-family:'Fredoka',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.06em;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:2px solid rgba(214,90,74,0.3);transition:all 0.3s;box-shadow:0 2px 10px rgba(180,90,40,0.15);" onmouseover="this.style.background='#d65a4a';this.style.color='#ffffff';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.85)';this.style.color='#d65a4a';this.style.transform='scale(1)'">← ANA SAYFA</a>
+
+<script>
+// ─── Falling Petals ───
+const pCanvas = document.getElementById('petals');
+const pctx = pCanvas.getContext('2d');
+let PW, PH, petals = [];
+const PETAL_COLORS = ['#ffb380', '#ff8fb0', '#ffd166', '#c8e89a', '#ffc1a1'];
+function resizePetals() {
+  PW = pCanvas.width = window.innerWidth;
+  PH = pCanvas.height = window.innerHeight;
+  petals = [];
+  const n = Math.floor((PW * PH) / 26000);
+  for (let i = 0; i < n; i++) {
+    petals.push(makePetal(true));
+  }
+}
+function makePetal(initial) {
+  return {
+    x: Math.random() * PW,
+    y: initial ? Math.random() * PH : -20,
+    r: Math.random() * 6 + 4,
+    vy: Math.random() * 0.6 + 0.3,
+    vx: (Math.random() - 0.5) * 0.5,
+    rot: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 0.03,
+    color: PETAL_COLORS[Math.floor(Math.random() * PETAL_COLORS.length)],
+    a: Math.random() * 0.4 + 0.4,
+    sway: Math.random() * 0.02 + 0.005,
+    swayPh: Math.random() * Math.PI * 2
+  };
+}
+resizePetals();
+window.addEventListener('resize', resizePetals);
+
+function drawPetals() {
+  pctx.clearRect(0, 0, PW, PH);
+  for (const p of petals) {
+    p.swayPh += p.sway;
+    p.x += p.vx + Math.sin(p.swayPh) * 0.4;
+    p.y += p.vy;
+    p.rot += p.vr;
+    if (p.y > PH + 20) {
+      Object.assign(p, makePetal(false));
+    }
+    pctx.save();
+    pctx.translate(p.x, p.y);
+    pctx.rotate(p.rot);
+    pctx.globalAlpha = p.a;
+    pctx.fillStyle = p.color;
+    pctx.beginPath();
+    pctx.ellipse(0, 0, p.r, p.r * 0.55, 0, 0, Math.PI * 2);
+    pctx.fill();
+    pctx.restore();
+  }
+  pctx.globalAlpha = 1;
+  requestAnimationFrame(drawPetals);
+}
+drawPetals();
+
+// ─── Audio ───
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    catch (e) { audioCtx = null; }
+  }
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+}
+function playTone(freq, dur, type = 'sine', vol = 0.15) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(g).connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + dur);
+}
+function sndFlip() { playTone(520, 0.08, 'triangle', 0.12); }
+function sndMatch() {
+  playTone(660, 0.1, 'triangle', 0.18);
+  setTimeout(() => playTone(880, 0.12, 'triangle', 0.18), 80);
+  setTimeout(() => playTone(1100, 0.16, 'triangle', 0.16), 170);
+}
+function sndMiss() { playTone(240, 0.18, 'square', 0.1); }
+function sndWin() {
+  const notes = [523, 659, 784, 1047, 1319];
+  notes.forEach((f, i) => setTimeout(() => playTone(f, 0.25, 'triangle', 0.2), i * 110));
+}
+
+// ─── Game ───
+const EMOJIS = ['🦊','🐰','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🦝','🐶','🐱','🐭','🐹'];
+
+const DIFF = {
+  easy:   { cols: 4, rows: 3, label: 'easy' },
+  medium: { cols: 4, rows: 4, label: 'medium' },
+  hard:   { cols: 6, rows: 4, label: 'hard' }
+};
+
+let difficulty = localStorage.getItem('hafizaBahcesiDiff') || 'medium';
+const STATE = {
+  cards: [],
+  flipped: [],
+  matched: 0,
+  totalPairs: 0,
+  moves: 0,
+  startTime: 0,
+  running: false,
+  busy: false
+};
+
+const boardEl = document.getElementById('board');
+const timeVal = document.getElementById('timeVal');
+const movesVal = document.getElementById('movesVal');
+const pairsVal = document.getElementById('pairsVal');
+
+function fmtTime(ms) {
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function syncDiffButtons() {
+  document.querySelectorAll('.diff-btn').forEach(b => {
+    if (b.dataset.diff === difficulty) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+}
+
+function newGame() {
+  ensureAudio();
+  const conf = DIFF[difficulty];
+  const total = conf.cols * conf.rows;
+  const pairs = total / 2;
+  STATE.totalPairs = pairs;
+  STATE.matched = 0;
+  STATE.moves = 0;
+  STATE.flipped = [];
+  STATE.startTime = performance.now();
+  STATE.running = true;
+  STATE.busy = false;
+
+  const pool = shuffle([...EMOJIS]).slice(0, pairs);
+  const deck = shuffle([...pool, ...pool]);
+
+  boardEl.className = 'board ' + conf.label;
+  boardEl.innerHTML = '';
+  STATE.cards = deck.map((emoji, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.idx = i;
+    card.dataset.emoji = emoji;
+    card.innerHTML = `
+      <div class="face face-back"></div>
+      <div class="face face-front">${emoji}</div>
+    `;
+    card.addEventListener('click', () => onCardClick(card));
+    boardEl.appendChild(card);
+    return card;
+  });
+
+  movesVal.textContent = '0';
+  pairsVal.textContent = `0 / ${pairs}`;
+  timeVal.textContent = '0:00';
+  document.getElementById('winOverlay').classList.remove('show');
+}
+
+function onCardClick(card) {
+  if (STATE.busy) return;
+  if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  if (STATE.flipped.length >= 2) return;
+
+  card.classList.add('flipped');
+  STATE.flipped.push(card);
+  sndFlip();
+
+  if (STATE.flipped.length === 2) {
+    STATE.moves++;
+    movesVal.textContent = STATE.moves;
+    const [a, b] = STATE.flipped;
+    if (a.dataset.emoji === b.dataset.emoji) {
+      STATE.busy = true;
+      setTimeout(() => {
+        a.classList.add('matched');
+        b.classList.add('matched');
+        a.classList.remove('flipped');
+        b.classList.remove('flipped');
+        STATE.matched++;
+        STATE.flipped = [];
+        STATE.busy = false;
+        pairsVal.textContent = `${STATE.matched} / ${STATE.totalPairs}`;
+        sndMatch();
+        if (STATE.matched >= STATE.totalPairs) win();
+      }, 380);
+    } else {
+      STATE.busy = true;
+      sndMiss();
+      a.classList.add('shake');
+      b.classList.add('shake');
+      setTimeout(() => {
+        a.classList.remove('flipped', 'shake');
+        b.classList.remove('flipped', 'shake');
+        STATE.flipped = [];
+        STATE.busy = false;
+      }, 700);
+    }
+  }
+}
+
+function win() {
+  STATE.running = false;
+  const totalMs = performance.now() - STATE.startTime;
+  const totalSec = Math.floor(totalMs / 1000);
+  const moves = STATE.moves;
+  const score = moves * 1000 + totalSec;
+  const key = 'hafizaBahcesiBest_' + difficulty;
+  const prevBest = parseInt(localStorage.getItem(key) || '0', 10);
+  let bestText;
+  let isNewBest = false;
+  if (!prevBest || score < prevBest) {
+    localStorage.setItem(key, String(score));
+    bestText = `${moves} · ${fmtTime(totalMs)}`;
+    isNewBest = true;
+  } else {
+    const prevMoves = Math.floor(prevBest / 1000);
+    const prevSec = prevBest % 1000;
+    bestText = `${prevMoves} · ${Math.floor(prevSec/60)}:${(prevSec%60).toString().padStart(2,'0')}`;
+  }
+  document.getElementById('winTime').textContent = fmtTime(totalMs);
+  document.getElementById('winMoves').textContent = moves;
+  document.getElementById('winBest').textContent = bestText;
+  document.getElementById('winTag').textContent = isNewBest ? '★ Yeni Rekor! ★' : 'Bahçe seni gururlandırdı';
+  sndWin();
+  setTimeout(() => document.getElementById('winOverlay').classList.add('show'), 500);
+}
+
+// ─── Timer ───
+function tick() {
+  if (STATE.running) {
+    const elapsed = performance.now() - STATE.startTime;
+    timeVal.textContent = fmtTime(elapsed);
+  }
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ─── Difficulty buttons (event delegation) ───
+function handleDiffClick(e) {
+  const btn = e.target.closest('.diff-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (btn.dataset.diff === difficulty) return;
+  difficulty = btn.dataset.diff;
+  try { localStorage.setItem('hafizaBahcesiDiff', difficulty); } catch (_) {}
+  syncDiffButtons();
+  newGame();
+}
+document.addEventListener('click', handleDiffClick, true);
+document.addEventListener('touchstart', handleDiffClick, { capture: true, passive: false });
+
+document.getElementById('restartBtn').addEventListener('click', newGame);
+document.getElementById('winRestart').addEventListener('click', newGame);
+
+// ─── Init ───
+syncDiffButtons();
+newGame();
+</script>
+</body>
+</html>
