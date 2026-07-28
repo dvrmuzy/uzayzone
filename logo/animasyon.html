@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Uzay Zone — Logo Animasyonu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #05010f;
+    color: #cfd6ff;
+    font-family: 'Orbitron', system-ui, sans-serif;
+  }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 18px; padding: 20px;
+  }
+  #stage {
+    width: 100%; max-width: 1280px;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 0 70px rgba(0,200,255,.16), 0 20px 60px rgba(0,0,0,.6);
+    background: #05010f;
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  .bar {
+    width: 100%; max-width: 1280px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit; font-weight: 700; font-size: 13px; letter-spacing: 1px;
+    color: #dff6ff; background: rgba(0,200,255,.10);
+    border: 1px solid rgba(0,200,255,.38);
+    padding: 10px 16px; border-radius: 9px; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  button:hover:not(:disabled) { background: rgba(0,200,255,.22); border-color: rgba(125,249,255,.7); }
+  button:active:not(:disabled) { transform: translateY(1px); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.rec { color: #ffd7e4; background: rgba(255,60,120,.12); border-color: rgba(255,80,140,.45); }
+  button.rec:hover:not(:disabled) { background: rgba(255,60,120,.24); }
+
+  #scrub { flex: 1; min-width: 200px; accent-color: #00c8ff; height: 4px; }
+  #clock { font-size: 12px; font-variant-numeric: tabular-nums; color: #7d8ac0; min-width: 96px; text-align: right; }
+  #status { width: 100%; max-width: 1280px; font-size: 12px; font-weight: 400; color: #7d8ac0; min-height: 18px; }
+  #status b { color: #7df9ff; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="stage"><canvas id="c" width="1920" height="1080"></canvas></div>
+
+<div class="bar">
+  <button id="play">⏸ DURAKLAT</button>
+  <button id="restart">↺ BAŞA SAR</button>
+  <input id="scrub" type="range" min="0" max="24" step="0.05" value="0">
+  <span id="clock">0.0 / 24.0 s</span>
+  <button id="record" class="rec">⏺ VİDEO KAYDET</button>
+</div>
+<div id="status">Kayıt gerçek zamanlı yapılır — 24 saniye sürer, bittiğinde dosya otomatik iner.</div>
+
+<script>
+(() => {
+'use strict';
+
+const W = 1920, H = 1080;
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha: false });
+
+/* ─────────────── Zaman çizelgesi ─────────────── */
+const T = {
+  meteorStart : 12.0,   // meteor kadraja girer
+  impact      : 13.5,   // çarpma anı
+  newStart    : 16.5,   // yeni gezegen kuzeydoğuda belirir
+  newArrive   : 21.5,   // yerine oturur
+  end         : 24.0
+};
+
+/* ─────────────── Sahne düzeni ─────────────── */
+const PL = { x: 640, y: 555, r: 170 };              // ana gezegen
+const RING = { rx: PL.r * 1.84, ry: PL.r * 0.46, tilt: -24 * Math.PI / 180 };
+const NEW = { fromX: 2380, fromY: -420, toX: 1600, toY: 245, r: 108 };  // kuzeydoğudan gelen
+const IMPACT_ANG = 215 * Math.PI / 180;             // çarpma noktası (sol üst)
+const IMPACT_DEPTH = 0.60;                          // yüzeyde merkeze uzaklık (r cinsinden)
+const GM = 3.0e6;                                   // yerçekimi sabiti (px³/s²)
+
+/* ─────────────── Yardımcılar ─────────────── */
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp  = (a, b, t) => a + (b - a) * t;
+const ease  = t => t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2) / 2;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+// 0→1 arası normalize edilmiş, sınırlanmış ilerleme
+const span = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function radial(x, y, r0, r1, stops) {
+  const g = ctx.createRadialGradient(x, y, r0, x, y, r1);
+  for (const [o, c] of stops) g.addColorStop(o, c);
+  return g;
+}
+// Merkezi (x,y), yarıçapı r olan yumuşak parıltı
+function glow(x, y, r, color, alpha) {
+  ctx.fillStyle = radial(x, y, 0, r, [
+    [0,   `rgba(${color},${alpha})`],
+    [0.4, `rgba(${color},${alpha * 0.42})`],
+    [1,   `rgba(${color},0)`]
+  ]);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+}
+
+/* Harf aralıklı metin (canvas letterSpacing'e güvenmeden) */
+function trackedWidth(text, sp) {
+  let w = 0;
+  for (const ch of text) w += ctx.measureText(ch).width + sp;
+  return w - sp;
+}
+function drawTracked(text, x, y, sp) {
+  let cx = x;
+  for (const ch of text) { ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + sp; }
+}
+
+/* ─────────────── Yıldız alanı ─────────────── */
+const stars = (() => {
+  const rnd = mulberry32(20260726), out = [];
+  for (let i = 0; i < 460; i++) {
+    const big = rnd() > 0.94;
+    out.push({
+      x: rnd() * W, y: rnd() * H,
+      r: big ? 1.5 + rnd() * 1.9 : 0.4 + rnd() * 1.0,
+      a: 0.25 + rnd() * 0.7,
+      ph: rnd() * 6.2832,
+      sp: 0.6 + rnd() * 2.2,
+      hue: rnd() > 0.8 ? '190,240,255' : (rnd() > 0.6 ? '200,180,255' : '255,255,255')
+    });
+  }
+  return out;
+})();
+
+/* ─────────────── Durum ─────────────── */
+let t = 0, playing = true, moons = [], debris = [], sparks = [], scars = [], flashes = [];
+let shake = 0, craterHeat = 0, moonsReleased = false, meteorDone = false;
+
+function reset() {
+  t = 0;
+  shake = 0; craterHeat = 0; moonsReleased = false; meteorDone = false;
+  debris = []; sparks = []; scars = []; flashes = [];
+  moons = [
+    // yörünge yarıçapı çarpanı, boyut, periyot, faz, renk
+    { k: 1.00, r: 21, per:  7.5, ph: 0.35, col: 'moonA', x:0, y:0, vx:0, vy:0, spin:0, vspin:0, free:false },
+    { k: 0.72, r: 13, per:  5.2, ph: 2.60, col: 'moonB', x:0, y:0, vx:0, vy:0, spin:0, vspin:0, free:false },
+    { k: 1.24, r:  9, per: 10.4, ph: 4.35, col: 'moonC', x:0, y:0, vx:0, vy:0, spin:0, vspin:0, free:false }
+  ];
+}
+
+/* Çarpma noktasının ekran koordinatı */
+function impactPoint() {
+  return {
+    x: PL.x + Math.cos(IMPACT_ANG) * PL.r * IMPACT_DEPTH,
+    y: PL.y + Math.sin(IMPACT_ANG) * PL.r * IMPACT_DEPTH
+  };
+}
+
+/* Uydunun yörüngedeki konumu (eğik elips) */
+function moonOrbit(m, time) {
+  const a = time / m.per * 6.2832 + m.ph;
+  const ox = Math.cos(a) * RING.rx * m.k;
+  const oy = Math.sin(a) * RING.ry * m.k;
+  const c = Math.cos(RING.tilt), s = Math.sin(RING.tilt);
+  return {
+    x: PL.x + ox * c - oy * s,
+    y: PL.y + ox * s + oy * c,
+    front: Math.sin(a) > 0,
+    a
+  };
+}
+
+/* ─────────────── Meteor yolu ─────────────── */
+function meteorAt(time) {
+  const p = span(time, T.meteorStart, T.impact);
+  const ip = impactPoint();
+  const x0 = -380, y0 = -320;
+  // hafif kavisli giriş
+  const cx = lerp(x0, ip.x, 0.62) + 120, cy = lerp(y0, ip.y, 0.62) - 190;
+  const u = p * p * 0.35 + p * 0.65;   // sona doğru hızlanma
+  const iu = 1 - u;
+  return {
+    x: iu*iu*x0 + 2*iu*u*cx + u*u*ip.x,
+    y: iu*iu*y0 + 2*iu*u*cy + u*u*ip.y,
+    p
+  };
+}
+
+/* ─────────────── Çarpma ─────────────── */
+function detonate() {
+  const ip = impactPoint();
+  const rnd = mulberry32(99137);
+  shake = 1;
+  craterHeat = 1;
+
+  // dışa doğru normal (gezegen merkezinden çarpma noktasına)
+  const nx = Math.cos(IMPACT_ANG), ny = Math.sin(IMPACT_ANG);
+
+  // Enkaz: bir kısmı kaçar, bir kısmı geri düşüp gezegene çarpar
+  for (let i = 0; i < 64; i++) {
+    const spread = (rnd() - 0.5) * 2.1;                 // koni açıklığı
+    const ang = Math.atan2(ny, nx) + spread;
+    const willEscape = rnd() > 0.55;
+    const sp = willEscape ? 190 + rnd() * 250 : 60 + rnd() * 85;
+    const sz = 2 + rnd() * (rnd() > 0.85 ? 11 : 5);
+    debris.push({
+      x: ip.x + Math.cos(ang) * (6 + rnd() * 16),
+      y: ip.y + Math.sin(ang) * (6 + rnd() * 16),
+      vx: Math.cos(ang) * sp + (rnd() - 0.5) * 40,
+      vy: Math.sin(ang) * sp + (rnd() - 0.5) * 40,
+      r: sz, spin: rnd() * 6.28, vspin: (rnd() - 0.5) * 9,
+      heat: 1, seed: rnd() * 100
+    });
+  }
+  // Kıvılcım perdesi
+  for (let i = 0; i < 130; i++) {
+    const ang = Math.atan2(ny, nx) + (rnd() - 0.5) * 2.6;
+    const sp = 120 + rnd() * 620;
+    sparks.push({
+      x: ip.x, y: ip.y,
+      vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+      life: 0.5 + rnd() * 1.5, age: 0, r: 1 + rnd() * 2.6
+    });
+  }
+  flashes.push({ x: ip.x, y: ip.y, age: 0, life: 0.55, r: 420, core: true });
+
+  // Uyduları yörüngeden kopar — her biri farklı yöne
+  moons.forEach((m, i) => {
+    const o = moonOrbit(m, T.impact);
+    m.x = o.x; m.y = o.y; m.free = true;
+    // şok dalgası itmesi + yörünge hızının teğet bileşeni
+    const dx = o.x - PL.x, dy = o.y - PL.y, d = Math.hypot(dx, dy) || 1;
+    const push = [340, 470, 265][i];
+    const tangent = [1.0, -0.85, 0.55][i];
+    m.vx = (dx / d) * push + (-dy / d) * push * tangent;
+    m.vy = (dy / d) * push + ( dx / d) * push * tangent;
+    m.vspin = [1.4, -2.3, 0.9][i];
+  });
+  moonsReleased = true;
+}
+
+/* ─────────────── Simülasyon ─────────────── */
+function step(dt) {
+  const prev = t;
+  t = Math.min(t + dt, T.end);
+
+  if (!meteorDone && prev < T.impact && t >= T.impact) { detonate(); meteorDone = true; }
+
+  shake = Math.max(0, shake - dt * 1.7);
+  craterHeat = Math.max(0, craterHeat - dt * 0.16);
+
+  // Enkaz: yerçekimi + gezegene çarpma
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const d = debris[i];
+    const dx = PL.x - d.x, dy = PL.y - d.y;
+    const dist = Math.max(Math.hypot(dx, dy), 30);
+    const a = GM / (dist * dist);
+    d.vx += (dx / dist) * a * dt;
+    d.vy += (dy / dist) * a * dt;
+    d.x += d.vx * dt; d.y += d.vy * dt;
+    d.spin += d.vspin * dt;
+    d.heat = Math.max(0, d.heat - dt * 0.35);
+
+    if (dist <= PL.r + d.r * 0.4) {
+      // Parça gezegene geri çarptı
+      const ux = -dx / dist, uy = -dy / dist;
+      const hx = PL.x + ux * PL.r, hy = PL.y + uy * PL.r;
+      flashes.push({ x: hx, y: hy, age: 0, life: 0.34, r: 40 + d.r * 9, core: false });
+      scars.push({ ang: Math.atan2(uy, ux), depth: 0.86 + Math.random() * 0.1, r: d.r * 0.9 + 3, heat: 1 });
+      const rnd = mulberry32(d.seed * 1000 | 0);
+      for (let k = 0; k < 12; k++) {
+        const sa = Math.atan2(uy, ux) + (rnd() - 0.5) * 2.2;
+        const sp = 40 + rnd() * 190;
+        sparks.push({ x: hx, y: hy, vx: Math.cos(sa) * sp, vy: Math.sin(sa) * sp, life: 0.35 + rnd() * 0.7, age: 0, r: 1 + rnd() * 2 });
+      }
+      shake = Math.min(1, shake + 0.16);
+      debris.splice(i, 1);
+      continue;
+    }
+    if (d.x < -400 || d.x > W + 400 || d.y < -400 || d.y > H + 400) debris.splice(i, 1);
+  }
+
+  for (const s of scars) s.heat = Math.max(0, s.heat - dt * 0.3);
+
+  // Kıvılcımlar
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i];
+    s.age += dt;
+    if (s.age >= s.life) { sparks.splice(i, 1); continue; }
+    const dx = PL.x - s.x, dy = PL.y - s.y;
+    const dist = Math.max(Math.hypot(dx, dy), 40);
+    const a = GM * 0.55 / (dist * dist);
+    s.vx += (dx / dist) * a * dt; s.vy += (dy / dist) * a * dt;
+    s.x += s.vx * dt; s.y += s.vy * dt;
+  }
+
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    flashes[i].age += dt;
+    if (flashes[i].age >= flashes[i].life) flashes.splice(i, 1);
+  }
+
+  // Serbest kalan uydular
+  for (const m of moons) {
+    if (!m.free) continue;
+    const dx = PL.x - m.x, dy = PL.y - m.y;
+    const dist = Math.max(Math.hypot(dx, dy), 60);
+    const a = GM / (dist * dist);
+    m.vx += (dx / dist) * a * dt; m.vy += (dy / dist) * a * dt;
+    m.x += m.vx * dt; m.y += m.vy * dt;
+    m.spin += m.vspin * dt;
+  }
+}
+
+/* ═════════════════ ÇİZİM ═════════════════ */
+
+function drawBackground() {
+  ctx.fillStyle = '#05010f';
+  ctx.fillRect(0, 0, W, H);
+
+  // Nebula
+  ctx.fillStyle = radial(360, 250, 0, 900, [[0,'rgba(0,140,220,.20)'],[1,'rgba(0,140,220,0)']]);
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = radial(1500, 880, 0, 950, [[0,'rgba(120,60,220,.20)'],[1,'rgba(120,60,220,0)']]);
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = radial(1180, 180, 0, 620, [[0,'rgba(200,80,255,.10)'],[1,'rgba(200,80,255,0)']]);
+  ctx.fillRect(0, 0, W, H);
+
+  // Yıldızlar
+  for (const s of stars) {
+    const tw = 0.6 + 0.4 * Math.sin(t * s.sp + s.ph);
+    ctx.fillStyle = `rgba(${s.hue},${s.a * tw})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
+    if (s.r > 1.5) glow(s.x, s.y, s.r * 6, s.hue, 0.14 * tw);
+  }
+}
+
+function drawWordmark() {
+  const x = 1030, yU = 500, yZ = 675, size = 148, sp = 15;
+  ctx.font = `900 ${size}px Orbitron, system-ui, sans-serif`;
+  ctx.textBaseline = 'alphabetic';
+
+  const w = trackedWidth('UZAY', sp);
+  const g = ctx.createLinearGradient(x, yU - size * 0.75, x + w, yU - size * 0.75 + size * 0.4);
+  g.addColorStop(0,   '#9fefff');
+  g.addColorStop(0.45,'#00c8ff');
+  g.addColorStop(1,   '#c98bff');
+
+  // 3B ekstrüzyon katmanları
+  const layers = [[4, 5.5, '#1b0e44'], [3, 4, '#160a38'], [2, 2.5, '#241357']];
+  for (const [dx, dy, col] of layers) {
+    ctx.fillStyle = col;
+    drawTracked('UZAY', x + dx, yU + dy, sp);
+    drawTracked('ZONE', x + dx, yZ + dy, sp);
+  }
+
+  // Parıltı
+  const pulse = 0.55 + 0.2 * Math.sin(t * 1.4);
+  ctx.save();
+  ctx.shadowColor = `rgba(0,200,255,${pulse})`; ctx.shadowBlur = 46;
+  ctx.fillStyle = g;  drawTracked('UZAY', x, yU, sp);
+  ctx.shadowColor = `rgba(160,140,255,${pulse})`;
+  ctx.fillStyle = '#eef1ff'; drawTracked('ZONE', x, yZ, sp);
+  ctx.restore();
+
+  ctx.font = `400 30px Orbitron, system-ui, sans-serif`;
+  ctx.fillStyle = '#8c8cb4';
+  drawTracked('OYUN PORTALI', x + 6, 733, 26);
+}
+
+/* Halkanın yarısı: half = -1 arka (üst yay), +1 ön (alt yay) */
+function ringPath(cx, cy, rx, ry, tilt, half) {
+  ctx.beginPath();
+  const a0 = half > 0 ? 0 : Math.PI;
+  ctx.ellipse(cx, cy, rx, ry, tilt, a0, a0 + Math.PI);
+}
+
+function drawRingBack() {
+  ctx.save();
+  ctx.lineWidth = 8;
+  const g = ctx.createLinearGradient(PL.x - RING.rx, PL.y, PL.x + RING.rx, PL.y);
+  g.addColorStop(0, '#1c5a82'); g.addColorStop(1, '#4a2a80');
+  ctx.strokeStyle = g; ctx.globalAlpha = 0.72;
+  ringPath(PL.x, PL.y, RING.rx, RING.ry, RING.tilt, -1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRingFront() {
+  ctx.save();
+  const g = ctx.createLinearGradient(PL.x - RING.rx, PL.y, PL.x + RING.rx, PL.y);
+  g.addColorStop(0, '#00c8ff'); g.addColorStop(0.5, '#7df9ff'); g.addColorStop(1, '#a855f7');
+  ctx.strokeStyle = g;
+  ctx.shadowColor = 'rgba(125,249,255,.75)'; ctx.shadowBlur = 26;
+  ctx.lineWidth = 10;
+  ringPath(PL.x, PL.y, RING.rx, RING.ry, RING.tilt, 1);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPlanet() {
+  const r = PL.r, cx = PL.x, cy = PL.y;
+  const spin = t * 0.16;
+
+  // Atmosfer halesi
+  glow(cx, cy, r * 1.60, '0,200,255', 0.20);
+  glow(cx, cy, r * 1.15, '168,85,247', 0.17);
+
+  // Küre gövdesi
+  const fx = cx - 0.32 * r, fy = cy - 0.40 * r;
+  const sphere = ctx.createRadialGradient(fx, fy, 0, fx, fy, r * 1.70);
+  sphere.addColorStop(0,     '#dffaff');
+  sphere.addColorStop(0.18,  '#7df2ff');
+  sphere.addColorStop(0.5,   '#5aa8f7');
+  sphere.addColorStop(0.5001,'#7d5cf0');
+  sphere.addColorStop(0.82,  '#5a23b8');
+  sphere.addColorStop(1,     '#220a52');
+  ctx.fillStyle = sphere;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  // Yüzey bantları (dönüyor)
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
+  ctx.globalAlpha = 0.25; ctx.strokeStyle = '#1a0a40'; ctx.lineWidth = r * 0.047;
+  const bands = [-0.34, 0.09, 0.47];
+  const shift = ((spin % 1) + 1) % 1;
+  for (let rep = -1; rep <= 1; rep++) {
+    const off = (shift + rep) * 2 * r;
+    for (const b of bands) {
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.95 + off, cy + b * r - r * 0.05);
+      ctx.bezierCurveTo(
+        cx - r * 0.30 + off, cy + b * r - r * 0.20,
+        cx + r * 0.45 + off, cy + b * r + r * 0.05,
+        cx + r * 0.98 + off, cy + b * r + r * 0.18
+      );
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // Geri düşen parçaların açtığı izler
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
+  for (const s of scars) {
+    const sx = cx + Math.cos(s.ang) * r * s.depth;
+    const sy = cy + Math.sin(s.ang) * r * s.depth;
+    ctx.fillStyle = `rgba(18,6,44,.85)`;
+    ctx.beginPath(); ctx.ellipse(sx, sy, s.r, s.r * 0.7, s.ang, 0, 6.2832); ctx.fill();
+    if (s.heat > 0) {
+      ctx.fillStyle = `rgba(255,${120 + 90 * s.heat | 0},60,${s.heat * 0.8})`;
+      ctx.beginPath(); ctx.ellipse(sx, sy, s.r * 0.55, s.r * 0.4, s.ang, 0, 6.2832); ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // Ana krater (çarpmadan sonra)
+  if (t >= T.impact) {
+    const grow = easeOut(span(t, T.impact, T.impact + 0.45));
+    const ip = impactPoint();
+    const cr = r * 0.33 * grow;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
+
+    // koparılan kabuk — koyu çukur
+    ctx.fillStyle = radial(ip.x, ip.y, cr * 0.1, cr, [
+      [0, 'rgba(6,2,18,.96)'], [0.62, 'rgba(24,8,52,.9)'], [1, 'rgba(40,16,80,0)']
+    ]);
+    ctx.beginPath(); ctx.ellipse(ip.x, ip.y, cr, cr * 0.78, IMPACT_ANG, 0, 6.2832); ctx.fill();
+
+    // kor kenar (zamanla soğur)
+    if (craterHeat > 0.01) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = `rgba(255,${90 + 110 * craterHeat | 0},${30 * craterHeat | 0},${craterHeat * 0.9})`;
+      ctx.lineWidth = 5 + 7 * craterHeat;
+      ctx.beginPath(); ctx.ellipse(ip.x, ip.y, cr * 0.92, cr * 0.72, IMPACT_ANG, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = radial(ip.x, ip.y, 0, cr * 1.5, [
+        [0, `rgba(255,170,60,${craterHeat * 0.55})`], [1, 'rgba(255,120,0,0)']
+      ]);
+      ctx.beginPath(); ctx.arc(ip.x, ip.y, cr * 1.5, 0, 6.2832); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    ctx.restore();
+  }
+
+  // Terminatör (gece tarafı)
+  const tx = cx - 0.36 * r, ty = cy - 0.44 * r;
+  const term = ctx.createRadialGradient(tx, ty, r * 0.99, tx, ty, r * 1.80);
+  term.addColorStop(0, 'rgba(0,0,0,0)');
+  term.addColorStop(1, 'rgba(5,1,15,.78)');
+  ctx.fillStyle = term;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  // Kenar ışığı
+  const rim = ctx.createRadialGradient(cx, cy, r * 0.82, cx, cy, r);
+  rim.addColorStop(0, 'rgba(0,200,255,0)');
+  rim.addColorStop(0.85, 'rgba(125,249,255,.7)');
+  rim.addColorStop(1, 'rgba(125,249,255,.15)');
+  ctx.fillStyle = rim;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  // Speküler
+  ctx.save();
+  ctx.translate(cx - 0.31 * r, cy - 0.34 * r); ctx.rotate(-0.35);
+  ctx.fillStyle = radial(0, 0, 0, r * 0.32, [
+    [0, 'rgba(255,255,255,.9)'], [0.4, 'rgba(255,255,255,.3)'], [1, 'rgba(255,255,255,0)']
+  ]);
+  ctx.beginPath(); ctx.ellipse(0, 0, r * 0.32, r * 0.22, 0, 0, 6.2832); ctx.fill();
+  ctx.restore();
+}
+
+const MOON_COLS = {
+  moonA: ['#ffffff', '#b9a7ff', '#3a1f7a'],
+  moonB: ['#fdfbff', '#c9b8ff', '#2f1a68'],
+  moonC: ['#eaf8ff', '#9fd8ff', '#1e3a72']
+};
+
+function drawMoon(m, x, y, scale) {
+  const [c0, c1, c2] = MOON_COLS[m.col];
+  const r = m.r * scale;
+  glow(x, y, r * 3.4, '160,140,255', 0.30);
+  const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.4, 0, x - r * 0.3, y - r * 0.4, r * 1.7);
+  g.addColorStop(0, c0); g.addColorStop(0.5, c1); g.addColorStop(1, c2);
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+  // kraterler
+  ctx.save();
+  ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.clip();
+  ctx.fillStyle = 'rgba(40,20,90,.35)';
+  const rot = m.spin;
+  for (let i = 0; i < 3; i++) {
+    const a = rot + i * 2.1;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * r * 0.4, y + Math.sin(a) * r * 0.35, r * (0.2 + i * 0.06), 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,.7)';
+  ctx.beginPath(); ctx.ellipse(x - r * 0.3, y - r * 0.32, r * 0.3, r * 0.22, 0, 0, 6.2832); ctx.fill();
+}
+
+function drawMoons(front) {
+  for (const m of moons) {
+    if (m.free) {
+      if (front) drawMoon(m, m.x, m.y, 1);
+    } else {
+      const o = moonOrbit(m, t);
+      if (o.front === front) {
+        // öndeyken biraz büyük, arkadayken küçük ve sönük (derinlik)
+        const depth = 1 + Math.sin(o.a) * 0.16;
+        ctx.save();
+        if (!front) ctx.globalAlpha = 0.75;
+        drawMoon(m, o.x, o.y, depth);
+        ctx.restore();
+      }
+    }
+  }
+}
+
+function drawMeteor() {
+  if (t < T.meteorStart || t >= T.impact) return;
+  const m = meteorAt(t);
+  const prev = meteorAt(Math.max(T.meteorStart, t - 0.05));
+  const ang = Math.atan2(m.y - prev.y, m.x - prev.x);
+  const size = lerp(9, 22, m.p);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+
+  // İz (uzun konik kuyruk)
+  const tl = lerp(240, 520, m.p);
+  const tx = m.x - Math.cos(ang) * tl, ty = m.y - Math.sin(ang) * tl;
+  const tg = ctx.createLinearGradient(m.x, m.y, tx, ty);
+  tg.addColorStop(0,    'rgba(255,240,190,.85)');
+  tg.addColorStop(0.18, 'rgba(255,150,40,.55)');
+  tg.addColorStop(0.55, 'rgba(255,70,20,.22)');
+  tg.addColorStop(1,    'rgba(160,20,60,0)');
+  ctx.strokeStyle = tg;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = size * 1.7;
+  ctx.beginPath(); ctx.moveTo(m.x, m.y); ctx.lineTo(tx, ty); ctx.stroke();
+
+  // Kıvılcım saçağı
+  const rnd = mulberry32(Math.floor(t * 60));
+  for (let i = 0; i < 14; i++) {
+    const f = rnd();
+    const px = m.x - Math.cos(ang) * tl * f * 0.6 + (rnd() - 0.5) * 34 * f;
+    const py = m.y - Math.sin(ang) * tl * f * 0.6 + (rnd() - 0.5) * 34 * f;
+    ctx.fillStyle = `rgba(255,${170 + rnd() * 80 | 0},80,${(1 - f) * 0.7})`;
+    ctx.beginPath(); ctx.arc(px, py, 1 + rnd() * 3, 0, 6.2832); ctx.fill();
+  }
+
+  // Baş
+  glow(m.x, m.y, size * 7, '255,140,40', 0.60);
+  glow(m.x, m.y, size * 3, '255,230,170', 0.85);
+  ctx.fillStyle = '#fffdf2';
+  ctx.beginPath(); ctx.arc(m.x, m.y, size * 0.75, 0, 6.2832); ctx.fill();
+  ctx.restore();
+}
+
+function drawDebris() {
+  ctx.save();
+  for (const d of debris) {
+    ctx.save();
+    ctx.translate(d.x, d.y); ctx.rotate(d.spin);
+    if (d.heat > 0.02) {
+      ctx.globalCompositeOperation = 'lighter';
+      glow(0, 0, d.r * 5, '255,140,40', d.heat * 0.5);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // düzensiz taş parçası
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = i / 6 * 6.2832;
+      const rr = d.r * (0.66 + ((Math.sin(d.seed + i * 2.3) + 1) / 2) * 0.6);
+      const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath();
+    const cg = ctx.createLinearGradient(-d.r, -d.r, d.r, d.r);
+    cg.addColorStop(0, d.heat > 0.3 ? '#ffb257' : '#7b5fd6');
+    cg.addColorStop(1, '#1e0a46');
+    ctx.fillStyle = cg; ctx.fill();
+    ctx.strokeStyle = `rgba(255,${140 * d.heat | 0},60,${d.heat})`;
+    ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawSparks() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const s of sparks) {
+    const k = 1 - s.age / s.life;
+    ctx.fillStyle = `rgba(255,${150 + 100 * k | 0},${60 * k | 0},${k * 0.9})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r * k, 0, 6.2832); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawFlashes() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const f of flashes) {
+    const k = f.age / f.life, inv = 1 - k;
+    // şok dalgası halkası
+    ctx.strokeStyle = `rgba(190,240,255,${inv * inv * 0.75})`;
+    ctx.lineWidth = (f.core ? 12 : 5) * inv;
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r * easeOut(k) * (f.core ? 1.7 : 1), 0, 6.2832); ctx.stroke();
+    // çekirdek patlama
+    glow(f.x, f.y, f.r * (0.35 + k * 0.9), '255,225,170', inv * (f.core ? 0.95 : 0.6));
+    if (f.core) glow(f.x, f.y, f.r * (0.15 + k * 0.4), '255,255,255', inv * inv);
+  }
+  ctx.restore();
+}
+
+/* Kuzeydoğudan gelen yeni gezegen — sıcak magma dünyası */
+function drawNewPlanet() {
+  if (t < T.newStart) return;
+  const p = span(t, T.newStart, T.newArrive);
+  const e = ease(p);
+  const cx = lerp(NEW.fromX, NEW.toX, e);
+  const cy = lerp(NEW.fromY, NEW.toY, e);
+  const r  = NEW.r * lerp(0.32, 1, e);
+  const appear = span(t, T.newStart, T.newStart + 0.9);
+  const spin = (t - T.newStart) * 0.32;
+
+  ctx.save();
+  ctx.globalAlpha = appear;
+
+  // Giriş sürüklenme izi
+  if (p < 0.98) {
+    const dx = NEW.fromX - cx, dy = NEW.fromY - cy;
+    const dl = Math.hypot(dx, dy) || 1;
+    const len = Math.min(dl, 520) * (1 - e * 0.75);
+    const tg = ctx.createLinearGradient(cx, cy, cx + dx / dl * len, cy + dy / dl * len);
+    tg.addColorStop(0, `rgba(255,140,40,${0.42 * (1 - e)})`);
+    tg.addColorStop(1, 'rgba(255,60,20,0)');
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = tg; ctx.lineCap = 'round'; ctx.lineWidth = r * 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + dx / dl * len, cy + dy / dl * len); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Sıcak korona
+  glow(cx, cy, r * 2.5, '255,110,30', 0.26);
+  glow(cx, cy, r * 1.35, '255,200,90', 0.22);
+
+  // Arka halka (ters eğim — orijinal gezegenden farklı)
+  const tilt2 = 34 * Math.PI / 180;
+  const rx2 = r * 1.9, ry2 = r * 0.40;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120,50,20,.75)'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx2, ry2, tilt2, Math.PI, 6.2832); ctx.stroke();
+  ctx.restore();
+
+  // Gövde: koyu kabuk + magma
+  const g = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.38, 0, cx - r * 0.3, cy - r * 0.38, r * 1.7);
+  g.addColorStop(0,    '#fff0c2');
+  g.addColorStop(0.16, '#ffb43c');
+  g.addColorStop(0.42, '#e6521a');
+  g.addColorStop(0.72, '#7d1a12');
+  g.addColorStop(1,    '#2a0605');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  // Lav çatlakları
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
+  ctx.globalCompositeOperation = 'lighter';
+  const rnd = mulberry32(4242);
+  for (let i = 0; i < 16; i++) {
+    const a0 = rnd() * 6.2832 + spin;
+    const rr = rnd() * r * 0.85;
+    let px = cx + Math.cos(a0) * rr, py = cy + Math.sin(a0) * rr;
+    ctx.strokeStyle = `rgba(255,${150 + rnd() * 90 | 0},50,${0.35 + rnd() * 0.45})`;
+    ctx.lineWidth = 1.5 + rnd() * 3;
+    ctx.beginPath(); ctx.moveTo(px, py);
+    let ang = rnd() * 6.2832;
+    for (let k = 0; k < 5; k++) {
+      ang += (rnd() - 0.5) * 1.5;
+      px += Math.cos(ang) * r * 0.16; py += Math.sin(ang) * r * 0.16;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  // koyu kabuk lekeleri
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(30,8,6,.5)';
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * 6.2832 + spin * 0.5, rr = rnd() * r * 0.8;
+    ctx.beginPath();
+    ctx.ellipse(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, r * (0.1 + rnd() * 0.22), r * (0.07 + rnd() * 0.14), a, 0, 6.2832);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Gece tarafı + sıcak kenar
+  const tg2 = ctx.createRadialGradient(cx - r * 0.34, cy - r * 0.42, r * 0.99, cx - r * 0.34, cy - r * 0.42, r * 1.85);
+  tg2.addColorStop(0, 'rgba(0,0,0,0)');
+  tg2.addColorStop(1, 'rgba(20,2,2,.72)');
+  ctx.fillStyle = tg2;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  const rim2 = ctx.createRadialGradient(cx, cy, r * 0.84, cx, cy, r);
+  rim2.addColorStop(0, 'rgba(255,120,0,0)');
+  rim2.addColorStop(0.88, 'rgba(255,190,90,.75)');
+  rim2.addColorStop(1, 'rgba(255,150,40,.2)');
+  ctx.fillStyle = rim2;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
+
+  // Ön halka
+  ctx.save();
+  const rg = ctx.createLinearGradient(cx - rx2, cy, cx + rx2, cy);
+  rg.addColorStop(0, '#ff8a2b'); rg.addColorStop(0.5, '#ffd27a'); rg.addColorStop(1, '#c2371f');
+  ctx.strokeStyle = rg;
+  ctx.shadowColor = 'rgba(255,160,50,.7)'; ctx.shadowBlur = 22;
+  ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx2, ry2, tilt2, 0, Math.PI); ctx.stroke();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawVignette() {
+  const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 1.05);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,.55)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+}
+
+function draw() {
+  drawBackground();
+
+  ctx.save();
+  if (shake > 0.001) {
+    const s = shake * shake * 26;
+    ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+    ctx.rotate((Math.random() - 0.5) * shake * shake * 0.012);
+  }
+
+  drawWordmark();
+  drawRingBack();
+  drawMoons(false);
+  drawPlanet();
+  drawRingFront();
+  drawMoons(true);
+  drawDebris();
+  drawMeteor();
+  drawSparks();
+  drawFlashes();
+
+  ctx.restore();
+
+  drawNewPlanet();
+  drawVignette();
+
+  // Çarpma anındaki tam ekran beyaz parlama
+  const fl = span(t, T.impact, T.impact + 0.28);
+  if (t >= T.impact && fl < 1) {
+    ctx.fillStyle = `rgba(255,245,225,${(1 - fl) * 0.55})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+  // Açılış / kapanış kararması
+  const fadeIn = span(t, 0, 0.8), fadeOut = 1 - span(t, T.end - 1.0, T.end);
+  const dark = 1 - Math.min(fadeIn, fadeOut);
+  if (dark > 0.001) { ctx.fillStyle = `rgba(0,0,0,${dark})`; ctx.fillRect(0, 0, W, H); }
+}
+
+/* ─────────────── Döngü (sabit adımlı) ─────────────── */
+const DT = 1 / 60;
+let acc = 0, last = performance.now();
+
+function frame(now) {
+  const real = Math.min((now - last) / 1000, 0.25);
+  last = now;
+  if (playing) {
+    acc += real;
+    while (acc >= DT) { step(DT); acc -= DT; }
+    if (t >= T.end) { playing = false; playBtn.textContent = '▶ OYNAT'; }
+  }
+  draw();
+  syncUI();
+  requestAnimationFrame(frame);
+}
+
+/* ─────────────── Arayüz ─────────────── */
+const playBtn = document.getElementById('play');
+const restartBtn = document.getElementById('restart');
+const recBtn = document.getElementById('record');
+const scrub = document.getElementById('scrub');
+const clock = document.getElementById('clock');
+const status = document.getElementById('status');
+let scrubbing = false, recording = false;
+
+function syncUI() {
+  if (!scrubbing) scrub.value = t.toFixed(2);
+  clock.textContent = `${t.toFixed(1)} / ${T.end.toFixed(1)} s`;
+}
+
+playBtn.onclick = () => {
+  if (t >= T.end) { reset(); }
+  playing = !playing;
+  playBtn.textContent = playing ? '⏸ DURAKLAT' : '▶ OYNAT';
+};
+restartBtn.onclick = () => { reset(); playing = true; playBtn.textContent = '⏸ DURAKLAT'; };
+
+// Scrub: hedef zamana kadar simülasyonu baştan hızlıca sar (fizik deterministik kalsın)
+scrub.oninput = () => {
+  scrubbing = true;
+  const target = parseFloat(scrub.value);
+  reset(); playing = false; playBtn.textContent = '▶ OYNAT';
+  let guard = 0;
+  while (t < target - 1e-6 && guard++ < 5000) step(DT);
+};
+scrub.onchange = () => { scrubbing = false; };
+
+/* ─────────────── Video kaydı ─────────────── */
+function pickMime() {
+  const cands = [
+    'video/mp4;codecs=avc1.4d002a',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ];
+  for (const m of cands) {
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return '';
+}
+
+recBtn.onclick = async () => {
+  if (recording) return;
+  if (!window.MediaRecorder || !canvas.captureStream) {
+    status.innerHTML = '<b>Bu tarayıcı kayıt desteklemiyor.</b> Chrome veya Edge kullan.';
+    return;
+  }
+  const mime = pickMime();
+  const ext = mime.startsWith('video/mp4') ? 'mp4' : 'webm';
+
+  recording = true;
+  recBtn.disabled = playBtn.disabled = restartBtn.disabled = scrub.disabled = true;
+
+  const stream = canvas.captureStream(60);
+  const chunks = [];
+  const rec = new MediaRecorder(stream, {
+    mimeType: mime || undefined,
+    videoBitsPerSecond: 16_000_000
+  });
+  rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+  rec.onstop = () => {
+    const blob = new Blob(chunks, { type: mime || 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `uzayzone-logo.${ext}`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    status.innerHTML = `<b>Bitti.</b> uzayzone-logo.${ext} indirildi (${(blob.size / 1048576).toFixed(1)} MB).`;
+    recording = false;
+    recBtn.disabled = playBtn.disabled = restartBtn.disabled = scrub.disabled = false;
+  };
+
+  reset(); playing = true; playBtn.textContent = '⏸ DURAKLAT';
+  rec.start(200);
+
+  const tick = () => {
+    if (t < T.end) {
+      status.innerHTML = `Kaydediliyor… <b>${t.toFixed(1)}s / ${T.end}s</b> (${ext.toUpperCase()}) — sekmeyi ön planda tut.`;
+      requestAnimationFrame(tick);
+    } else {
+      setTimeout(() => rec.stop(), 350);
+    }
+  };
+  requestAnimationFrame(tick);
+};
+
+/* ─────────────── Başlat ─────────────── */
+reset();
+const start = () => { last = performance.now(); requestAnimationFrame(frame); };
+if (document.fonts && document.fonts.load) {
+  Promise.all([
+    document.fonts.load('900 148px Orbitron'),
+    document.fonts.load('400 30px Orbitron')
+  ]).then(start).catch(start);
+} else start();
+
+})();
+</script>
+</body>
+</html>

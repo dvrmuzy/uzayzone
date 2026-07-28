@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Uzay Ping-Pong — 2 Kişilik Neon Pong</title>
+<link rel="icon" href="../logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../logo/favicon-16.png">
+<link rel="icon" type="image/svg+xml" href="../logo/favicon.svg">
+<link rel="apple-touch-icon" href="../logo/apple-touch-icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --bg: #04060f;
+    --p1: #00e5ff;
+    --p1-dim: rgba(0,229,255,0.45);
+    --p2: #ff3d9a;
+    --p2-dim: rgba(255,61,154,0.45);
+    --gold: #ffd24a;
+    --text: #cfe6ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    background: radial-gradient(ellipse at 50% 40%, #0b1330 0%, #04060f 70%);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #stage {
+    position: relative;
+    width: min(96vw, calc((100vh - 130px) * 1.6667));
+    max-width: 1000px;
+    aspect-ratio: 5 / 3;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border-radius: 14px;
+    border: 2px solid rgba(120,180,255,0.18);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 60px rgba(40,90,200,0.25), inset 0 0 80px rgba(0,0,0,0.6);
+    background: #050914;
+  }
+
+  /* ─── HUD ─── */
+  #hud {
+    width: min(96vw, 1000px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  .side { display: flex; flex-direction: column; align-items: center; min-width: 120px; }
+  .side .name { font-size: 0.68rem; letter-spacing: 2px; opacity: 0.75; font-weight: 700; }
+  .side .keys { font-size: 0.58rem; letter-spacing: 1px; opacity: 0.45; font-family: 'Share Tech Mono', monospace; margin-top: 2px; }
+  .side .pts { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+  #s1 { color: var(--p1); text-shadow: 0 0 12px var(--p1-dim); }
+  #s2 { color: var(--p2); text-shadow: 0 0 12px var(--p2-dim); }
+  #n1 { color: var(--p1); }
+  #n2 { color: var(--p2); }
+
+  #center-hud { text-align: center; flex: 1; }
+  #target-txt { font-size: 0.62rem; letter-spacing: 3px; opacity: 0.55; }
+  #logo-txt {
+    font-size: 0.95rem; font-weight: 900; letter-spacing: 4px; margin-top: 2px;
+    background: linear-gradient(90deg, var(--p1), #fff, var(--p2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* ─── Overlays ─── */
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; padding: 18px;
+    background: rgba(4,8,20,0.86);
+    backdrop-filter: blur(6px);
+    border-radius: 14px;
+    font-family: 'Orbitron', sans-serif;
+    z-index: 20;
+  }
+  .overlay.hidden { display: none; }
+
+  .o-title {
+    font-size: clamp(1.4rem, 4.4vw, 2.6rem); font-weight: 900; letter-spacing: 5px;
+    background: linear-gradient(90deg, var(--p1), #ffffff, var(--p2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 18px rgba(90,160,255,0.35));
+  }
+  .o-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; opacity: 0.7; letter-spacing: 1px; max-width: 460px; line-height: 1.6; }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .lbl { font-size: 0.6rem; letter-spacing: 3px; opacity: 0.5; margin-bottom: -6px; }
+
+  .btn {
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.72rem; letter-spacing: 2px;
+    padding: 10px 18px; border-radius: 30px; cursor: pointer;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(150,200,255,0.22);
+    color: var(--text);
+    transition: transform .15s, background .2s, border-color .2s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.09); }
+  .btn.sel { border-color: var(--p1); color: #fff; background: rgba(0,229,255,0.14); box-shadow: 0 0 16px rgba(0,229,255,0.25); }
+  .btn.primary {
+    background: linear-gradient(90deg, rgba(0,229,255,0.22), rgba(255,61,154,0.22));
+    border-color: rgba(255,255,255,0.35); color: #fff; font-size: 0.85rem; padding: 13px 34px; margin-top: 4px;
+  }
+  .btn.primary:hover { box-shadow: 0 0 26px rgba(140,120,255,0.4); }
+
+  .ctrl-table { display: flex; gap: 26px; font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; flex-wrap: wrap; justify-content: center; }
+  .ctrl-col { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+  .ctrl-col b { font-family: 'Orbitron', sans-serif; font-size: 0.62rem; letter-spacing: 2px; }
+  .ctrl-col span { opacity: 0.6; }
+  .kbd {
+    display: inline-block; padding: 2px 8px; border-radius: 5px; margin: 0 2px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); font-size: 0.7rem;
+  }
+
+  #hint {
+    margin-top: 9px; font-size: 0.62rem; letter-spacing: 1.5px; opacity: 0.35; text-align: center; padding: 0 10px;
+  }
+
+  @media (max-width: 620px) {
+    #stage { width: 97vw; }
+    .side .pts { font-size: 1.9rem; }
+    .side { min-width: 74px; }
+    .side .keys { display: none; }
+    #logo-txt { font-size: 0.72rem; letter-spacing: 2px; }
+    .ctrl-table { gap: 14px; }
+  }
+  @media (max-height: 520px) {
+    #hud { margin-bottom: 4px; }
+    .side .pts { font-size: 1.6rem; }
+  }
+  /* Dar ekranda "Ana Sayfa" butonu skorun üstüne binmesin */
+  @media (max-width: 900px) {
+    #home-btn { top: auto !important; bottom: 10px !important; left: 10px !important; font-size: 0.7rem !important; padding: 6px 12px !important; }
+    #hint { margin-bottom: 34px; }
+  }
+</style>
+<script src="../analytics.js"></script>
+</head>
+<body>
+
+<div id="hud">
+  <div class="side">
+    <div class="name" id="n1">OYUNCU 1</div>
+    <div class="pts" id="s1">0</div>
+    <div class="keys">W / S</div>
+  </div>
+  <div id="center-hud">
+    <div id="logo-txt">UZAY PING-PONG</div>
+    <div id="target-txt">İLK 7 SAYI KAZANIR</div>
+  </div>
+  <div class="side">
+    <div class="name" id="n2">OYUNCU 2</div>
+    <div class="pts" id="s2">0</div>
+    <div class="keys">↑ / ↓</div>
+  </div>
+</div>
+
+<div id="stage">
+  <canvas id="cv" width="1000" height="600"></canvas>
+
+  <!-- Menü -->
+  <div class="overlay" id="menu">
+    <div class="o-title">UZAY PING-PONG</div>
+    <div class="o-sub">Tek bilgisayarda iki kişi. Topu kaçıran rakibine sayı verir.</div>
+
+    <div class="lbl">MOD</div>
+    <div class="row" id="mode-row">
+      <button class="btn sel" data-mode="pvp">👥 2 KİŞİ</button>
+      <button class="btn" data-mode="cpu">🤖 BİLGİSAYARA KARŞI</button>
+    </div>
+
+    <div class="lbl" id="diff-lbl" style="display:none">ZORLUK</div>
+    <div class="row" id="diff-row" style="display:none">
+      <button class="btn" data-diff="0">KOLAY</button>
+      <button class="btn sel" data-diff="1">ORTA</button>
+      <button class="btn" data-diff="2">ZOR</button>
+    </div>
+
+    <div class="lbl">HEDEF SAYI</div>
+    <div class="row" id="target-row">
+      <button class="btn" data-target="5">5</button>
+      <button class="btn sel" data-target="7">7</button>
+      <button class="btn" data-target="11">11</button>
+    </div>
+
+    <div class="ctrl-table">
+      <div class="ctrl-col"><b style="color:var(--p1)">OYUNCU 1</b><span><span class="kbd">W</span> yukarı <span class="kbd">S</span> aşağı</span></div>
+      <div class="ctrl-col"><b style="color:var(--p2)">OYUNCU 2</b><span><span class="kbd">↑</span> yukarı <span class="kbd">↓</span> aşağı</span></div>
+    </div>
+
+    <button class="btn primary" id="start-btn">BAŞLA</button>
+  </div>
+
+  <!-- Duraklat -->
+  <div class="overlay hidden" id="pause">
+    <div class="o-title" style="font-size:1.6rem">DURAKLATILDI</div>
+    <div class="o-sub">Devam etmek için <span class="kbd">Boşluk</span></div>
+    <div class="row">
+      <button class="btn primary" id="resume-btn">DEVAM ET</button>
+      <button class="btn" id="quit-btn">ANA MENÜ</button>
+    </div>
+  </div>
+
+  <!-- Kazanan -->
+  <div class="overlay hidden" id="win">
+    <div class="o-title" id="win-title">OYUNCU 1 KAZANDI</div>
+    <div class="o-sub" id="win-score">7 - 3</div>
+    <div class="row">
+      <button class="btn primary" id="again-btn">TEKRAR OYNA</button>
+      <button class="btn" id="menu-btn">ANA MENÜ</button>
+    </div>
+  </div>
+</div>
+
+<div id="hint">BOŞLUK = DURAKLAT &nbsp;·&nbsp; MOBİLDE EKRANIN SOL/SAĞ YARISINI PARMAĞINLA SÜRÜKLE</div>
+
+<script>
+(() => {
+'use strict';
+
+// ─── Canvas ───
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+// ─── Ses (Web Audio ile sentez) ───
+let ac = null;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function tone(freq, dur, type = 'square', vol = 0.14, slideTo = null) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, a.currentTime);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, a.currentTime + dur);
+  g.gain.setValueAtTime(vol, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime + dur);
+}
+const sfxPaddle = () => tone(420, 0.07, 'square', 0.13, 640);
+const sfxWall   = () => tone(240, 0.05, 'square', 0.09);
+const sfxScore  = () => { tone(180, 0.28, 'sawtooth', 0.12, 70); };
+const sfxCount  = () => tone(660, 0.08, 'triangle', 0.10);
+function sfxWin() {
+  const a = audio(); if (!a) return;
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.13), i * 110));
+}
+
+// ─── Ayarlar ───
+const cfg = { mode: 'pvp', diff: 1, target: 7 };
+const CPU = [
+  { speed: 5.2, err: 62, react: 0.55 },   // Kolay
+  { speed: 7.4, err: 32, react: 0.78 },   // Orta
+  { speed: 9.6, err: 12, react: 0.94 }    // Zor
+];
+
+// ─── Oyun nesneleri ───
+const PW = 14, PH = 104, PSPD = 9.2, MARGIN = 26;
+const BALL_R = 9, BASE_SPD = 7.4, MAX_SPD = 16.5;
+
+const p1 = { x: MARGIN, y: H / 2 - PH / 2, vy: 0, hit: 0 };
+const p2 = { x: W - MARGIN - PW, y: H / 2 - PH / 2, vy: 0, hit: 0 };
+const ball = { x: W / 2, y: H / 2, vx: 0, vy: 0, spd: BASE_SPD, trail: [] };
+
+let score1 = 0, score2 = 0;
+let state = 'menu';            // menu | count | play | pause | over
+let countTimer = 0, countNum = 3, serveDir = 1;
+let shakeT = 0, flashT = 0, flashSide = 0, rallyHits = 0;
+const particles = [];
+const stars = [];
+for (let i = 0; i < 90; i++) {
+  stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.5 + 0.3, a: Math.random() * 0.5 + 0.15, s: Math.random() * 0.16 + 0.03 });
+}
+
+// ─── Giriş: klavye ───
+const keys = Object.create(null);
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (['arrowup', 'arrowdown', ' ', 'w', 's'].includes(k)) e.preventDefault();
+  if (k === ' ') { togglePause(); return; }
+  if (k === 'escape' && state === 'play') { togglePause(); return; }
+  keys[k] = true;
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+// ─── Giriş: dokunmatik (çift parmak destekli) ───
+const touchTargets = {};   // touchId -> 1 | 2
+const touchY = { 1: null, 2: null };
+
+function canvasPos(t) {
+  const r = cv.getBoundingClientRect();
+  return { x: (t.clientX - r.left) / r.width * W, y: (t.clientY - r.top) / r.height * H };
+}
+function onTouchStart(e) {
+  for (const t of e.changedTouches) {
+    const p = canvasPos(t);
+    const side = p.x < W / 2 ? 1 : 2;
+    if (side === 2 && cfg.mode === 'cpu') continue;
+    touchTargets[t.identifier] = side;
+    touchY[side] = p.y;
+  }
+  if (Object.keys(touchTargets).length) e.preventDefault();
+}
+function onTouchMove(e) {
+  for (const t of e.changedTouches) {
+    const side = touchTargets[t.identifier];
+    if (side) touchY[side] = canvasPos(t).y;
+  }
+  if (Object.keys(touchTargets).length) e.preventDefault();
+}
+function onTouchEnd(e) {
+  for (const t of e.changedTouches) {
+    const side = touchTargets[t.identifier];
+    if (side) { touchY[side] = null; delete touchTargets[t.identifier]; }
+  }
+}
+cv.addEventListener('touchstart', onTouchStart, { passive: false });
+cv.addEventListener('touchmove', onTouchMove, { passive: false });
+cv.addEventListener('touchend', onTouchEnd);
+cv.addEventListener('touchcancel', onTouchEnd);
+
+// ─── Akış ───
+function resetBall(dir) {
+  ball.x = W / 2; ball.y = H / 2;
+  ball.spd = BASE_SPD;
+  ball.trail.length = 0;
+  rallyHits = 0;
+  serveDir = dir;
+  const ang = (Math.random() * 0.6 - 0.3);     // ±17°
+  ball.vx = Math.cos(ang) * BASE_SPD * dir;
+  ball.vy = Math.sin(ang) * BASE_SPD;
+}
+
+function startCountdown(dir) {
+  resetBall(dir);
+  p1.y = p2.y = H / 2 - PH / 2;
+  countNum = 3; countTimer = 0;
+  state = 'count';
+  sfxCount();
+}
+
+function newGame() {
+  score1 = 0; score2 = 0;
+  updateHud();
+  hide('menu'); hide('win'); hide('pause');
+  startCountdown(Math.random() < 0.5 ? -1 : 1);
+  audio();
+}
+
+function point(who) {
+  if (who === 1) score1++; else score2++;
+  updateHud();
+  sfxScore();
+  shakeT = 16;
+  flashT = 22; flashSide = who === 1 ? 2 : 1;   // topun kaçtığı taraf yanar
+  burst(who === 1 ? W - 10 : 10, ball.y, who === 1 ? '#ff3d9a' : '#00e5ff', 26);
+
+  if (score1 >= cfg.target || score2 >= cfg.target) {
+    state = 'over';
+    const w = score1 > score2 ? 1 : 2;
+    const nm = w === 1 ? 'OYUNCU 1' : (cfg.mode === 'cpu' ? 'BİLGİSAYAR' : 'OYUNCU 2');
+    const t = document.getElementById('win-title');
+    t.textContent = nm + ' KAZANDI';
+    document.getElementById('win-score').textContent = score1 + ' - ' + score2;
+    show('win');
+    sfxWin();
+  } else {
+    startCountdown(who === 1 ? -1 : 1);   // sayıyı yiyen servis atar
+  }
+}
+
+function togglePause() {
+  if (state === 'play') { state = 'pause'; show('pause'); }
+  else if (state === 'pause') { state = 'play'; hide('pause'); }
+}
+
+// ─── Parçacıklar ───
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = Math.random() * 6 + 1.4;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color, r: Math.random() * 3 + 1.4 });
+  }
+}
+
+// ─── Güncelleme ───
+function movePaddle(p, up, down, tY) {
+  if (tY !== null && tY !== undefined) {
+    const goal = tY - PH / 2;
+    const d = goal - p.y;
+    p.vy = Math.max(-PSPD * 1.5, Math.min(PSPD * 1.5, d * 0.42));
+  } else {
+    p.vy = (up ? -PSPD : 0) + (down ? PSPD : 0);
+  }
+  p.y += p.vy;
+  if (p.y < 4) { p.y = 4; p.vy = 0; }
+  if (p.y > H - PH - 4) { p.y = H - PH - 4; p.vy = 0; }
+}
+
+function moveCpu(p) {
+  const d = CPU[cfg.diff];
+  let goal = H / 2;
+  if (ball.vx > 0) {
+    // Topun kendi düzlemine ulaşacağı yeri kabaca tahmin et
+    const t = (p.x - ball.x) / Math.max(ball.vx, 0.1);
+    let py = ball.y + ball.vy * t;
+    const span = H - 2 * BALL_R;
+    py = Math.abs(((py - BALL_R) % (2 * span) + 2 * span) % (2 * span));
+    if (py > span) py = 2 * span - py;
+    goal = py + BALL_R;
+    goal = goal * d.react + (H / 2) * (1 - d.react);
+    goal += Math.sin(performance.now() / 420) * d.err;
+  }
+  const diff = goal - (p.y + PH / 2);
+  p.vy = Math.max(-d.speed, Math.min(d.speed, diff * 0.16));
+  p.y += p.vy;
+  p.y = Math.max(4, Math.min(H - PH - 4, p.y));
+}
+
+function bounce(p, side) {
+  // Vuruş noktasına göre açı: kenara yakın vuruş daha dik gider
+  const rel = (ball.y - (p.y + PH / 2)) / (PH / 2);
+  const clamped = Math.max(-1, Math.min(1, rel));
+  const ang = clamped * (Math.PI / 3.6);            // maks ~50°
+  ball.spd = Math.min(MAX_SPD, ball.spd + 0.42);
+  ball.vx = Math.cos(ang) * ball.spd * side;
+  ball.vy = Math.sin(ang) * ball.spd + p.vy * 0.22;  // raketin hızı topa biner
+  ball.x = side > 0 ? p.x + PW + BALL_R + 0.5 : p.x - BALL_R - 0.5;
+  p.hit = 12;
+  rallyHits++;
+  sfxPaddle();
+  burst(ball.x, ball.y, side > 0 ? '#00e5ff' : '#ff3d9a', 9);
+}
+
+function update() {
+  // Yıldızlar her zaman aksın
+  for (const s of stars) { s.x -= s.s; if (s.x < -2) { s.x = W + 2; s.y = Math.random() * H; } }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const q = particles[i];
+    q.x += q.vx; q.y += q.vy; q.vx *= 0.94; q.vy *= 0.94; q.life -= 0.035;
+    if (q.life <= 0) particles.splice(i, 1);
+  }
+  if (shakeT > 0) shakeT--;
+  if (flashT > 0) flashT--;
+  if (p1.hit > 0) p1.hit--;
+  if (p2.hit > 0) p2.hit--;
+
+  if (state === 'count') {
+    countTimer++;
+    if (countTimer >= 42) {
+      countTimer = 0; countNum--;
+      if (countNum <= 0) { state = 'play'; tone(880, 0.12, 'triangle', 0.12); }
+      else sfxCount();
+    }
+    // Sayım sırasında raketler hareket edebilsin
+    movePaddle(p1, keys['w'], keys['s'], touchY[1]);
+    if (cfg.mode === 'cpu') moveCpu(p2); else movePaddle(p2, keys['arrowup'], keys['arrowdown'], touchY[2]);
+    return;
+  }
+  if (state !== 'play') return;
+
+  movePaddle(p1, keys['w'], keys['s'], touchY[1]);
+  if (cfg.mode === 'cpu') moveCpu(p2); else movePaddle(p2, keys['arrowup'], keys['arrowdown'], touchY[2]);
+
+  // Hızlı topun raketi delip geçmemesi için alt adımlama
+  const steps = Math.max(1, Math.ceil(ball.spd / 5));
+  for (let i = 0; i < steps; i++) {
+    ball.x += ball.vx / steps;
+    ball.y += ball.vy / steps;
+
+    if (ball.y - BALL_R < 0) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy); sfxWall(); burst(ball.x, 2, '#9fd8ff', 5); }
+    else if (ball.y + BALL_R > H) { ball.y = H - BALL_R; ball.vy = -Math.abs(ball.vy); sfxWall(); burst(ball.x, H - 2, '#9fd8ff', 5); }
+
+    if (ball.vx < 0 && ball.x - BALL_R <= p1.x + PW && ball.x + BALL_R >= p1.x &&
+        ball.y >= p1.y - BALL_R && ball.y <= p1.y + PH + BALL_R) { bounce(p1, 1); }
+    else if (ball.vx > 0 && ball.x + BALL_R >= p2.x && ball.x - BALL_R <= p2.x + PW &&
+        ball.y >= p2.y - BALL_R && ball.y <= p2.y + PH + BALL_R) { bounce(p2, -1); }
+
+    if (ball.x < -30) { point(2); return; }
+    if (ball.x > W + 30) { point(1); return; }
+  }
+
+  ball.trail.push({ x: ball.x, y: ball.y });
+  if (ball.trail.length > 16) ball.trail.shift();
+}
+
+// ─── Çizim ───
+function draw() {
+  ctx.save();
+  if (shakeT > 0) {
+    const m = shakeT / 4;
+    ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m);
+  }
+
+  ctx.fillStyle = '#050914';
+  ctx.fillRect(-20, -20, W + 40, H + 40);
+
+  // Yıldızlar
+  for (const s of stars) {
+    ctx.globalAlpha = s.a;
+    ctx.fillStyle = '#bcd8ff';
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+  ctx.globalAlpha = 1;
+
+  // Orta çizgi
+  ctx.strokeStyle = 'rgba(150,200,255,0.13)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([13, 18]);
+  ctx.beginPath(); ctx.moveTo(W / 2, 0); ctx.lineTo(W / 2, H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Orta halka
+  ctx.strokeStyle = 'rgba(150,200,255,0.08)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(W / 2, H / 2, 74, 0, Math.PI * 2); ctx.stroke();
+
+  // Kenar çizgileri
+  ctx.strokeStyle = 'rgba(150,200,255,0.10)';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, 2); ctx.lineTo(W, 2); ctx.moveTo(0, H - 2); ctx.lineTo(W, H - 2); ctx.stroke();
+
+  // Sayı flaşı
+  if (flashT > 0) {
+    const a = (flashT / 22) * 0.3;
+    const g = ctx.createLinearGradient(flashSide === 1 ? 0 : W, 0, flashSide === 1 ? 220 : W - 220, 0);
+    g.addColorStop(0, flashSide === 1 ? `rgba(0,229,255,${a})` : `rgba(255,61,154,${a})`);
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  // Top izi
+  for (let i = 0; i < ball.trail.length; i++) {
+    const t = ball.trail[i], k = i / ball.trail.length;
+    ctx.globalAlpha = k * 0.4;
+    ctx.fillStyle = rallyHits >= 6 ? '#ffd24a' : '#9fe9ff';
+    ctx.beginPath(); ctx.arc(t.x, t.y, BALL_R * k * 0.92, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Parçacıklar
+  for (const q of particles) {
+    ctx.globalAlpha = Math.max(0, q.life);
+    ctx.fillStyle = q.color;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Raketler
+  paddle(p1, '#00e5ff', p1.hit);
+  paddle(p2, '#ff3d9a', p2.hit);
+
+  // Top
+  if (state === 'play' || state === 'pause') {
+    const c = rallyHits >= 6 ? '#ffd24a' : '#ffffff';
+    ctx.shadowBlur = 26; ctx.shadowColor = c;
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, BALL_R, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // Geri sayım
+  if (state === 'count') {
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 128px Orbitron, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 30; ctx.shadowColor = serveDir > 0 ? '#ff3d9a' : '#00e5ff';
+    const scale = 1 + (countTimer / 42) * 0.12;
+    ctx.save(); ctx.translate(W / 2, H / 2 - 10); ctx.scale(scale, scale);
+    ctx.fillText(String(countNum), 0, 0); ctx.restore();
+    ctx.shadowBlur = 0;
+    ctx.font = '700 17px Orbitron, sans-serif';
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = serveDir > 0 ? '#ff3d9a' : '#00e5ff';
+    ctx.fillText(serveDir > 0 ? 'SERVİS →' : '← SERVİS', W / 2, H / 2 + 86);
+    ctx.globalAlpha = 1;
+  }
+
+  // Ralli sayacı
+  if (state === 'play' && rallyHits >= 4) {
+    ctx.globalAlpha = 0.34;
+    ctx.fillStyle = rallyHits >= 6 ? '#ffd24a' : '#cfe6ff';
+    ctx.font = '700 15px Orbitron, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('RALLİ ' + rallyHits, W / 2, 30);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function paddle(p, color, hit) {
+  ctx.shadowBlur = hit > 0 ? 34 : 16;
+  ctx.shadowColor = color;
+  ctx.fillStyle = color;
+  ctx.globalAlpha = hit > 0 ? 1 : 0.92;
+  roundRect(p.x, p.y, PW, PH, 7);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#ffffff';
+  roundRect(p.x + 4, p.y + 8, 3.5, PH - 16, 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+// ─── Döngü ───
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+
+// ─── Arayüz ───
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function updateHud() {
+  document.getElementById('s1').textContent = score1;
+  document.getElementById('s2').textContent = score2;
+  document.getElementById('target-txt').textContent = 'İLK ' + cfg.target + ' SAYI KAZANIR';
+}
+
+function pickRow(rowId, attr, onPick) {
+  document.getElementById(rowId).addEventListener('click', e => {
+    const b = e.target.closest('button[data-' + attr + ']');
+    if (!b) return;
+    for (const x of document.getElementById(rowId).querySelectorAll('button')) x.classList.remove('sel');
+    b.classList.add('sel');
+    onPick(b.dataset[attr]);
+    tone(760, 0.05, 'triangle', 0.08);
+  });
+}
+pickRow('mode-row', 'mode', v => {
+  cfg.mode = v;
+  const on = v === 'cpu';
+  document.getElementById('diff-row').style.display = on ? 'flex' : 'none';
+  document.getElementById('diff-lbl').style.display = on ? 'block' : 'none';
+  document.getElementById('n2').textContent = on ? 'BİLGİSAYAR' : 'OYUNCU 2';
+});
+pickRow('diff-row', 'diff', v => { cfg.diff = +v; });
+pickRow('target-row', 'target', v => { cfg.target = +v; updateHud(); });
+
+document.getElementById('start-btn').onclick = newGame;
+document.getElementById('again-btn').onclick = newGame;
+document.getElementById('resume-btn').onclick = togglePause;
+document.getElementById('quit-btn').onclick = () => { state = 'menu'; hide('pause'); show('menu'); score1 = score2 = 0; updateHud(); };
+document.getElementById('menu-btn').onclick = () => { state = 'menu'; hide('win'); show('menu'); score1 = score2 = 0; updateHud(); };
+
+updateHud();
+})();
+</script>
+
+<a href="../" id="home-btn" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#00e5ff;font-family:'Orbitron',sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+</body>
+</html>

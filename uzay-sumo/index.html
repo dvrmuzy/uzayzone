@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Uzay Sumo — 2 Kişilik İtiş Kakış</title>
+<link rel="icon" href="../logo/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../logo/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="../logo/favicon-16.png">
+<link rel="icon" type="image/svg+xml" href="../logo/favicon.svg">
+<link rel="apple-touch-icon" href="../logo/apple-touch-icon.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --p1: #ffc93c;
+    --p2: #6c8cff;
+    --text: #d6e2f5;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    background: radial-gradient(ellipse at 50% 40%, #171233 0%, #05060f 72%);
+    font-family: 'Share Tech Mono', monospace; color: var(--text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+
+  #stage {
+    position: relative;
+    width: min(96vw, calc((100vh - 140px) * 1.4706));
+    max-width: 1000px; aspect-ratio: 25 / 17;
+  }
+  canvas {
+    width: 100%; height: 100%; display: block; border-radius: 14px;
+    border: 2px solid rgba(140,160,255,0.16);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 70px rgba(80,60,200,0.25), inset 0 0 90px rgba(0,0,0,0.5);
+    background: #06070f;
+  }
+
+  /* ─── HUD ─── */
+  #hud {
+    width: min(96vw, 1000px); display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin-bottom: 8px; font-family: 'Orbitron', sans-serif;
+  }
+  .side { display: flex; flex-direction: column; align-items: center; min-width: 150px; }
+  .side .name { font-size: 0.66rem; letter-spacing: 2px; opacity: 0.8; font-weight: 700; }
+  .side .pts { font-size: 2.1rem; font-weight: 900; line-height: 1.05; }
+  .side .dmg { font-size: 0.92rem; font-weight: 900; letter-spacing: 1px; opacity: 0.95; }
+  .side .keys { font-size: 0.55rem; letter-spacing: 1px; opacity: 0.38; font-family: 'Share Tech Mono', monospace; }
+  #s1, #n1 { color: var(--p1); }
+  #s2, #n2 { color: var(--p2); }
+  #s1 { text-shadow: 0 0 12px rgba(255,201,60,0.45); }
+  #s2 { text-shadow: 0 0 12px rgba(108,140,255,0.5); }
+
+  #center-hud { text-align: center; flex: 1; }
+  #logo-txt {
+    font-size: 0.9rem; font-weight: 900; letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--p1), #fff, var(--p2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #timer { font-size: 1.2rem; font-weight: 900; letter-spacing: 2px; }
+  #timer.low { color: #ff5a5a; animation: blink .6s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  #round-txt { font-size: 0.55rem; letter-spacing: 3px; opacity: 0.5; }
+
+  /* ─── Overlay ─── */
+  .overlay {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 13px; text-align: center; padding: 16px;
+    background: rgba(6,7,18,0.88); backdrop-filter: blur(6px);
+    border-radius: 14px; font-family: 'Orbitron', sans-serif; z-index: 20;
+  }
+  .overlay.hidden { display: none; }
+  .o-title {
+    font-size: clamp(1.3rem, 4.2vw, 2.4rem); font-weight: 900; letter-spacing: 5px;
+    background: linear-gradient(90deg, var(--p1), #ffffff, var(--p2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 16px rgba(140,120,255,0.35));
+  }
+  .o-sub { font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; opacity: 0.72; letter-spacing: 1px; max-width: 520px; line-height: 1.65; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .lbl { font-size: 0.58rem; letter-spacing: 3px; opacity: 0.5; margin-bottom: -6px; }
+
+  .btn {
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 0.7rem; letter-spacing: 2px;
+    padding: 9px 17px; border-radius: 26px; cursor: pointer;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(150,170,255,0.2); color: var(--text);
+    transition: transform .15s, background .2s, border-color .2s, box-shadow .2s;
+  }
+  .btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.09); }
+  .btn.sel { border-color: var(--p1); color: #fff; background: rgba(255,201,60,0.14); box-shadow: 0 0 14px rgba(255,201,60,0.25); }
+  .btn.primary {
+    background: linear-gradient(90deg, rgba(255,201,60,0.22), rgba(108,140,255,0.24));
+    border-color: rgba(255,255,255,0.35); color: #fff; font-size: 0.82rem; padding: 12px 32px; margin-top: 2px;
+  }
+  .btn.primary:hover { box-shadow: 0 0 24px rgba(150,140,255,0.4); }
+
+  .ctrl-table { display: flex; gap: 26px; font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; flex-wrap: wrap; justify-content: center; }
+  .ctrl-col { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+  .ctrl-col b { font-family: 'Orbitron', sans-serif; font-size: 0.6rem; letter-spacing: 2px; }
+  .ctrl-col span { opacity: 0.62; }
+  .kbd { display: inline-block; padding: 1px 7px; border-radius: 5px; margin: 0 1px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.16); font-size: 0.68rem; }
+
+  #hint { margin-top: 8px; font-size: 0.6rem; letter-spacing: 1.5px; opacity: 0.35; text-align: center; padding: 0 8px; }
+
+  /* ─── Dokunmatik ─── */
+  #touch { display: none; }
+  .pad { position: fixed; bottom: 8px; display: grid;
+         grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 38px); gap: 4px; z-index: 50; }
+  .pad.left { left: 8px; }
+  .pad.right { right: 8px; }
+  .tb {
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 10px; font-size: 0.95rem; font-weight: 700; color: #fff; font-family: 'Orbitron', sans-serif;
+  }
+  .tb.active { background: rgba(255,255,255,0.26); }
+  .tb.blank { visibility: hidden; }
+  .tb.dash { grid-column: span 3; font-size: 0.62rem; letter-spacing: 2px; }
+  .pad.left .tb.dash { background: rgba(255,201,60,0.22); border-color: rgba(255,201,60,0.5); }
+  .pad.right .tb.dash { background: rgba(108,140,255,0.24); border-color: rgba(108,140,255,0.5); }
+  body.touch #touch { display: block; }
+  body.touch #stage { width: min(96vw, calc((100vh - 200px) * 1.4706)); }
+  body.touch #hint { display: none; }
+
+  @media (max-width: 640px) {
+    .side .pts { font-size: 1.55rem; }
+    .side { min-width: 84px; }
+    .side .keys { display: none; }
+    #logo-txt { font-size: 0.64rem; letter-spacing: 2px; }
+    #timer { font-size: 0.95rem; }
+    .ctrl-table { gap: 14px; }
+  }
+  @media (max-width: 900px) {
+    #home-btn { top: auto !important; bottom: 8px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 0.64rem !important; padding: 5px 12px !important; }
+  }
+</style>
+<script src="../analytics.js"></script>
+</head>
+<body>
+
+<div id="hud">
+  <div class="side">
+    <div class="name" id="n1">OYUNCU 1</div>
+    <div class="pts" id="s1">0</div>
+    <div class="dmg" id="d1" style="color:var(--p1)">%0</div>
+    <div class="keys">WASD + BOŞLUK</div>
+  </div>
+  <div id="center-hud">
+    <div id="logo-txt">UZAY SUMO</div>
+    <div id="timer">45</div>
+    <div id="round-txt">RAUNT 1</div>
+  </div>
+  <div class="side">
+    <div class="name" id="n2">OYUNCU 2</div>
+    <div class="pts" id="s2">0</div>
+    <div class="dmg" id="d2" style="color:var(--p2)">%0</div>
+    <div class="keys">OKLAR + ENTER</div>
+  </div>
+</div>
+
+<div id="stage">
+  <canvas id="cv" width="1000" height="680"></canvas>
+
+  <div class="overlay" id="menu">
+    <div class="o-title">UZAY SUMO</div>
+    <div class="o-sub">Rakibini platformdan dışarı it! Hasarın arttıkça daha uzağa fırlarsın. Arena zamanla daralır — saklanacak yer kalmaz.</div>
+
+    <div class="lbl">KAZANMA SKORU</div>
+    <div class="row" id="target-row">
+      <button class="btn" data-target="3">3</button>
+      <button class="btn sel" data-target="5">5</button>
+      <button class="btn" data-target="7">7</button>
+    </div>
+
+    <div class="lbl">ARENA</div>
+    <div class="row" id="arena-row">
+      <button class="btn" data-arena="0">GENİŞ</button>
+      <button class="btn sel" data-arena="1">NORMAL</button>
+      <button class="btn" data-arena="2">DAR</button>
+    </div>
+
+    <div class="ctrl-table">
+      <div class="ctrl-col"><b style="color:var(--p1)">OYUNCU 1</b>
+        <span><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> hareket</span>
+        <span><span class="kbd">Boşluk</span> hamle (dash)</span></div>
+      <div class="ctrl-col"><b style="color:var(--p2)">OYUNCU 2</b>
+        <span><span class="kbd">↑</span><span class="kbd">←</span><span class="kbd">↓</span><span class="kbd">→</span> hareket</span>
+        <span><span class="kbd">Enter</span> hamle (dash)</span></div>
+    </div>
+
+    <button class="btn primary" id="start-btn">MEYDANA ÇIK</button>
+  </div>
+
+  <div class="overlay hidden" id="pause">
+    <div class="o-title" style="font-size:1.5rem">DURAKLATILDI</div>
+    <div class="o-sub">Devam etmek için <span class="kbd">P</span></div>
+    <div class="row">
+      <button class="btn primary" id="resume-btn">DEVAM ET</button>
+      <button class="btn" id="quit-btn">ANA MENÜ</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="win">
+    <div class="o-title" id="win-title">OYUNCU 1 KAZANDI</div>
+    <div class="o-sub" id="win-score">5 - 3</div>
+    <div class="row">
+      <button class="btn primary" id="again-btn">TEKRAR OYNA</button>
+      <button class="btn" id="menu-btn">ANA MENÜ</button>
+    </div>
+  </div>
+</div>
+
+<div id="hint">P = DURAKLAT &nbsp;·&nbsp; HAMLE (DASH) ÇARPMAYI GÜÇLENDİRİR, AMA BOŞA GİDERSE SENİ SAVURUR</div>
+
+<div id="touch">
+  <div class="pad left">
+    <div class="tb blank"></div><div class="tb" data-k="w">▲</div><div class="tb blank"></div>
+    <div class="tb" data-k="a">◀</div><div class="tb" data-k="s">▼</div><div class="tb" data-k="d">▶</div>
+    <div class="tb dash" data-k=" ">HAMLE</div>
+  </div>
+  <div class="pad right">
+    <div class="tb blank"></div><div class="tb" data-k="arrowup">▲</div><div class="tb blank"></div>
+    <div class="tb" data-k="arrowleft">◀</div><div class="tb" data-k="arrowdown">▼</div><div class="tb" data-k="arrowright">▶</div>
+    <div class="tb dash" data-k="enter">HAMLE</div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const CX = W / 2, CY = H / 2;
+
+// ─── Ses ───
+let ac = null;
+function audio() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function tone(freq, dur, type = 'square', vol = 0.12, slideTo = null) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, a.currentTime);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), a.currentTime + dur);
+  g.gain.setValueAtTime(vol, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+  o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+}
+function noise(dur, vol = 0.2, cut = 1600) {
+  const a = audio(); if (!a) return;
+  const len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = a.createBufferSource(); src.buffer = buf;
+  const g = a.createGain(); g.gain.setValueAtTime(vol, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+  const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(cut, a.currentTime);
+  src.connect(f); f.connect(g); g.connect(a.destination); src.start();
+}
+function sfxHit(power) {
+  const p = Math.min(1, power / 14);
+  tone(160 + p * 220, 0.09 + p * 0.1, 'square', 0.07 + p * 0.09, 60);
+  noise(0.09 + p * 0.12, 0.10 + p * 0.16, 900 + p * 1800);
+}
+const sfxDash  = () => { tone(720, 0.11, 'sawtooth', 0.09, 250); noise(0.08, 0.07, 2600); };
+const sfxFall  = () => { tone(520, 0.75, 'sine', 0.13, 45); noise(0.3, 0.1, 700); };
+const sfxCount = () => tone(620, 0.08, 'triangle', 0.09);
+const sfxShrink = () => tone(230, 0.3, 'triangle', 0.07, 150);
+function sfxWin() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.12), i * 110)); }
+
+// ─── Ayarlar ───
+const cfg = { target: 5, arena: 1 };
+const ARENA = [
+  { start: 300, min: 190 },   // Geniş
+  { start: 262, min: 150 },   // Normal
+  { start: 225, min: 118 }    // Dar
+];
+const ROUND_TIME = 45;
+const R_BODY = 24;
+const ACC = 0.52, FRICTION = 0.915, DASH_SPD = 9.5, DASH_CD = 950, DASH_FRAMES = 12;
+
+// ─── Durum ───
+function mkFighter(id, color, dir) {
+  return { id, color, x: CX + dir * 120, y: CY, vx: 0, vy: 0, dmg: 0,
+           alive: true, dashCd: 0, dashT: 0, face: dir > 0 ? Math.PI : 0,
+           hitFlash: 0, fallT: 0, sq: 0, dir };
+}
+const f1 = mkFighter(1, '#ffc93c', -1);
+const f2 = mkFighter(2, '#6c8cff', 1);
+const fighters = [f1, f2];
+
+let arenaR = ARENA[1].start, arenaTarget = arenaR;
+let score1 = 0, score2 = 0, round = 1;
+let state = 'menu';              // menu | count | play | dead | pause | over
+let countNum = 3, countT = 0, deadT = 0, timeLeft = ROUND_TIME, timeAcc = 0;
+let shakeT = 0, lastWinner = 0, deadReason = '';
+const particles = [];
+const stars = [];
+for (let i = 0; i < 110; i++)
+  stars.push({ x: Math.random() * W, y: Math.random() * H, r: Math.random() * 1.6 + 0.3, a: Math.random() * 0.55 + 0.12, tw: Math.random() * 6.28 });
+
+// ─── Giriş ───
+const keys = Object.create(null);
+const GAME_KEYS = ['w', 'a', 's', 'd', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter'];
+addEventListener('keydown', e => {
+  const k = e.key.toLowerCase();
+  if (GAME_KEYS.includes(k)) e.preventDefault();
+  if (k === 'p' || k === 'escape') { togglePause(); return; }
+  keys[k] = true;
+});
+addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+for (const el of document.querySelectorAll('.tb')) {
+  const k = el.dataset.k;
+  if (!k) continue;
+  const on = e => { e.preventDefault(); keys[k] = true; el.classList.add('active'); audio(); };
+  const off = e => { e.preventDefault(); keys[k] = false; el.classList.remove('active'); };
+  el.addEventListener('touchstart', on, { passive: false });
+  el.addEventListener('touchend', off, { passive: false });
+  el.addEventListener('touchcancel', off, { passive: false });
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup', off);
+  el.addEventListener('mouseleave', off);
+}
+
+// ─── Akış ───
+function startRound() {
+  arenaR = ARENA[cfg.arena].start; arenaTarget = arenaR;
+  particles.length = 0;
+  for (const f of fighters) {
+    f.x = CX + f.dir * 120; f.y = CY; f.vx = 0; f.vy = 0;
+    f.dmg = 0; f.alive = true; f.dashCd = 0; f.dashT = 0; f.hitFlash = 0; f.fallT = 0; f.sq = 0;
+    f.face = f.dir > 0 ? Math.PI : 0;
+  }
+  timeLeft = ROUND_TIME; timeAcc = 0;
+  countNum = 3; countT = 0; state = 'count';
+  sfxCount(); updateHud();
+}
+function newGame() {
+  score1 = 0; score2 = 0; round = 1;
+  hide('menu'); hide('win'); hide('pause');
+  audio(); startRound();
+}
+function endRound(winner, reason) {
+  if (state !== 'play') return;              // bir raunt yalnızca bir kez biter
+  lastWinner = winner; deadReason = reason;
+  if (winner === 1) score1++; else if (winner === 2) score2++;
+  updateHud();
+  state = 'dead'; deadT = 0;
+  if (score1 >= cfg.target || score2 >= cfg.target) {
+    setTimeout(() => {
+      state = 'over';
+      const w = score1 >= cfg.target ? 1 : 2;
+      document.getElementById('win-title').textContent = 'OYUNCU ' + w + ' KAZANDI';
+      document.getElementById('win-score').textContent = score1 + ' - ' + score2;
+      show('win'); sfxWin();
+    }, 1600);
+  }
+}
+function togglePause() {
+  if (state === 'play' || state === 'count') { state = 'pause'; show('pause'); }
+  else if (state === 'pause') { state = 'play'; hide('pause'); }
+}
+
+// ─── Efektler ───
+function burst(x, y, color, n, spd = 5) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = Math.random() * spd + 0.7;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color, r: Math.random() * 3 + 1.2 });
+  }
+}
+function ring(x, y, color, n, spd) {
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    particles.push({ x, y, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, life: 1, color, r: 2.4 });
+  }
+}
+
+// ─── Fizik ───
+function inputVec(kUp, kDown, kL, kR) {
+  let dx = (keys[kR] ? 1 : 0) - (keys[kL] ? 1 : 0);
+  let dy = (keys[kDown] ? 1 : 0) - (keys[kUp] ? 1 : 0);
+  if (dx && dy) { const m = Math.SQRT1_2; dx *= m; dy *= m; }
+  return { dx, dy };
+}
+
+function moveFighter(f, kUp, kDown, kL, kR, kDash) {
+  if (!f.alive) return;
+  if (f.dashCd > 0) f.dashCd -= 16.7;
+  if (f.dashT > 0) f.dashT--;
+  if (f.hitFlash > 0) f.hitFlash--;
+  if (f.sq > 0) f.sq -= 0.06;
+
+  const { dx, dy } = inputVec(kUp, kDown, kL, kR);
+  if (dx || dy) f.face = Math.atan2(dy, dx);
+
+  if (keys[kDash] && f.dashCd <= 0) {
+    f.dashCd = DASH_CD; f.dashT = DASH_FRAMES;
+    const a = (dx || dy) ? Math.atan2(dy, dx) : f.face;
+    f.vx = Math.cos(a) * DASH_SPD; f.vy = Math.sin(a) * DASH_SPD;
+    ring(f.x, f.y, f.color, 12, 3.2);
+    sfxDash();
+  }
+
+  if (f.dashT <= 0) {                    // hamle sırasında yön değiştiremezsin
+    f.vx += dx * ACC; f.vy += dy * ACC;
+  }
+  f.vx *= FRICTION; f.vy *= FRICTION;
+  f.x += f.vx; f.y += f.vy;
+
+  if (f.dashT > 0 && f.dashT % 2 === 0)
+    particles.push({ x: f.x, y: f.y, vx: -f.vx * 0.12, vy: -f.vy * 0.12, life: 0.7, color: f.color, r: 4 });
+}
+
+function collide(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const d = Math.hypot(dx, dy);
+  const minD = R_BODY * 2;
+  if (d === 0 || d >= minD) return;
+
+  const nx = dx / d, ny = dy / d;
+  const overlap = minD - d;
+  a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+  b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+
+  const rvn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+  if (rvn > 0) return;                      // zaten ayrılıyorlar
+
+  const impact = Math.abs(rvn);
+  const j = -(1 + 0.35) * rvn / 2;          // eşit kütle, esnek çarpışma
+
+  // Hasar arttıkça geri tepme büyür (kap: 3x) — %0'da temiz bir dash yaklaşık
+  // yarım arena savurur, %150'de kesin dışarı atar
+  const kb = f => Math.min(3.0, 1 + f.dmg / 80);
+  const aDash = a.dashT > 0, bDash = b.dashT > 0;
+  const aPush = j * kb(a) * (bDash ? 1.55 : 1);
+  const bPush = j * kb(b) * (aDash ? 1.55 : 1);
+
+  a.vx -= nx * aPush; a.vy -= ny * aPush;
+  b.vx += nx * bPush; b.vy += ny * bPush;
+
+  a.dmg = Math.min(299, a.dmg + impact * (aDash ? 0.4 : 0.95) + (bDash ? 6 : 0));
+  b.dmg = Math.min(299, b.dmg + impact * (bDash ? 0.4 : 0.95) + (aDash ? 6 : 0));
+  a.hitFlash = 10; b.hitFlash = 10; a.sq = 1; b.sq = 1;
+
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const power = impact * (aDash || bDash ? 1.6 : 1);
+  burst(mx, my, '#ffffff', Math.min(26, 6 + power * 2), 1.5 + power * 0.35);
+  ring(mx, my, aDash ? a.color : (bDash ? b.color : '#ffffff'), 10, 1 + power * 0.4);
+  shakeT = Math.min(20, 5 + power * 1.6);
+  sfxHit(power);
+  updateHud();
+}
+
+function checkFalls() {
+  // İkisi aynı karede düşerse berabere — sıra önceliği kimseyi cezalandırmasın
+  const out = fighters.filter(f => f.alive && Math.hypot(f.x - CX, f.y - CY) > arenaR + R_BODY * 0.55);
+  if (!out.length) return;
+  for (const f of out) { f.alive = false; f.fallT = 0; burst(f.x, f.y, f.color, 26, 5); }
+  sfxFall(); shakeT = 16;
+  if (out.length === 2) endRound(0, 'double');
+  else endRound(out[0].id === 1 ? 2 : 1, 'out');
+}
+
+// ─── Güncelleme ───
+function update() {
+  if (shakeT > 0) shakeT--;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const q = particles[i];
+    q.x += q.vx; q.y += q.vy; q.vx *= 0.94; q.vy *= 0.94; q.life -= 0.03;
+    if (q.life <= 0) particles.splice(i, 1);
+  }
+  for (const s of stars) s.tw += 0.03;
+  arenaR += (arenaTarget - arenaR) * 0.06;
+
+  if (state === 'count') {
+    countT++;
+    if (countT >= 42) {
+      countT = 0; countNum--;
+      if (countNum <= 0) { state = 'play'; tone(880, 0.13, 'triangle', 0.12); }
+      else sfxCount();
+    }
+    return;
+  }
+  if (state === 'dead') {
+    deadT++;
+    for (const f of fighters) {
+      if (f.alive) { f.vx *= 0.9; f.vy *= 0.9; f.x += f.vx; f.y += f.vy; }
+      else { f.fallT++; f.x += f.vx; f.y += f.vy; f.vx *= 0.99; f.vy *= 0.99; }
+    }
+    if (deadT > 100 && score1 < cfg.target && score2 < cfg.target) { round++; startRound(); }
+    return;
+  }
+  if (state !== 'play') return;
+
+  timeAcc += 16.7;
+  if (timeAcc >= 1000) {
+    timeAcc -= 1000; timeLeft--; updateHud();
+    // Arena son 30 saniyede kademeli daralır
+    const cf = ARENA[cfg.arena];
+    if (timeLeft <= 30 && timeLeft > 0) {
+      const nt = cf.min + (cf.start - cf.min) * (timeLeft / 30);
+      if (nt < arenaTarget - 1) { arenaTarget = nt; if (timeLeft % 5 === 0) sfxShrink(); }
+    }
+    if (timeLeft <= 5 && timeLeft > 0) tone(520, 0.07, 'square', 0.08);
+  }
+  if (timeLeft <= 0) {
+    // Süre biterse hasarı az olan raundu alır
+    const w = f1.dmg === f2.dmg ? 0 : (f1.dmg < f2.dmg ? 1 : 2);
+    endRound(w, 'time');
+    return;
+  }
+
+  moveFighter(f1, 'w', 's', 'a', 'd', ' ');
+  moveFighter(f2, 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter');
+  collide(f1, f2);
+  checkFalls();
+}
+
+// ─── Çizim ───
+function draw() {
+  ctx.save();
+  if (shakeT > 0) { const m = shakeT / 2.4; ctx.translate((Math.random() - 0.5) * m, (Math.random() - 0.5) * m); }
+
+  // Uzay
+  const bgGrad = ctx.createRadialGradient(CX, CY, 40, CX, CY, W * 0.62);
+  bgGrad.addColorStop(0, '#141033');
+  bgGrad.addColorStop(1, '#05060f');
+  ctx.fillStyle = bgGrad; ctx.fillRect(-20, -20, W + 40, H + 40);
+
+  for (const s of stars) {
+    ctx.globalAlpha = s.a * (0.65 + Math.sin(s.tw) * 0.35);
+    ctx.fillStyle = '#cfe0ff';
+    ctx.fillRect(s.x, s.y, s.r, s.r);
+  }
+  ctx.globalAlpha = 1;
+
+  // Arena diski
+  const g = ctx.createRadialGradient(CX, CY - arenaR * 0.3, arenaR * 0.1, CX, CY, arenaR);
+  g.addColorStop(0, 'rgba(70,80,150,0.5)');
+  g.addColorStop(0.7, 'rgba(34,38,86,0.55)');
+  g.addColorStop(1, 'rgba(18,20,52,0.75)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(CX, CY, arenaR, 0, Math.PI * 2); ctx.fill();
+
+  // Halka desenleri
+  ctx.strokeStyle = 'rgba(160,180,255,0.10)'; ctx.lineWidth = 1;
+  for (let i = 1; i <= 3; i++) {
+    ctx.beginPath(); ctx.arc(CX, CY, arenaR * (i / 4), 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.moveTo(CX + Math.cos(a) * arenaR * 0.25, CY + Math.sin(a) * arenaR * 0.25);
+    ctx.lineTo(CX + Math.cos(a) * arenaR, CY + Math.sin(a) * arenaR);
+  }
+  ctx.stroke();
+
+  // Kenar parlaması — daralırken kırmızıya döner
+  const shrinking = arenaTarget < ARENA[cfg.arena].start - 2;
+  const rim = shrinking ? '#ff6a6a' : '#9db4ff';
+  ctx.shadowBlur = 26; ctx.shadowColor = rim;
+  ctx.strokeStyle = rim; ctx.lineWidth = 4;
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath(); ctx.arc(CX, CY, arenaR, 0, Math.PI * 2); ctx.stroke();
+  ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+
+  // Parçacıklar
+  for (const q of particles) {
+    ctx.globalAlpha = Math.max(0, q.life);
+    ctx.fillStyle = q.color;
+    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  for (const f of fighters) drawFighter(f);
+
+  // Geri sayım
+  if (state === 'count') {
+    ctx.fillStyle = 'rgba(6,7,18,0.5)'; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#fff'; ctx.font = '900 120px Orbitron, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowBlur = 26; ctx.shadowColor = '#9db4ff';
+    const sc = 1 + (countT / 42) * 0.12;
+    ctx.save(); ctx.translate(CX, CY); ctx.scale(sc, sc); ctx.fillText(String(countNum), 0, 0); ctx.restore();
+    ctx.shadowBlur = 0;
+    ctx.font = '700 16px Orbitron, sans-serif'; ctx.globalAlpha = 0.65;
+    ctx.fillText('RAUNT ' + round, CX, CY + 92);
+    ctx.globalAlpha = 1;
+  }
+
+  // Raunt sonu
+  if (state === 'dead' && deadT > 20) {
+    ctx.globalAlpha = Math.min(1, (deadT - 20) / 16);
+    ctx.fillStyle = 'rgba(6,7,18,0.5)'; ctx.fillRect(0, CY - 56, W, 112);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '900 38px Orbitron, sans-serif';
+    if (lastWinner === 0) {
+      ctx.fillStyle = '#d6e2f5';
+      ctx.fillText(deadReason === 'double' ? 'İKİSİ DE DÜŞTÜ!' : 'BERABERE', CX, CY - 8);
+    }
+    else {
+      ctx.fillStyle = lastWinner === 1 ? '#ffc93c' : '#6c8cff';
+      ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle;
+      ctx.fillText('OYUNCU ' + lastWinner + ' RAUNDU ALDI', CX, CY - 8);
+      ctx.shadowBlur = 0;
+    }
+    ctx.font = '700 15px Orbitron, sans-serif';
+    ctx.fillStyle = 'rgba(214,226,245,0.6)';
+    ctx.fillText(deadReason === 'time' ? 'SÜRE DOLDU — AZ HASARLI KAZANIR'
+               : deadReason === 'double' ? 'KİMSE SAYI ALAMADI'
+               : 'ARENADAN DÜŞTÜ', CX, CY + 28);
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.restore();
+}
+
+function drawFighter(f) {
+  const fading = !f.alive ? Math.max(0, 1 - f.fallT / 70) : 1;
+  if (fading <= 0) return;
+
+  ctx.save();
+  ctx.globalAlpha = fading;
+  ctx.translate(f.x, f.y);
+  const scale = (!f.alive ? 0.35 + fading * 0.65 : 1) * (1 + f.sq * 0.14);
+  ctx.scale(scale, scale);
+
+  // Hamle izi
+  if (f.dashT > 0) {
+    ctx.globalAlpha = fading * 0.35;
+    ctx.fillStyle = f.color;
+    ctx.beginPath(); ctx.arc(0, 0, R_BODY + 9, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = fading;
+  }
+
+  const flashing = f.hitFlash > 0 && f.hitFlash % 4 < 2;
+  const body = flashing ? '#ffffff' : f.color;
+
+  // Gövde
+  ctx.shadowBlur = 22; ctx.shadowColor = f.color;
+  const bg = ctx.createRadialGradient(-6, -8, 3, 0, 0, R_BODY);
+  bg.addColorStop(0, flashing ? '#ffffff' : lighten(f.color));
+  bg.addColorStop(1, body);
+  ctx.fillStyle = bg;
+  ctx.beginPath(); ctx.arc(0, 0, R_BODY, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Hasar çatlakları (hasar arttıkça kızarır)
+  const heat = Math.min(1, f.dmg / 180);
+  if (heat > 0.05) {
+    ctx.globalAlpha = fading * heat * 0.75;
+    ctx.strokeStyle = '#ff3b3b'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, R_BODY - 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = fading;
+  }
+
+  // Yüz — baktığı yöne dönen gözler
+  const ex = Math.cos(f.face) * 5, ey = Math.sin(f.face) * 5;
+  ctx.fillStyle = 'rgba(10,12,26,0.85)';
+  ctx.beginPath(); ctx.arc(-7 + ex, -3 + ey, 4.6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7 + ex, -3 + ey, 4.6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-6 + ex * 1.3, -3.5 + ey * 1.3, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(8 + ex * 1.3, -3.5 + ey * 1.3, 1.8, 0, Math.PI * 2); ctx.fill();
+  // Ağız — hasar arttıkça bozulur
+  ctx.strokeStyle = 'rgba(10,12,26,0.8)'; ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.arc(0 + ex * 0.6, 7 + ey * 0.6, 6, heat > 0.5 ? Math.PI : 0.2, heat > 0.5 ? Math.PI * 2 : Math.PI - 0.2);
+  ctx.stroke();
+
+  ctx.restore();
+
+  if (!f.alive) return;
+
+  // Hamle bekleme halkası
+  ctx.save();
+  const cdRatio = 1 - Math.max(0, f.dashCd) / DASH_CD;
+  ctx.globalAlpha = cdRatio >= 1 ? 0.85 : 0.5;
+  ctx.strokeStyle = cdRatio >= 1 ? '#ffffff' : f.color;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(f.x, f.y, R_BODY + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * cdRatio);
+  ctx.stroke();
+  ctx.restore();
+
+  // Hasar yüzdesi
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '900 15px Orbitron, sans-serif';
+  const heat2 = Math.min(1, f.dmg / 180);
+  ctx.fillStyle = `rgb(255,${Math.round(230 - heat2 * 170)},${Math.round(230 - heat2 * 210)})`;
+  ctx.shadowBlur = 8; ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.fillText('%' + Math.round(f.dmg), f.x, f.y - R_BODY - 16);
+  ctx.restore();
+}
+
+function lighten(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = Math.min(255, ((n >> 16) & 255) + 70);
+  const g = Math.min(255, ((n >> 8) & 255) + 70);
+  const b = Math.min(255, (n & 255) + 70);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ─── Döngü ───
+function loop() { update(); draw(); requestAnimationFrame(loop); }
+loop();
+
+// ─── Arayüz ───
+function show(id) { document.getElementById(id).classList.remove('hidden'); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function updateHud() {
+  document.getElementById('s1').textContent = score1;
+  document.getElementById('s2').textContent = score2;
+  document.getElementById('d1').textContent = '%' + Math.round(f1.dmg);
+  document.getElementById('d2').textContent = '%' + Math.round(f2.dmg);
+  document.getElementById('round-txt').textContent = 'RAUNT ' + round + ' · İLK ' + cfg.target;
+  const tm = document.getElementById('timer');
+  tm.textContent = Math.max(0, timeLeft);
+  tm.classList.toggle('low', timeLeft <= 10 && state === 'play');
+}
+function pickRow(rowId, attr, onPick) {
+  document.getElementById(rowId).addEventListener('click', e => {
+    const b = e.target.closest('button[data-' + attr + ']');
+    if (!b) return;
+    for (const x of document.getElementById(rowId).querySelectorAll('button')) x.classList.remove('sel');
+    b.classList.add('sel');
+    onPick(b.dataset[attr]);
+    tone(760, 0.05, 'triangle', 0.08);
+  });
+}
+pickRow('target-row', 'target', v => { cfg.target = +v; updateHud(); });
+pickRow('arena-row', 'arena', v => { cfg.arena = +v; arenaR = arenaTarget = ARENA[cfg.arena].start; });
+
+document.getElementById('start-btn').onclick = newGame;
+document.getElementById('again-btn').onclick = newGame;
+document.getElementById('resume-btn').onclick = togglePause;
+document.getElementById('quit-btn').onclick = () => { state = 'menu'; hide('pause'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
+document.getElementById('menu-btn').onclick = () => { state = 'menu'; hide('win'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
+
+updateHud();
+})();
+</script>
+
+<a href="../" id="home-btn" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#ffc93c;font-family:'Orbitron',sans-serif;font-size:0.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+</body>
+</html>

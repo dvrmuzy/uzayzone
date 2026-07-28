@@ -552,11 +552,53 @@ const GAMES = [
       bar: 'linear-gradient(90deg, #3df07d, #5db4ff, #c98aff)',
       border: 'rgba(93,180,255,0.25)'
     }
+  },
+  {
+    title: 'Uzay Ping-Pong',
+    genre: '2 Kişilik / Arcade',
+    desc: 'Tek bilgisayarda iki kişi! Sol oyuncu W-S, sağ oyuncu ok tuşları. İlk 7 sayıyı alan kazanır. Tek başınaysan bilgisayara karşı oyna.',
+    href: 'uzay-pingpong/',
+    icon: '🏓',
+    colors: {
+      bg: 'linear-gradient(135deg, #04101f, #1a0722)',
+      accent: '#00e5ff',
+      glow: 'rgba(0,229,255,0.20)',
+      bar: 'linear-gradient(90deg, #00e5ff, #ffffff, #ff3d9a)',
+      border: 'rgba(0,229,255,0.22)'
+    }
+  },
+  {
+    title: 'Tank Savaşı',
+    genre: '2 Kişilik / Aksiyon',
+    desc: 'Tek bilgisayarda iki tank kapışır! Mermiler çelik duvarlardan seker, tuğlaları yıkar. Kalkan, hız ve üçlü atış güçlendirmeleriyle ilk 5 raundu alan kazanır.',
+    href: 'tank-savasi/',
+    icon: '🎯',
+    colors: {
+      bg: 'linear-gradient(135deg, #0a1a14, #241206)',
+      accent: '#2ee6a0',
+      glow: 'rgba(46,230,160,0.20)',
+      bar: 'linear-gradient(90deg, #2ee6a0, #ffffff, #ff8a3d)',
+      border: 'rgba(46,230,160,0.22)'
+    }
+  },
+  {
+    title: 'Uzay Sumo',
+    genre: '2 Kişilik / Aksiyon',
+    desc: 'Rakibini uzay arenasından dışarı it! Hasarın arttıkça daha uzağa fırlarsın, arena da zamanla daralır. Hamle (dash) ile ezici darbeyi indir.',
+    href: 'uzay-sumo/',
+    icon: '🤼',
+    colors: {
+      bg: 'linear-gradient(135deg, #2a2008, #10122e)',
+      accent: '#ffc93c',
+      glow: 'rgba(255,201,60,0.20)',
+      bar: 'linear-gradient(90deg, #ffc93c, #ffffff, #6c8cff)',
+      border: 'rgba(255,201,60,0.22)'
+    }
   }
 ];
 
 // Son eklenen kaç oyun "YENİ" olarak vurgulansın (array'in sonundakiler)
-const NEW_COUNT = 4;
+const NEW_COUNT = 3;
 
 // ─── Render Cards ───
 function renderCards() {
