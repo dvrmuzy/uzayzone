@@ -125,6 +125,7 @@
   .pad.left .tb.dash { background: rgba(255,201,60,0.22); border-color: rgba(255,201,60,0.5); }
   .pad.right .tb.dash { background: rgba(108,140,255,0.24); border-color: rgba(108,140,255,0.5); }
   body.touch #touch { display: block; }
+  body.cpu .pad.right { display: none; }        /* bilgisayara karşı: sağ ped gereksiz */
   body.touch #stage { width: min(96vw, calc((100vh - 200px) * 1.4706)); }
   body.touch #hint { display: none; }
 
@@ -160,7 +161,7 @@
     <div class="name" id="n2">OYUNCU 2</div>
     <div class="pts" id="s2">0</div>
     <div class="dmg" id="d2" style="color:var(--p2)">%0</div>
-    <div class="keys">OKLAR + ENTER</div>
+    <div class="keys" id="k2">OKLAR + ENTER</div>
   </div>
 </div>
 
@@ -170,6 +171,19 @@
   <div class="overlay" id="menu">
     <div class="o-title">UZAY SUMO</div>
     <div class="o-sub">Rakibini platformdan dışarı it! Hasarın arttıkça daha uzağa fırlarsın. Arena zamanla daralır — saklanacak yer kalmaz.</div>
+
+    <div class="lbl">MOD</div>
+    <div class="row" id="mode-row">
+      <button class="btn sel" data-mode="pvp">👥 2 KİŞİ</button>
+      <button class="btn" data-mode="cpu">🤖 BİLGİSAYARA KARŞI</button>
+    </div>
+
+    <div class="lbl" id="diff-lbl" style="display:none">ZORLUK</div>
+    <div class="row" id="diff-row" style="display:none">
+      <button class="btn" data-diff="0">KOLAY</button>
+      <button class="btn sel" data-diff="1">ORTA</button>
+      <button class="btn" data-diff="2">ZOR</button>
+    </div>
 
     <div class="lbl">KAZANMA SKORU</div>
     <div class="row" id="target-row">
@@ -281,7 +295,8 @@ const sfxShrink = () => tone(230, 0.3, 'triangle', 0.07, 150);
 function sfxWin() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.12), i * 110)); }
 
 // ─── Ayarlar ───
-const cfg = { target: 5, arena: 1 };
+const cfg = { target: 5, arena: 1, mode: 'pvp', diff: 1 };
+const pName = i => (i === 2 && cfg.mode === 'cpu') ? 'BİLGİSAYAR' : 'OYUNCU ' + i;
 const ARENA = [
   { start: 300, min: 190 },   // Geniş
   { start: 262, min: 150 },   // Normal
@@ -295,7 +310,7 @@ const ACC = 0.52, FRICTION = 0.915, DASH_SPD = 9.5, DASH_CD = 950, DASH_FRAMES =
 function mkFighter(id, color, dir) {
   return { id, color, x: CX + dir * 120, y: CY, vx: 0, vy: 0, dmg: 0,
            alive: true, dashCd: 0, dashT: 0, face: dir > 0 ? Math.PI : 0,
-           hitFlash: 0, fallT: 0, sq: 0, dir };
+           hitFlash: 0, fallT: 0, sq: 0, knock: 0, dir };
 }
 const f1 = mkFighter(1, '#ffc93c', -1);
 const f2 = mkFighter(2, '#6c8cff', 1);
@@ -343,8 +358,9 @@ function startRound() {
   particles.length = 0;
   for (const f of fighters) {
     f.x = CX + f.dir * 120; f.y = CY; f.vx = 0; f.vy = 0;
-    f.dmg = 0; f.alive = true; f.dashCd = 0; f.dashT = 0; f.hitFlash = 0; f.fallT = 0; f.sq = 0;
+    f.dmg = 0; f.alive = true; f.dashCd = 0; f.dashT = 0; f.hitFlash = 0; f.fallT = 0; f.sq = 0; f.knock = 0;
     f.face = f.dir > 0 ? Math.PI : 0;
+    f.ai = null;                       // yapay zekâ yön hafızası sıfırlansın
   }
   timeLeft = ROUND_TIME; timeAcc = 0;
   countNum = 3; countT = 0; state = 'count';
@@ -365,7 +381,7 @@ function endRound(winner, reason) {
     setTimeout(() => {
       state = 'over';
       const w = score1 >= cfg.target ? 1 : 2;
-      document.getElementById('win-title').textContent = 'OYUNCU ' + w + ' KAZANDI';
+      document.getElementById('win-title').textContent = pName(w) + ' KAZANDI';
       document.getElementById('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();
     }, 1600);
@@ -398,17 +414,87 @@ function inputVec(kUp, kDown, kL, kR) {
   return { dx, dy };
 }
 
-function moveFighter(f, kUp, kDown, kL, kR, kDash) {
+function humanVec(kUp, kDown, kL, kR, kDash) {
+  const v = inputVec(kUp, kDown, kL, kR);
+  return { dx: v.dx, dy: v.dy, dash: !!keys[kDash] };
+}
+
+// ─── Bilgisayar rakip ───
+const SUMO_AI = [
+  // Kolay: yavaş tepki, çok savrulur, dash'i ender kullanır, kenarı geç fark eder
+  { react: 0.10, wander: 62, dashRate: 0.055, edgeCare: 0.55, evade: 0.00 },
+  // Orta: dengeli
+  { react: 0.22, wander: 30, dashRate: 0.16,  edgeCare: 0.85, evade: 0.40 },
+  // Zor: hızlı hizalanır, kenarı iyi kollar, gelen dash'ten kaçar
+  { react: 0.40, wander: 12, dashRate: 0.32,  edgeCare: 1.00, evade: 0.85 }
+];
+
+function aiVec(f, foe) {
+  const d = SUMO_AI[cfg.diff];
+  const ai = f.ai || (f.ai = { dx: 0, dy: 0, wx: 0, wy: 0, wanderT: 0 });
+  if (--ai.wanderT <= 0) {
+    const a = Math.random() * Math.PI * 2;
+    ai.wx = Math.cos(a) * d.wander; ai.wy = Math.sin(a) * d.wander;
+    ai.wanderT = 35 + Math.random() * 40;
+  }
+
+  const myD = Math.hypot(f.x - CX, f.y - CY);
+  const foeD = Math.hypot(foe.x - CX, foe.y - CY);
+  const tx = foe.x - f.x, ty = foe.y - f.y;
+  const dist = Math.hypot(tx, ty) || 1;
+  const nx = tx / dist, ny = ty / dist;               // bana göre rakip yönü
+  // Rakibin dışarı bakan yönü — onu bu yöne itmeliyim
+  let ux, uy;
+  if (foeD > 20) { ux = (foe.x - CX) / foeD; uy = (foe.y - CY) / foeD; }
+  else { ux = nx; uy = ny; }
+
+  let gx, gy;
+  const safeR = arenaR * (0.80 - 0.16 * d.edgeCare);
+  if (myD > safeR) {
+    gx = CX; gy = CY;                                  // önce kendini kurtar
+    if (dist < 62 && foeD > myD) { gx = foe.x; gy = foe.y; }   // rakip dışımdaysa itmeye devam
+  } else {
+    // Rakibin merkez tarafına geç ki ittiğimde dışarı gitsin
+    gx = foe.x - ux * (R_BODY * 2.0) + ai.wx;
+    gy = foe.y - uy * (R_BODY * 2.0) + ai.wy;
+  }
+
+  let dirX = gx - f.x, dirY = gy - f.y;
+  const dl = Math.hypot(dirX, dirY) || 1;
+  dirX /= dl; dirY /= dl;
+
+  let dash = false;
+
+  // Gelen dash'ten yana sıçrayarak kaç
+  if (foe.dashT > 0 && dist < 140 && f.dashCd <= 0 && Math.random() < d.evade) {
+    const px = -ny, py = nx;
+    const s = ((CX - f.x) * px + (CY - f.y) * py) >= 0 ? 1 : -1;   // merkeze doğru olan yan
+    dirX = px * s; dirY = py * s; dash = true;
+  } else if (f.dashCd <= 0 && dist < 92 && (nx * ux + ny * uy) > 0.15) {
+    // Rakibi dışarı itecek hizadayım — hamleyi bas
+    const predX = f.x + nx * 105, predY = f.y + ny * 105;
+    const safe = Math.hypot(predX - CX, predY - CY) < arenaR * 0.95 || dist < 58;
+    if (safe && Math.random() < d.dashRate) { dirX = nx; dirY = ny; dash = true; }
+  }
+
+  // Tepki gecikmesi: yön ani değil, yumuşak dönsün (kolay AI daha hantal)
+  ai.dx += (dirX - ai.dx) * d.react;
+  ai.dy += (dirY - ai.dy) * d.react;
+  const ml = Math.hypot(ai.dx, ai.dy) || 1;
+  return { dx: ai.dx / Math.max(1, ml), dy: ai.dy / Math.max(1, ml), dash };
+}
+
+function moveFighter(f, inp) {
   if (!f.alive) return;
   if (f.dashCd > 0) f.dashCd -= 16.7;
   if (f.dashT > 0) f.dashT--;
   if (f.hitFlash > 0) f.hitFlash--;
   if (f.sq > 0) f.sq -= 0.06;
 
-  const { dx, dy } = inputVec(kUp, kDown, kL, kR);
+  const dx = inp.dx, dy = inp.dy;
   if (dx || dy) f.face = Math.atan2(dy, dx);
 
-  if (keys[kDash] && f.dashCd <= 0) {
+  if (inp.dash && f.dashCd <= 0) {
     f.dashCd = DASH_CD; f.dashT = DASH_FRAMES;
     const a = (dx || dy) ? Math.atan2(dy, dx) : f.face;
     f.vx = Math.cos(a) * DASH_SPD; f.vy = Math.sin(a) * DASH_SPD;
@@ -420,6 +506,20 @@ function moveFighter(f, kUp, kDown, kL, kR, kDash) {
     f.vx += dx * ACC; f.vy += dy * ACC;
   }
   f.vx *= FRICTION; f.vy *= FRICTION;
+
+  // Kenar direnci: kendi hatanla dışarı sürüklenirken hafif içeri çeker.
+  // Darbe yemişsen (knock) veya hamledeysen çalışmaz — savrulma tam etkisini korur.
+  if (f.knock > 0) f.knock--;
+  else if (f.dashT <= 0) {
+    const dC = Math.hypot(f.x - CX, f.y - CY);
+    const edge = arenaR * 0.78;
+    if (dC > edge && dC > 1) {
+      const pull = 0.34 * Math.min(1, (dC - edge) / (arenaR - edge));
+      f.vx -= (f.x - CX) / dC * pull;
+      f.vy -= (f.y - CY) / dC * pull;
+    }
+  }
+
   f.x += f.vx; f.y += f.vy;
 
   if (f.dashT > 0 && f.dashT % 2 === 0)
@@ -456,6 +556,7 @@ function collide(a, b) {
   a.dmg = Math.min(299, a.dmg + impact * (aDash ? 0.4 : 0.95) + (bDash ? 6 : 0));
   b.dmg = Math.min(299, b.dmg + impact * (bDash ? 0.4 : 0.95) + (aDash ? 6 : 0));
   a.hitFlash = 10; b.hitFlash = 10; a.sq = 1; b.sq = 1;
+  a.knock = b.knock = 55;         // darbeyle savrulurken kenar direnci devreye girmez
 
   const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
   const power = impact * (aDash || bDash ? 1.6 : 1);
@@ -525,8 +626,9 @@ function update() {
     return;
   }
 
-  moveFighter(f1, 'w', 's', 'a', 'd', ' ');
-  moveFighter(f2, 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter');
+  moveFighter(f1, humanVec('w', 's', 'a', 'd', ' '));
+  moveFighter(f2, cfg.mode === 'cpu' ? aiVec(f2, f1)
+                                     : humanVec('arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter'));
   collide(f1, f2);
   checkFalls();
 }
@@ -616,7 +718,7 @@ function draw() {
     else {
       ctx.fillStyle = lastWinner === 1 ? '#ffc93c' : '#6c8cff';
       ctx.shadowBlur = 20; ctx.shadowColor = ctx.fillStyle;
-      ctx.fillText('OYUNCU ' + lastWinner + ' RAUNDU ALDI', CX, CY - 8);
+      ctx.fillText(pName(lastWinner) + ' RAUNDU ALDI', CX, CY - 8);
       ctx.shadowBlur = 0;
     }
     ctx.font = '700 15px Orbitron, sans-serif';
@@ -744,6 +846,16 @@ function pickRow(rowId, attr, onPick) {
     tone(760, 0.05, 'triangle', 0.08);
   });
 }
+pickRow('mode-row', 'mode', v => {
+  cfg.mode = v;
+  const on = v === 'cpu';
+  document.getElementById('diff-row').style.display = on ? 'flex' : 'none';
+  document.getElementById('diff-lbl').style.display = on ? 'block' : 'none';
+  document.getElementById('n2').textContent = pName(2);
+  document.getElementById('k2').textContent = on ? 'YAPAY ZEKÂ' : 'OKLAR + ENTER';
+  document.body.classList.toggle('cpu', on);
+});
+pickRow('diff-row', 'diff', v => { cfg.diff = +v; });
 pickRow('target-row', 'target', v => { cfg.target = +v; updateHud(); });
 pickRow('arena-row', 'arena', v => { cfg.arena = +v; arenaR = arenaTarget = ARENA[cfg.arena].start; });
 

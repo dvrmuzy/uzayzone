@@ -129,6 +129,7 @@
   .pad.left .tb.fire { background: rgba(46,230,160,0.22); border-color: rgba(46,230,160,0.5); }
   .pad.right .tb.fire { background: rgba(255,138,61,0.22); border-color: rgba(255,138,61,0.5); }
   body.touch #touch { display: block; }
+  body.cpu .pad.right { display: none; }        /* bilgisayara karşı: sağ ped gereksiz */
   body.touch #stage { width: min(96vw, calc((100vh - 210px) * 1.4706)); }
   body.touch #hint { display: none; }
 
@@ -162,7 +163,7 @@
   <div class="side">
     <div class="name" id="n2">OYUNCU 2</div>
     <div class="pts" id="s2">0</div>
-    <div class="keys">OKLAR + ENTER</div>
+    <div class="keys" id="k2">OKLAR + ENTER</div>
   </div>
 </div>
 
@@ -172,6 +173,19 @@
   <div class="overlay" id="menu">
     <div class="o-title">TANK SAVAŞI</div>
     <div class="o-sub">Mermiler çelik duvarlardan seker, tuğla duvarları yıkar. Kendi sektirdiğin mermi seni de vurur — dikkat!</div>
+
+    <div class="lbl">MOD</div>
+    <div class="row" id="mode-row">
+      <button class="btn sel" data-mode="pvp">👥 2 KİŞİ</button>
+      <button class="btn" data-mode="cpu">🤖 BİLGİSAYARA KARŞI</button>
+    </div>
+
+    <div class="lbl" id="diff-lbl" style="display:none">ZORLUK</div>
+    <div class="row" id="diff-row" style="display:none">
+      <button class="btn" data-diff="0">KOLAY</button>
+      <button class="btn sel" data-diff="1">ORTA</button>
+      <button class="btn" data-diff="2">ZOR</button>
+    </div>
 
     <div class="lbl">KAZANMA SKORU</div>
     <div class="row" id="target-row">
@@ -281,7 +295,8 @@ const sfxCount  = () => tone(620, 0.08, 'triangle', 0.09);
 function sfxWin() { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.12), i * 110)); }
 
 // ─── Ayarlar ───
-const cfg = { target: 5, powerups: true };
+const cfg = { target: 5, powerups: true, mode: 'pvp', diff: 1 };
+const pName = i => (i === 2 && cfg.mode === 'cpu') ? 'BİLGİSAYAR' : 'OYUNCU ' + i;
 const ROUND_TIME = 60;         // saniye
 const TANK_R = 14;
 const SPD = 2.15, ROT = 0.052, BSPD = 5.2, B_MAX = 5, B_BOUNCE = 3, COOLDOWN = 420;
@@ -422,6 +437,7 @@ function startRound(full) {
     t.x = (t.spawn.cx + 0.5) * CELL; t.y = (t.spawn.cy + 0.5) * CELL;
     t.ang = t.id === 1 ? 0 : Math.PI;
     t.alive = true; t.cd = 0; t.shield = 120; t.fast = 0; t.triple = 0; t.flash = 0;
+    t.ai = null;                      // yapay zekâ hafızası (yol, hedef) sıfırlansın
   }
   timeLeft = ROUND_TIME; timeAcc = 0; pwTimer = 240;
   countNum = 3; countT = 0; state = 'count';
@@ -442,7 +458,7 @@ function endRound(winner) {
     setTimeout(() => {
       state = 'over';
       const w = score1 >= cfg.target ? 1 : 2;
-      document.getElementById('win-title').textContent = 'OYUNCU ' + w + ' KAZANDI';
+      document.getElementById('win-title').textContent = pName(w) + ' KAZANDI';
       document.getElementById('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();
     }, 1500);
@@ -556,8 +572,192 @@ function applyPowerup(t, type) {
   burst(t.x, t.y, type.color, 18, 4);
 }
 
+// ─── Bilgisayar rakip ───
+const AI = [
+  // Kolay: nişanı bozuk, geç ateş eder, mermiden kaçmaz
+  { aimTol: 0.26, aimNoise: 0.26, reload: 850, repath: 40, dodge: 0.00, keepDist: 0,   smart: false },
+  // Orta: makul nişan, mesafesini korur, mermiden kaçar, güçlendirme toplar
+  { aimTol: 0.14, aimNoise: 0.11, reload: 260, repath: 26, dodge: 0.60, keepDist: 210, smart: true },
+  // Zor: keskin nişancı, hızlı tepki
+  { aimTol: 0.07, aimNoise: 0.035, reload: 170, repath: 15, dodge: 0.95, keepDist: 250, smart: true }
+];
+
+function angNorm(a) { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; }
+
+// Görüş hattı: ilk engele kadar ilerle
+function losInfo(x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy);
+  const steps = Math.max(1, Math.ceil(d / 7));
+  for (let i = 1; i <= steps; i++) {
+    const px = x0 + dx * i / steps, py = y0 + dy * i / steps;
+    const v = at(Math.floor(px / CELL), Math.floor(py / CELL));
+    if (v !== EMPTY) return { clear: false, type: v, dist: d * i / steps };
+  }
+  return { clear: true, type: EMPTY, dist: d };
+}
+
+// Labirentte en kısa yol (yalnızca boş hücreler)
+function bfsPath(sx, sy, tx, ty) {
+  if (at(sx, sy) !== EMPTY || at(tx, ty) !== EMPTY) return null;
+  const start = sy * COLS + sx, goal = ty * COLS + tx;
+  const prev = new Int32Array(COLS * ROWS).fill(-1);
+  const seen = new Uint8Array(COLS * ROWS);
+  const q = [start]; seen[start] = 1;
+  for (let head = 0; head < q.length; head++) {
+    const i = q[head];
+    if (i === goal) {
+      const path = []; let c = i;
+      while (c !== start) { path.push({ cx: c % COLS, cy: (c / COLS) | 0 }); c = prev[c]; }
+      return path.reverse();
+    }
+    const cx = i % COLS, cy = (i / COLS) | 0;
+    for (const [x, y] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+      if (x < 0 || y < 0 || x >= COLS || y >= ROWS) continue;
+      const j = y * COLS + x;
+      if (!seen[j] && grid[j] === EMPTY) { seen[j] = 1; prev[j] = i; q.push(j); }
+    }
+  }
+  return null;
+}
+
+// Ateşten önce kendi mermini simüle et: sekip sana geri dönüyorsa ateş etme
+function selfSafeShot(t, foe) {
+  let x = t.x + Math.cos(t.ang) * (TANK_R + 8);
+  let y = t.y + Math.sin(t.ang) * (TANK_R + 8);
+  if (solidAt(x, y)) return false;
+  let vx = Math.cos(t.ang) * BSPD, vy = Math.sin(t.ang) * BSPD;
+  let bounces = 0;
+  for (let age = 1; age <= 130; age++) {
+    for (let s = 0; s < 4; s++) {
+      const nx = x + vx / 4;
+      if (solidAt(nx, y)) {
+        if (at(Math.floor(nx / CELL), Math.floor(y / CELL)) === BRICK) return true;
+        vx = -vx; bounces++;
+      } else x = nx;
+      const ny = y + vy / 4;
+      if (solidAt(x, ny)) {
+        if (at(Math.floor(x / CELL), Math.floor(ny / CELL)) === BRICK) return true;
+        vy = -vy; bounces++;
+      } else y = ny;
+      if (bounces > B_BOUNCE) return true;                                  // sönüyor, zararsız
+      if (Math.hypot(x - foe.x, y - foe.y) < TANK_R + 4) return true;        // rakibi vuruyor
+      if (age > 14 && Math.hypot(x - t.x, y - t.y) < TANK_R + 4) return false; // bana dönüyor
+    }
+  }
+  return true;
+}
+
+function humanInput(kUp, kDown, kL, kR, kFire) {
+  return { up: !!keys[kUp], down: !!keys[kDown], left: !!keys[kL], right: !!keys[kR], fire: !!keys[kFire] };
+}
+
+function aiInput(t, foe) {
+  const d = AI[cfg.diff];
+  const inp = { up: false, down: false, left: false, right: false, fire: false };
+  if (!t.alive) return inp;
+  const ai = t.ai || (t.ai = { path: null, repathT: 0, dodgeT: 0, dodgeAng: 0, fireT: 0,
+                               stuckT: 0, stuckDir: 1, checkT: 0, lastX: t.x, lastY: t.y, noise: 0, noiseT: 0,
+                               strafing: false, strafeT: 60, strafeDir: 1 });
+
+  if (ai.fireT > 0) ai.fireT -= 16.7;
+  if (--ai.noiseT <= 0) { ai.noise = (Math.random() * 2 - 1) * d.aimNoise; ai.noiseT = 30; }
+  if (--ai.strafeT <= 0) {
+    ai.strafing = !ai.strafing;
+    ai.strafeT = ai.strafing ? 26 + Math.random() * 22 : 55 + Math.random() * 45;
+    ai.strafeDir = Math.random() < 0.5 ? -1 : 1;
+  }
+
+  const dx = foe.x - t.x, dy = foe.y - t.y;
+  const dist = Math.hypot(dx, dy);
+  const foeAng = Math.atan2(dy, dx);
+  const los = losInfo(t.x, t.y, foe.x, foe.y);
+
+  // Yaklaşan mermiden kaçınma
+  if (ai.dodgeT > 0) ai.dodgeT--;
+  else if (Math.random() < d.dodge) {
+    for (const b of bullets) {
+      const rx = t.x - b.x, ry = t.y - b.y;
+      const dd = Math.hypot(rx, ry);
+      if (dd > 190 || dd < 1) continue;
+      const bs = Math.hypot(b.vx, b.vy) || 1;
+      if ((b.vx * rx + b.vy * ry) / (bs * dd) < 0.9) continue;         // bize doğru gelmiyor
+      if (Math.abs(b.vx * ry - b.vy * rx) / bs > 34) continue;          // ıskalayacak
+      ai.dodgeT = 26;
+      ai.dodgeAng = Math.atan2(b.vy, b.vx) + (Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2);
+      break;
+    }
+  }
+
+  // Hedef seçimi: yakında güçlendirme varsa önce onu topla
+  let navX = foe.x, navY = foe.y, navIsPw = false;
+  if (cfg.powerups && d.smart && powerups.length && dist > 140) {
+    let best = null, bd = 1e9;
+    for (const p of powerups) { const dd = Math.hypot(p.x - t.x, p.y - t.y); if (dd < bd) { bd = dd; best = p; } }
+    if (best && bd < 260) { navX = best.x; navY = best.y; navIsPw = true; }
+  }
+
+  let targetAng, advance = true, reverse = false;
+
+  if (ai.dodgeT > 0) {
+    targetAng = ai.dodgeAng;
+  } else if (los.clear && !navIsPw) {
+    ai.path = null;
+    targetAng = foeAng + ai.noise;
+    if (d.keepDist && dist < d.keepDist * 0.55) reverse = true;
+    else if (d.keepDist && dist < d.keepDist) advance = false;
+    // Yerinde durup ateş etmek, kendi sekmene hedef olmak demek — ara ara yalpala
+    if (d.smart && ai.strafing && !reverse) { targetAng = foeAng + ai.strafeDir * 1.35; advance = true; }
+  } else {
+    if (--ai.repathT <= 0 || !ai.path || !ai.path.length) {
+      ai.repathT = d.repath;
+      ai.path = bfsPath(Math.floor(t.x / CELL), Math.floor(t.y / CELL),
+                        Math.floor(navX / CELL), Math.floor(navY / CELL));
+    }
+    if (ai.path) {
+      while (ai.path.length &&
+             Math.hypot((ai.path[0].cx + 0.5) * CELL - t.x, (ai.path[0].cy + 0.5) * CELL - t.y) < 14) ai.path.shift();
+    }
+    if (ai.path && ai.path.length) {
+      const wp = ai.path[0];
+      targetAng = Math.atan2((wp.cy + 0.5) * CELL - t.y, (wp.cx + 0.5) * CELL - t.x);
+    } else {
+      targetAng = foeAng;                     // yol yok — duvarı kırarak ilerle
+    }
+  }
+
+  const diff = angNorm(targetAng - t.ang);
+  if (diff > 0.05) inp.right = true; else if (diff < -0.05) inp.left = true;
+  if (reverse) inp.down = true;
+  else if (advance && Math.abs(diff) < 0.8) inp.up = true;
+
+  // Sıkışırsa geri geri manevra yap
+  if (++ai.checkT >= 30) {
+    ai.checkT = 0;
+    if (Math.hypot(t.x - ai.lastX, t.y - ai.lastY) < 5) { ai.stuckT = 34; ai.stuckDir = Math.random() < 0.5 ? -1 : 1; }
+    ai.lastX = t.x; ai.lastY = t.y;
+  }
+  if (ai.stuckT > 0) {
+    ai.stuckT--;
+    inp.up = false; inp.down = true;
+    inp.left = ai.stuckDir < 0; inp.right = ai.stuckDir > 0;
+  }
+
+  // Ateş kararı — kendi sekmeleriyle intihar etmemek için mesafe ve mermi sayısı sınırlı
+  const myBullets = bullets.reduce((n, b) => n + (b.o === t.id ? 1 : 0), 0);
+  if (ai.fireT <= 0 && myBullets < 3 && dist < 520) {
+    if (los.clear && Math.abs(angNorm(foeAng - t.ang)) < d.aimTol) {
+      if (selfSafeShot(t, foe)) { inp.fire = true; ai.fireT = d.reload; }
+      else ai.fireT = 120;                          // geri dönen atış — açını değiştir
+    } else if (d.smart && !los.clear && los.type === BRICK && los.dist < 170 &&
+               Math.abs(diff) < 0.12) {
+      inp.fire = true; ai.fireT = d.reload + 220;   // önündeki tuğlayı kır
+    }
+  }
+  return inp;
+}
+
 // ─── Tank hareketi ───
-function moveTank(t, kUp, kDown, kL, kR, kFire) {
+function moveTank(t, inp) {
   if (!t.alive) return;
   if (t.cd > 0) t.cd -= 16.7;
   if (t.shield > 0) t.shield--;
@@ -565,13 +765,13 @@ function moveTank(t, kUp, kDown, kL, kR, kFire) {
   if (t.triple > 0) t.triple--;
   if (t.flash > 0) t.flash--;
 
-  if (keys[kL]) t.ang -= ROT;
-  if (keys[kR]) t.ang += ROT;
+  if (inp.left) t.ang -= ROT;
+  if (inp.right) t.ang += ROT;
 
   const spd = SPD * (t.fast > 0 ? 1.45 : 1);
   let mv = 0;
-  if (keys[kUp]) mv = spd;
-  else if (keys[kDown]) mv = -spd * 0.62;
+  if (inp.up) mv = spd;
+  else if (inp.down) mv = -spd * 0.62;
 
   if (mv) {
     const nx = t.x + Math.cos(t.ang) * mv;
@@ -580,7 +780,7 @@ function moveTank(t, kUp, kDown, kL, kR, kFire) {
     if (!tankBlocked(t.x, ny)) t.y = ny;
     t.tread = (t.tread || 0) + Math.abs(mv);
   }
-  if (keys[kFire]) fire(t);
+  if (inp.fire) fire(t);
 
   for (let i = powerups.length - 1; i >= 0; i--) {
     const p = powerups[i];
@@ -619,8 +819,9 @@ function update() {
   if (timeAcc >= 1000) { timeAcc -= 1000; timeLeft--; updateHud(); if (timeLeft <= 5 && timeLeft > 0) tone(520, 0.07, 'square', 0.08); }
   if (timeLeft <= 0) { lastWinner = 0; state = 'dead'; deadT = 0; tone(160, 0.5, 'sawtooth', 0.12, 60); return; }
 
-  moveTank(t1, 'w', 's', 'a', 'd', ' ');
-  moveTank(t2, 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter');
+  moveTank(t1, humanInput('w', 's', 'a', 'd', ' '));
+  moveTank(t2, cfg.mode === 'cpu' ? aiInput(t2, t1)
+                                  : humanInput('arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter'));
   updateBullets();
 
   if (cfg.powerups) {
@@ -731,7 +932,7 @@ function draw() {
     else {
       ctx.fillStyle = lastWinner === 1 ? '#2ee6a0' : '#ff8a3d';
       ctx.shadowBlur = 22; ctx.shadowColor = ctx.fillStyle;
-      ctx.fillText('OYUNCU ' + lastWinner + ' RAUNDU ALDI', W / 2, H / 2);
+      ctx.fillText(pName(lastWinner) + ' RAUNDU ALDI', W / 2, H / 2);
       ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
@@ -826,6 +1027,16 @@ function pickRow(rowId, attr, onPick) {
     tone(760, 0.05, 'triangle', 0.08);
   });
 }
+pickRow('mode-row', 'mode', v => {
+  cfg.mode = v;
+  const on = v === 'cpu';
+  document.getElementById('diff-row').style.display = on ? 'flex' : 'none';
+  document.getElementById('diff-lbl').style.display = on ? 'block' : 'none';
+  document.getElementById('n2').textContent = pName(2);
+  document.getElementById('k2').textContent = on ? 'YAPAY ZEKÂ' : 'OKLAR + ENTER';
+  document.body.classList.toggle('cpu', on);
+});
+pickRow('diff-row', 'diff', v => { cfg.diff = +v; });
 pickRow('target-row', 'target', v => { cfg.target = +v; updateHud(); });
 pickRow('pw-row', 'pw', v => { cfg.powerups = v === '1'; });
 

@@ -73,6 +73,194 @@ header {
   50% { transform: translateY(-6px); }
 }
 
+/* ─── Kategori Filtresi ─── */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 40px;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: #b9b4d0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 30px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.filter-chip:hover {
+  color: #fff;
+  border-color: rgba(125,249,255,0.45);
+  background: rgba(125,249,255,0.07);
+  transform: translateY(-2px);
+}
+
+.filter-chip.active {
+  color: #050510;
+  background: linear-gradient(135deg, #7df9ff, #b44eff);
+  border-color: transparent;
+  box-shadow: 0 0 22px rgba(125,249,255,0.35);
+}
+
+.filter-chip .chip-emoji { font-size: 1rem; }
+
+.filter-chip .chip-count {
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 1px 7px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.08);
+  color: #8f8aa8;
+}
+
+.filter-chip.active .chip-count {
+  background: rgba(5,5,16,0.22);
+  color: #050510;
+}
+
+/* ─── Aranıyor / Bulunamadı Ekranı ─── */
+.search-state {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 30px 20px 60px;
+  animation: fadeInUp 0.45s ease both;
+}
+
+.space-loader {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  margin-bottom: 30px;
+}
+
+/* Gezegen */
+.space-loader .planet {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 76px; height: 76px;
+  margin: -38px 0 0 -38px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 32% 28%, #c79cff 0%, #7b4fc9 38%, #4a2a8a 68%, #221145 100%);
+  box-shadow: 0 0 38px rgba(150,90,255,0.45), inset -9px -7px 20px rgba(0,0,0,0.6);
+}
+
+/* Dönen yüzey lekeleri */
+.space-loader .planet::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(ellipse at 28% 26%, rgba(255,255,255,0.18), transparent 40%),
+    radial-gradient(ellipse at 70% 62%, rgba(0,0,0,0.30), transparent 44%),
+    radial-gradient(ellipse at 22% 78%, rgba(0,0,0,0.24), transparent 38%);
+  animation: planetSpin 7s linear infinite;
+}
+
+/* Gezegen halkası */
+.space-loader .ring {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 148px; height: 44px;
+  margin: -22px 0 0 -74px;
+  border-radius: 50%;
+  border: 2px solid rgba(190,160,255,0.35);
+  border-bottom-color: rgba(190,160,255,0.12);
+  transform: rotate(-16deg);
+}
+
+/* Uydu yörüngeleri */
+.space-loader .orbit {
+  position: absolute;
+  top: 50%; left: 50%;
+  border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 50%;
+}
+
+.space-loader .orbit .moon {
+  position: absolute;
+  top: -7px; left: 50%;
+  width: 14px; height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+}
+
+.space-loader .o1 {
+  width: 116px; height: 116px; margin: -58px 0 0 -58px;
+  animation: orbitSpin 3.6s linear infinite;
+}
+.space-loader .o1 .moon {
+  background: radial-gradient(circle at 32% 30%, #d8fbff, #4fc9e8 60%, #1c6a86);
+  box-shadow: 0 0 14px rgba(125,249,255,0.75);
+}
+
+.space-loader .o2 {
+  width: 168px; height: 168px; margin: -84px 0 0 -84px;
+  animation: orbitSpin 6.2s linear infinite reverse;
+}
+.space-loader .o2 .moon {
+  width: 11px; height: 11px; margin-left: -5.5px; top: -5.5px;
+  background: radial-gradient(circle at 32% 30%, #ffe6bd, #e08a3c 60%, #7a3d10);
+  box-shadow: 0 0 12px rgba(255,170,80,0.7);
+}
+
+.space-loader .o3 {
+  width: 214px; height: 214px; margin: -107px 0 0 -107px;
+  animation: orbitSpin 9.5s linear infinite;
+}
+.space-loader .o3 .moon {
+  width: 9px; height: 9px; margin-left: -4.5px; top: -4.5px;
+  background: radial-gradient(circle at 32% 30%, #ffffff, #b9b4d0 60%, #55506a);
+  box-shadow: 0 0 10px rgba(220,225,255,0.6);
+}
+
+.search-title {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.16em;
+  color: #dbe9ff;
+}
+
+.search-title .dot { animation: dotBlink 1.3s ease-in-out infinite; }
+.search-title .dot:nth-child(2) { animation-delay: 0.18s; }
+.search-title .dot:nth-child(3) { animation-delay: 0.36s; }
+
+.search-sub {
+  margin-top: 12px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: #7d7897;
+  max-width: 340px;
+}
+
+/* Bulunamadı hâli: gezegen yavaşlar, renk soğur */
+.search-state.not-found .planet {
+  background: radial-gradient(circle at 32% 28%, #8f9bbd 0%, #4f5878 38%, #333a54 68%, #1a1d2e 100%);
+  box-shadow: 0 0 26px rgba(120,130,180,0.28), inset -9px -7px 20px rgba(0,0,0,0.6);
+}
+.search-state.not-found .planet::before { animation-duration: 22s; }
+.search-state.not-found .o1 { animation-duration: 14s; }
+.search-state.not-found .o2 { animation-duration: 20s; }
+.search-state.not-found .o3 { animation-duration: 28s; }
+.search-state.not-found .ring { border-color: rgba(160,170,210,0.22); border-bottom-color: rgba(160,170,210,0.08); }
+.search-state.not-found .search-title { color: #a8b0cc; }
+
 /* ─── Games Grid ─── */
 .games-grid {
   display: grid;
@@ -253,14 +441,46 @@ footer {
   50% { transform: scale(1.1); }
 }
 
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes planetSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
   .site-logo { max-width: 88%; }
-  header { margin-bottom: 40px; padding-top: 20px; }
+  header { margin-bottom: 32px; padding-top: 20px; }
+  .filter-bar { gap: 8px; margin-bottom: 32px; }
+  .filter-chip { font-size: 0.78rem; padding: 8px 13px; gap: 5px; }
+  .filter-chip .chip-count { display: none; }
   .games-grid { gap: 24px; }
   .card-body { padding: 24px 20px 16px; }
   .card-icon { font-size: 2.4rem; }
   .card-title { font-size: 1.15rem; }
+  .space-loader { width: 180px; height: 180px; margin-bottom: 24px; }
+  .space-loader .planet { width: 62px; height: 62px; margin: -31px 0 0 -31px; }
+  .space-loader .ring { width: 120px; height: 36px; margin: -18px 0 0 -60px; }
+  .space-loader .o1 { width: 96px; height: 96px; margin: -48px 0 0 -48px; }
+  .space-loader .o2 { width: 138px; height: 138px; margin: -69px 0 0 -69px; }
+  .space-loader .o3 { width: 176px; height: 176px; margin: -88px 0 0 -88px; }
+  .search-title { font-size: 0.92rem; }
+}
+
+/* Hareket azaltma tercihi olan kullanıcılar için */
+@media (prefers-reduced-motion: reduce) {
+  .space-loader .planet::before,
+  .space-loader .orbit,
+  .search-title .dot { animation: none; }
 }
 
 @media (max-width: 380px) {
@@ -278,6 +498,7 @@ footer {
     <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
     <h1 class="site-title-fallback">UZAY ZONE</h1>
   </header>
+  <nav class="filter-bar" id="filterBar" aria-label="Oyun kategorileri"></nav>
   <section class="games-grid" id="gamesGrid"></section>
   <footer>
     <p>&copy; 2026 Uzay Zone</p>
@@ -292,6 +513,7 @@ const GAMES = [
     genre: 'Bulmaca',
     desc: 'Kibritleri hareket ettirerek hedef sayıya ulaş! Üç farklı zorluk seviyesiyle bulmaca çöz.',
     href: 'kibrit-oyunu/',
+    tags: ['tek', 'mobil', 'bulmaca'],
     icon: '🔥',
     colors: {
       bg: 'linear-gradient(135deg, #2a1f14, #1a1208)',
@@ -306,6 +528,7 @@ const GAMES = [
     genre: 'Arcade',
     desc: 'Neon topla tuğlaları kır, seviyeleri geç! Klasik brick-breaker neon stilde.',
     href: 'neonball/',
+    tags: ['tek', 'aksiyon'],
     icon: '🏓',
     colors: {
       bg: 'linear-gradient(135deg, #04060f, #0a1028)',
@@ -320,6 +543,7 @@ const GAMES = [
     genre: 'Strateji',
     desc: 'Klasik XOX oyunu! Yapay zekaya karşı oyna veya arkadaşınla yarış.',
     href: 'xox/',
+    tags: ['iki', 'mobil', 'bulmaca'],
     icon: '⭕',
     colors: {
       bg: 'linear-gradient(135deg, #1a1a2e, #0f3460)',
@@ -334,6 +558,7 @@ const GAMES = [
     genre: 'Eğitici / Arcade',
     desc: 'Arabayı sür, soruları çöz! Sınıfını seç, yanlış cevap verirsen afetler seni bekliyor.',
     href: 'araba-yarisi/',
+    tags: ['tek', 'mobil', 'egitici'],
     icon: '🏎️',
     colors: {
       bg: 'linear-gradient(135deg, #1a0a2e, #2a1a0e)',
@@ -348,6 +573,7 @@ const GAMES = [
     genre: 'Aksiyon / Arcade',
     desc: '30 level, 7 silah! Arabalara tiklayip patlat, arkadaslarinla yaris!',
     href: 'araba-patlatma/',
+    tags: ['tek', 'mobil', 'aksiyon'],
     icon: '💣',
     colors: {
       bg: 'linear-gradient(135deg, #1a0a0a, #2a1000)',
@@ -362,6 +588,7 @@ const GAMES = [
     genre: '3D Arcade',
     desc: 'Three.js ile 3D blok yığma! Hareket eden blokları mükemmel hizala, taşan kısım düşer.',
     href: 'kule-yigini/',
+    tags: ['tek', 'mobil', '3d'],
     icon: '🏗️',
     colors: {
       bg: 'linear-gradient(135deg, #0a0a2a, #2a1858)',
@@ -376,6 +603,7 @@ const GAMES = [
     genre: 'Aksiyon / Uzay',
     desc: 'Uzay gemini sür, asteroidleri ve düşmanları yok et! Power-up topla, dalgaları aş.',
     href: 'yildiz-avcisi/',
+    tags: ['tek', 'mobil', 'aksiyon'],
     icon: '🚀',
     colors: {
       bg: 'linear-gradient(135deg, #04031a, #1a0838)',
@@ -390,6 +618,7 @@ const GAMES = [
     genre: '3D Aksiyon',
     desc: 'Three.js ile 3D asteroid dodger! Uzay gemini sür, taşlardan kaç, halkalardan geç.',
     href: 'uzay-kacisi/',
+    tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '🛸',
     colors: {
       bg: 'linear-gradient(135deg, #02020a, #1a0a3a)',
@@ -404,6 +633,7 @@ const GAMES = [
     genre: 'Bulmaca / Hafıza',
     desc: 'Hayvanları eşleştir, bahçeyi keşfet! 3 zorluk seviyesi, süre ve hamle rekoru.',
     href: 'hafiza-bahcesi/',
+    tags: ['tek', 'mobil', 'bulmaca'],
     icon: '🌻',
     colors: {
       bg: 'linear-gradient(135deg, #3a1a08, #5a2a18)',
@@ -418,6 +648,7 @@ const GAMES = [
     genre: '3D Yaratıcılık',
     desc: 'Voxel bloklarla kule, köprü, saray inşa et! 5 şekil · 10 renk · hazır şablonlar.',
     href: 'mini-mimar/',
+    tags: ['tek', 'mobil', '3d', 'rahat'],
     icon: '🏰',
     colors: {
       bg: 'linear-gradient(135deg, #3a2818, #1a2838)',
@@ -432,6 +663,7 @@ const GAMES = [
     genre: '3D Arcade',
     desc: 'Sonsuz düşüş! Kuleyi döndür, boşluklardan geç, kırmızıdan kaç. 3 kombo = Smash Modu ⚡',
     href: 'helezon/',
+    tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '🌀',
     colors: {
       bg: 'linear-gradient(135deg, #1a0530, #2a0a48)',
@@ -446,6 +678,7 @@ const GAMES = [
     genre: 'Bulmaca / Keşif',
     desc: '4 elementten 25 elemente! Su, ateş, toprak, hava ile başla. Karıştır, dünyayı keşfet.',
     href: 'simya/',
+    tags: ['tek', 'mobil', 'bulmaca'],
     icon: '⚗️',
     colors: {
       bg: 'linear-gradient(135deg, #1a1438, #2a1850)',
@@ -460,6 +693,7 @@ const GAMES = [
     genre: 'Festival / Rahatlatıcı',
     desc: 'Gece şehrinin üstünde havai fişek patlat! Ekrana tıkla, renkler dans etsin. 6 şehir · yağmur, kar, açık hava.',
     href: 'havai-fisek/',
+    tags: ['tek', 'mobil', 'rahat'],
     icon: '🎆',
     colors: {
       bg: 'linear-gradient(135deg, #1a0530, #3a0a50)',
@@ -474,6 +708,7 @@ const GAMES = [
     genre: '3D Aksiyon / Refleks',
     desc: 'Katanalı samuraysın! Düşmanlar sana ateş ediyor, gelen mermileri havada ikiye böl. Her level daha çok düşman, daha hızlı mermi.',
     href: 'mermi-kesici/',
+    tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '⚔️',
     colors: {
       bg: 'linear-gradient(135deg, #0d0820, #1a0a1e)',
@@ -488,6 +723,7 @@ const GAMES = [
     genre: '3D Restoran / Yönetim',
     desc: 'Kendi restoranını işlet! Salata yap, doğra, pişir, rendele. Müşterileri mutlu et, dükkanını büyüt!',
     href: 'super-sef/',
+    tags: ['tek', 'mobil', '3d'],
     icon: '👨‍🍳',
     colors: {
       bg: 'linear-gradient(135deg, #2a1205, #3a1a0a)',
@@ -502,6 +738,7 @@ const GAMES = [
      genre: 'Aksiyon / Dövüş',
      desc: '1-5 kişilik çöp adam dövüşü! Bilgisayara veya arkadaşlarına karşı silah seç, geri sayımdan sonra son ayakta kalan kazansın.',
      href: 'stickman-dovus/',
+     tags: ['iki', 'mobil', 'aksiyon'],
      icon: '🥊',
      colors: {
        bg: 'linear-gradient(135deg, #1a0606, #2a0a0a)',
@@ -516,6 +753,7 @@ const GAMES = [
      genre: '3D Simülasyon / Uzay',
      desc: 'Yıldız gemisi ORION\'un içindesin! WASD ile dolaş, görevlileri dinle: renkli kabloları bağla, oksijen tüplerini aç. Meteorlar gövdeye çarpar, warning sesleri çalar!',
      href: 'roket-ucusu/',
+     tags: ['tek', 'mobil', '3d', 'egitici'],
      icon: '🛰️',
      colors: {
        bg: 'linear-gradient(135deg, #04030f, #0a0828)',
@@ -530,6 +768,7 @@ const GAMES = [
      genre: '3D Eğitici / Bulmaca',
      desc: 'Three.js ile 3D! Tornavidayla kasayı aç, parçaları sürükleyip yuvalarına tak: anakart, işlemci, RAM, ekran & ses kartı, güç kaynağı, disk. Bilgisayarı çalıştır!',
      href: 'bilgisayar-toplama/',
+     tags: ['tek', 'mobil', '3d', 'egitici', 'bulmaca'],
      icon: '🖥️',
      colors: {
        bg: 'linear-gradient(135deg, #0a1f1a, #06140f)',
@@ -544,6 +783,7 @@ const GAMES = [
     genre: 'Clicker / Eğlence',
     desc: 'Robux, Minecoin ya da Brawl Stars elması seç, tıklaya tıklaya topla! 70\'te 2\'li tıklama, 200\'de otomatik. 10.000\'de Uzaycoin açılır!',
     href: 'tikla-kazan/',
+    tags: ['tek', 'mobil', 'rahat'],
     icon: '🪙',
     colors: {
       bg: 'linear-gradient(135deg, #0a1f3a, #1a0a30)',
@@ -558,6 +798,7 @@ const GAMES = [
     genre: '2 Kişilik / Arcade',
     desc: 'Tek bilgisayarda iki kişi! Sol oyuncu W-S, sağ oyuncu ok tuşları. İlk 7 sayıyı alan kazanır. Tek başınaysan bilgisayara karşı oyna.',
     href: 'uzay-pingpong/',
+    tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🏓',
     colors: {
       bg: 'linear-gradient(135deg, #04101f, #1a0722)',
@@ -570,8 +811,9 @@ const GAMES = [
   {
     title: 'Tank Savaşı',
     genre: '2 Kişilik / Aksiyon',
-    desc: 'Tek bilgisayarda iki tank kapışır! Mermiler çelik duvarlardan seker, tuğlaları yıkar. Kalkan, hız ve üçlü atış güçlendirmeleriyle ilk 5 raundu alan kazanır.',
+    desc: 'Tek bilgisayarda iki tank kapışır! Mermiler çelik duvarlardan seker, tuğlaları yıkar. Kalkan, hız ve üçlü atış güçlendirmeleri var. Tek başınaysan bilgisayara karşı oyna.',
     href: 'tank-savasi/',
+    tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🎯',
     colors: {
       bg: 'linear-gradient(135deg, #0a1a14, #241206)',
@@ -584,8 +826,9 @@ const GAMES = [
   {
     title: 'Uzay Sumo',
     genre: '2 Kişilik / Aksiyon',
-    desc: 'Rakibini uzay arenasından dışarı it! Hasarın arttıkça daha uzağa fırlarsın, arena da zamanla daralır. Hamle (dash) ile ezici darbeyi indir.',
+    desc: 'Rakibini uzay arenasından dışarı it! Hasarın arttıkça daha uzağa fırlarsın, arena da zamanla daralır. İki kişi ya da bilgisayara karşı oyna.',
     href: 'uzay-sumo/',
+    tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🤼',
     colors: {
       bg: 'linear-gradient(135deg, #2a2008, #10122e)',
@@ -600,13 +843,110 @@ const GAMES = [
 // Son eklenen kaç oyun "YENİ" olarak vurgulansın (array'in sonundakiler)
 const NEW_COUNT = 3;
 
+// ─── Kategoriler ───
+// id: 'all' özel — tüm oyunları gösterir. Diğerleri GAMES içindeki tags ile eşleşir.
+const CATEGORIES = [
+  { id: 'all',     label: 'Tümü',         emoji: '🎮' },
+  { id: 'iki',     label: '2 Kişilik',    emoji: '👥' },
+  { id: 'coklu',   label: 'Çok Kişilik',  emoji: '🎉' },
+  { id: 'tek',     label: 'Tek Kişilik',  emoji: '🕹️' },
+  { id: 'mobil',   label: 'Mobil',        emoji: '📱' },
+  { id: '3d',      label: '3D',           emoji: '🧊' },
+  { id: 'aksiyon', label: 'Aksiyon',      emoji: '⚡' },
+  { id: 'bulmaca', label: 'Bulmaca',      emoji: '🧩' },
+  { id: 'egitici', label: 'Eğitici',      emoji: '📚' },
+  { id: 'rahat',   label: 'Rahatlatıcı',  emoji: '🌈' }
+];
+
+let activeCategory = 'all';
+
+function gamesInCategory(id) {
+  if (id === 'all') return GAMES;
+  return GAMES.filter(g => (g.tags || []).includes(id));
+}
+
+// ─── Render Filter Bar ───
+function renderFilters() {
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = CATEGORIES
+    .map(c => `
+      <button type="button" class="filter-chip${c.id === activeCategory ? ' active' : ''}" data-cat="${c.id}">
+        <span class="chip-emoji">${c.emoji}</span>${c.label}
+        <span class="chip-count">${gamesInCategory(c.id).length}</span>
+      </button>
+    `).join('');
+
+  bar.querySelectorAll('.filter-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.cat === activeCategory) return;
+      activeCategory = btn.dataset.cat;
+      bar.querySelectorAll('.filter-chip').forEach(b =>
+        b.classList.toggle('active', b.dataset.cat === activeCategory));
+      history.replaceState(null, '', activeCategory === 'all' ? location.pathname : '#' + activeCategory);
+      searchThenRender();
+    });
+  });
+}
+
+// ─── Aranıyor / Bulunamadı Ekranı ───
+// Uzay Zone genelinde kullanılan ortak sahne: gezegen ve uyduları döner.
+function spaceLoaderHTML() {
+  return `
+    <div class="space-loader" aria-hidden="true">
+      <div class="ring"></div>
+      <div class="planet"></div>
+      <div class="orbit o1"><span class="moon"></span></div>
+      <div class="orbit o2"><span class="moon"></span></div>
+      <div class="orbit o3"><span class="moon"></span></div>
+    </div>`;
+}
+
+function searchingHTML() {
+  return `
+    <div class="search-state" role="status" aria-live="polite">
+      ${spaceLoaderHTML()}
+      <p class="search-title">ARANIYOR<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
+      <p class="search-sub">Galakside oyunlar taranıyor…</p>
+    </div>`;
+}
+
+function notFoundHTML() {
+  return `
+    <div class="search-state not-found" role="status" aria-live="polite">
+      ${spaceLoaderHTML()}
+      <p class="search-title">HİÇBİR OYUN BULUNAMADI</p>
+      <p class="search-sub">Bu grupta şimdilik oyun yok. Yakında ekleyeceğiz — başka bir kategoriye göz at! 🚀</p>
+    </div>`;
+}
+
+// Hızlı tıklamalarda eski aramanın sonucu geç gelip yenisini ezmesin
+let searchToken = 0;
+const SEARCH_DELAY = 700;
+
+function searchThenRender() {
+  const grid = document.getElementById('gamesGrid');
+  const token = ++searchToken;
+  grid.innerHTML = searchingHTML();
+  setTimeout(() => {
+    if (token !== searchToken) return;
+    renderCards();
+  }, SEARCH_DELAY);
+}
+
 // ─── Render Cards ───
 function renderCards() {
   const grid = document.getElementById('gamesGrid');
   // En son eklenen oyunlar (array'in sonundakiler) en başta gözüksün
   const ordered = GAMES
     .map((g, idx) => ({ ...g, isNew: idx >= GAMES.length - NEW_COUNT }))
+    .filter(g => activeCategory === 'all' || (g.tags || []).includes(activeCategory))
     .reverse();
+
+  if (!ordered.length) {
+    grid.innerHTML = notFoundHTML();
+    return;
+  }
+
   grid.innerHTML = ordered.map((g, i) => `
     <a href="${g.href}" class="game-card${g.isNew ? ' is-new' : ''}"
        style="--card-bg:${g.colors.bg};--card-accent:${g.colors.accent};--card-glow:${g.colors.glow};--card-bar:${g.colors.bar};--card-border:${g.colors.border};animation-delay:${i * 0.12}s">
@@ -1172,7 +1512,15 @@ createStars();
 createPlanets();
 createAsteroids();
 createAstronauts();
-renderCards();
+
+// Adresteki #kategori ile açılışta doğrudan o grubu göster
+const hashCat = decodeURIComponent(location.hash.replace('#', ''));
+if (hashCat && CATEGORIES.some(c => c.id === hashCat)) activeCategory = hashCat;
+
+renderFilters();
+// Bağlantıda #kategori varsa arama sahnesiyle aç, yoksa listeyi anında göster
+if (activeCategory === 'all') renderCards();
+else searchThenRender();
 animate();
 </script>
 </body>
