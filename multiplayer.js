@@ -14,7 +14,7 @@
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-  getDatabase, ref, get, set, update, onValue,
+  getDatabase, ref, child, get, set, update, onValue,
   onDisconnect, runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 import { firebaseConfig } from './firebase-config.js';
@@ -111,6 +111,19 @@ export function onRoom(cb) {
 export function patch(obj) {
   if (!session) return Promise.resolve();
   return update(session.roomRef, obj);
+}
+
+// Tek bir dalı dinle / yaz.
+// Gerçek zamanlı oyunlarda tüm odayı dinlemek gereksiz trafik yaratır;
+// sadece değişen dalı (ör. 'snap', 'in2') izlemek çok daha ucuzdur.
+export function onChild(path, cb) {
+  if (!session) throw new Error('Önce bir odaya bağlan.');
+  session.unsubs.push(onValue(child(session.roomRef, path), snap => cb(snap.val())));
+}
+
+export function setChild(path, value) {
+  if (!session) return Promise.resolve();
+  return set(child(session.roomRef, path), value);
 }
 
 export const mySymbol = () => session?.symbol ?? null;
