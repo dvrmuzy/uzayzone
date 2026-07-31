@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "rooms": {
+      "$game": {
+        "$code": {
+          ".read": true,
+          ".write": true,
+
+          "size":  { ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 11" },
+          "board": { ".validate": "newData.isString() && newData.val().length <= 121" },
+          "turn":  { ".validate": "newData.isString() && newData.val().length == 1" },
+          "round": { ".validate": "newData.isNumber()" },
+          "createdAt": { ".validate": "newData.isNumber()" }
+        }
+      }
+    }
+  }
+}

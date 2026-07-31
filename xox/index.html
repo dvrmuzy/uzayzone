@@ -261,9 +261,110 @@
     .htp-icon  { flex-shrink: 0; font-size: 0.82rem; margin-top: 1px; }
     .htp-row b { color: #ddd; }
 
+    /* ── ONLINE (ARKADAŞINLA OYNA) ── */
+    #online-section { display: none; }
+    .online-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .online-row { display: flex; gap: 10px; }
+    .online-row button {
+      flex: 1;
+      padding: 12px 0;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: transparent;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .online-row button:hover:not(:disabled) { border-color: #e94560; color: #e94560; }
+    .online-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #join-row { display: none; gap: 10px; }
+    #join-code {
+      flex: 1;
+      padding: 12px 14px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.25);
+      color: #fff;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 6px;
+      text-align: center;
+      text-transform: uppercase;
+      font-family: 'Consolas', monospace;
+    }
+    #join-code:focus { outline: none; border-color: #e94560; }
+
+    #room-code-display {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px;
+      background: rgba(233,69,96,0.1);
+      border: 1px dashed rgba(233,69,96,0.5);
+      border-radius: 12px;
+    }
+    #room-code-display .rc-label { font-size: 0.72rem; letter-spacing: 1.5px; text-transform: uppercase; color: #aaa; }
+    #room-code-display .rc-code  {
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: 10px;
+      font-family: 'Consolas', monospace;
+      color: #e94560;
+      text-shadow: 0 0 20px rgba(233,69,96,0.5);
+      padding-left: 10px;
+    }
+    #copy-code {
+      padding: 7px 18px;
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
+      background: transparent;
+      color: #ddd;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    #copy-code:hover { border-color: #e94560; color: #e94560; }
+
+    #online-status { font-size: 0.85rem; color: #aaa; text-align: center; min-height: 20px; line-height: 1.4; }
+    #online-status.error { color: #ff7b8a; }
+
+    .waiting-dots::after {
+      content: '';
+      animation: dots 1.4s steps(4, end) infinite;
+    }
+    @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+    /* Oyun ekranında: sen kimsin + rakip durumu */
+    #online-bar {
+      display: none;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.82rem;
+      color: #bbb;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 7px 16px;
+    }
+    #online-bar .ob-code { font-family: 'Consolas', monospace; letter-spacing: 2px; color: #e94560; font-weight: 700; }
+    #online-bar .ob-dot  { width: 8px; height: 8px; border-radius: 50%; background: #3ddc84; display: inline-block; margin-right: 5px; }
+    #online-bar .ob-dot.off { background: #777; }
+
     @media (max-width: 500px) {
       h1     { font-size: 2rem; }
       #setup { padding: 22px 18px; }
+      #room-code-display .rc-code { font-size: 2rem; letter-spacing: 7px; }
     }
   </style>
 <script src="../analytics.js"></script>
@@ -304,6 +405,30 @@
     <div class="option-row" id="mode-options">
       <button class="option-btn selected" data-val="pvc">🤖 Bilgisayara Karşı</button>
       <button class="option-btn" data-val="pvp">👥 İki Oyuncu</button>
+      <button class="option-btn" data-val="online">🌐 Arkadaşınla</button>
+    </div>
+  </div>
+
+  <div class="setup-section" id="online-section">
+    <label>Arkadaşınla Oyna</label>
+    <div class="online-box">
+      <div class="online-row">
+        <button id="create-room-btn">🆕 Oda Kur</button>
+        <button id="show-join-btn">🔑 Koda Katıl</button>
+      </div>
+
+      <div id="join-row">
+        <input id="join-code" maxlength="4" placeholder="––––" autocomplete="off" spellcheck="false" />
+        <button id="join-room-btn" style="flex:0 0 auto;padding:0 20px;border:2px solid rgba(255,255,255,0.2);border-radius:12px;background:transparent;color:#fff;font-weight:700;cursor:pointer;">Katıl</button>
+      </div>
+
+      <div id="room-code-display">
+        <div class="rc-label">Oda Kodun</div>
+        <div class="rc-code" id="rc-code">––––</div>
+        <button id="copy-code">📋 Kodu Kopyala</button>
+      </div>
+
+      <div id="online-status"></div>
     </div>
   </div>
 
@@ -335,6 +460,12 @@
       <div class="score-label" id="p2-label">Oyuncu O</div>
       <div class="score-val score-o" id="score-o">0</div>
     </div>
+  </div>
+
+  <div id="online-bar">
+    <span>Oda <span class="ob-code" id="ob-code">––––</span></span>
+    <span id="ob-you">Sen: X</span>
+    <span><span class="ob-dot" id="ob-dot"></span><span id="ob-opp">Rakip bağlı</span></span>
   </div>
 
   <div class="status-bar">
@@ -459,6 +590,7 @@ const state = {
   current: 'X',
   over: false,
   scores: { X: 0, O: 0, D: 0 },
+  online: null,   // çevrimiçi oyunda { Net, symbol, code, started, oppSeen } — offline'da null
 };
 
 function winStreak(size) { return Math.min(size, 5); }
@@ -474,7 +606,13 @@ function bindOptionGroup(groupId, stateKey) {
     btn.classList.add('selected');
     state[stateKey] = btn.dataset.val;
     if (stateKey === 'mode') {
-      document.getElementById('diff-section').style.display = state.mode === 'pvc' ? '' : 'none';
+      const online = state.mode === 'online';
+      document.getElementById('diff-section').style.display   = state.mode === 'pvc' ? '' : 'none';
+      // CSS'te #online-section display:none — '' yerine açıkça 'block' vermeli
+      document.getElementById('online-section').style.display = online ? 'block' : 'none';
+      // Çevrimiçi modda oyun "Oda Kur" / "Katıl" ile başlar
+      document.getElementById('start-btn').style.display = online ? 'none' : '';
+      if (!online) resetOnlinePanel();
     }
   });
 }
@@ -516,11 +654,13 @@ function startGame() {
 }
 
 function showMenu() {
+  if (state.online) leaveOnline();
   document.getElementById('game').style.display = 'none';
   document.getElementById('setup').style.display = 'flex';
 }
 
 function restartRound() {
+  if (state.online) { requestRematch(); return; }
   newRound();
   sndStart();
 }
@@ -577,6 +717,7 @@ function onCellClick(e) {
   if (state.mode === 'pvc' && state.current === 'O') return;
   const idx = parseInt(e.currentTarget.dataset.idx, 10);
   if (state.board[idx]) return;
+  if (state.online) { sendOnlineMove(idx); return; }
   makeMove(idx);
 }
 
@@ -668,8 +809,11 @@ const drawSubs = [
 function handleEnd(result) {
   state.over = true;
 
+  // Çevrimiçi oyunda skorları oda tutar (kuran oyuncu yazar), yerelde artırma
+  const keepScore = !state.online;
+
   if (result.winner === 'draw') {
-    state.scores.D++;
+    if (keepScore) state.scores.D++;
     updateScores();
     setStatus('Berabere! 🤝', null);
     sndDraw();
@@ -677,12 +821,21 @@ function handleEnd(result) {
     setTimeout(() => showOverlay('🤝', 'Berabere!', sub), 600);
   } else {
     const isPC = state.mode === 'pvc' && result.winner === 'O';
-    state.scores[result.winner]++;
+    if (keepScore) state.scores[result.winner]++;
     updateScores();
     const name = isPC ? 'Bilgisayar' : `Oyuncu ${result.winner}`;
     setStatus(`${name} kazandı! 🎉`, result.winner);
 
-    if (isPC) {
+    if (state.online) {
+      const iWon = result.winner === state.online.symbol;
+      if (iWon) sndWin(); else sndPCWin();
+      setTimeout(() => showOverlay(
+        iWon ? '🎉' : '😅',
+        iWon ? 'Kazandın!' : 'Rakibin Kazandı',
+        iWon ? winSubs[Math.floor(Math.random() * winSubs.length)]
+             : 'Bir dahakine sen kazanırsın! 💪'
+      ), 700);
+    } else if (isPC) {
       sndPCWin();
       const sub = pcWinSubs[Math.floor(Math.random() * pcWinSubs.length)];
       setTimeout(() => showOverlay('🤖', 'Bilgisayar Kazandı!', sub), 700);
@@ -779,6 +932,273 @@ function showOverlay(icon, title, sub) {
 }
 
 function hideOverlay() { document.getElementById('overlay').classList.remove('show'); }
+
+// ══════════════════════════════════════════════
+//  ONLINE — ARKADAŞINLA OYNA
+//  Tahta odada tek bir metin olarak tutulur ('-' = boş kare).
+//  Her iki oyuncu da ekranı odadan gelen duruma göre çizer;
+//  böylece iki tarafta da aynı kod yolu çalışır ve durum ayrışmaz.
+// ══════════════════════════════════════════════
+let Net = null;   // multiplayer.js — sadece çevrimiçi mod seçilince yüklenir
+
+const boardToStr = b => b.map(v => v || '-').join('');
+const strToBoard = s => s.split('').map(c => (c === '-' ? '' : c));
+
+const $ = id => document.getElementById(id);
+
+function setOnlineStatus(msg, waiting = false, isError = false) {
+  const el = $('online-status');
+  el.textContent = msg;
+  el.className = (isError ? 'error ' : '') + (waiting ? 'waiting-dots' : '');
+}
+
+function resetOnlinePanel() {
+  $('join-row').style.display = 'none';
+  $('room-code-display').style.display = 'none';
+  $('join-code').value = '';
+  $('create-room-btn').disabled = false;
+  $('show-join-btn').disabled = false;
+  setOnlineStatus('');
+}
+
+async function loadNet() {
+  if (!Net) {
+    setOnlineStatus('Bağlanılıyor', true);
+    Net = await import('../multiplayer.js');
+  }
+  return Net;
+}
+
+// ── Oda kur ──
+$('create-room-btn').addEventListener('click', async () => {
+  $('create-room-btn').disabled = true;
+  $('show-join-btn').disabled = true;
+  $('join-row').style.display = 'none';
+  try {
+    const net = await loadNet();
+    const n = parseInt(state.size, 10);
+    const code = await net.createRoom('xox', {
+      size: n,
+      board: '-'.repeat(n * n),
+      turn: 'X',
+      round: 1,
+      scoredRound: 0,
+      scores: { X: 0, O: 0, D: 0 },
+      rematch: { X: false, O: false }
+    });
+    state.online = { symbol: 'X', code, started: false, shownRound: null, lastBoard: null };
+    $('rc-code').textContent = code;
+    $('room-code-display').style.display = 'flex';
+    setOnlineStatus('Arkadaşın bu kodu girsin. Bekleniyor', true);
+    net.onRoom(applyRoom);
+  } catch (err) {
+    setOnlineStatus(err.message || 'Bağlantı kurulamadı.', false, true);
+    resetOnlinePanel();
+  }
+});
+
+// ── Katılma alanını aç ──
+$('show-join-btn').addEventListener('click', () => {
+  $('join-row').style.display = 'flex';
+  $('room-code-display').style.display = 'none';
+  setOnlineStatus('Arkadaşının paylaştığı 4 haneli kodu gir.');
+  $('join-code').focus();
+});
+
+$('join-code').addEventListener('keydown', e => { if (e.key === 'Enter') $('join-room-btn').click(); });
+
+// ── Odaya katıl ──
+$('join-room-btn').addEventListener('click', async () => {
+  const code = $('join-code').value.trim().toUpperCase();
+  if (code.length !== 4) { setOnlineStatus('Kod 4 karakter olmalı.', false, true); return; }
+  $('join-room-btn').disabled = true;
+  try {
+    const net = await loadNet();
+    setOnlineStatus('Odaya bağlanılıyor', true);
+    const room = await net.joinRoom('xox', code);
+    state.online = { symbol: 'O', code, started: false, shownRound: null, lastBoard: null };
+    state.size = room.size;
+    net.onRoom(applyRoom);
+  } catch (err) {
+    setOnlineStatus(err.message || 'Odaya katılınamadı.', false, true);
+  } finally {
+    $('join-room-btn').disabled = false;
+  }
+});
+
+// ── Kodu kopyala ──
+$('copy-code').addEventListener('click', async () => {
+  const code = $('rc-code').textContent;
+  try {
+    await navigator.clipboard.writeText(code);
+    $('copy-code').textContent = '✅ Kopyalandı!';
+  } catch {
+    $('copy-code').textContent = '⚠️ Elle kopyala: ' + code;
+  }
+  setTimeout(() => { $('copy-code').textContent = '📋 Kodu Kopyala'; }, 1800);
+});
+
+// ── Odadan gelen her güncellemede çalışır ──
+function applyRoom(room) {
+  const O = state.online;
+  if (!O) return;
+
+  if (!room) { onOpponentGone('Oda kapandı.'); return; }
+
+  const oppSym  = O.symbol === 'X' ? 'O' : 'X';
+  const oppHere = !!(room.players && room.players[oppSym]);
+
+  // Rakip henüz gelmediyse kurulum ekranında bekle
+  if (!O.started) {
+    if (!oppHere) { setOnlineStatus('Arkadaşın bu kodu girsin. Bekleniyor', true); return; }
+    O.started = true;
+    beginOnlineGame(room);
+  }
+
+  // Rakip göstergesi
+  $('ob-dot').className = 'ob-dot' + (oppHere ? '' : ' off');
+  $('ob-opp').textContent = oppHere ? 'Rakip bağlı' : 'Rakip ayrıldı';
+
+  // Her iki oyuncu da "Tekrar Oyna" dediyse turu kuran oyuncu sıfırlar
+  if (O.symbol === 'X' && room.rematch && room.rematch.X && room.rematch.O) {
+    const n = room.size;
+    Net.patch({
+      board: '-'.repeat(n * n),
+      turn: 'X',
+      round: (room.round || 1) + 1,
+      rematch: { X: false, O: false }
+    });
+    return;
+  }
+
+  // Yeni tur başladıysa ekranı temizle
+  if (O.shownRound !== null && O.shownRound !== room.round) {
+    O.shownRound = null;
+    hideOverlay();
+    sndStart();
+  }
+
+  // Odadaki durumu ekrana uygula
+  state.size    = room.size;
+  state.board   = strToBoard(room.board);
+  state.current = room.turn;
+  state.scores  = room.scores || { X: 0, O: 0, D: 0 };
+  updateScores();
+
+  // Rakibin hamlesi geldiyse taş sesi çal
+  if (O.lastBoard && O.lastBoard !== room.board) {
+    const i = [...room.board].findIndex((c, k) => c !== O.lastBoard[k]);
+    if (i >= 0) sndPlace(room.board[i] === 'X');
+  }
+  O.lastBoard = room.board;
+
+  const result = checkResult();
+  renderBoard(result ? result.cells : []);
+
+  if (result) {
+    // Skoru yalnızca kuran oyuncu yazar — iki tarafın da yazması çift sayıma yol açardı
+    if (O.symbol === 'X' && room.scoredRound !== room.round) {
+      const s = Object.assign({ X: 0, O: 0, D: 0 }, room.scores);
+      if (result.winner === 'draw') s.D++; else s[result.winner]++;
+      Net.patch({ scores: s, scoredRound: room.round });
+    }
+    if (O.shownRound !== room.round) {
+      O.shownRound = room.round;
+      handleEnd(result);
+    }
+    return;
+  }
+
+  // Rakip kopmuşsa oyunu duraklat; geri gelirse kaldığı yerden devam et
+  if (!oppHere) { showOpponentGone(); return; }
+  if (O.oppGone) { O.oppGone = false; hideOverlay(); }
+
+  state.over = false;
+  const myTurn = room.turn === O.symbol;
+  setStatus(myTurn ? 'Senin sıran!' : 'Rakibin sırası...', room.turn);
+  setThinking(myTurn ? '' : 'Rakip düşünüyor... 🤔');
+}
+
+function beginOnlineGame(room) {
+  const O = state.online;
+  state.size = room.size;
+  state.scores = room.scores || { X: 0, O: 0, D: 0 };
+
+  $('p1-label').textContent = O.symbol === 'X' ? 'Sen (X)' : 'Rakip (X)';
+  $('p2-label').textContent = O.symbol === 'O' ? 'Sen (O)' : 'Rakip (O)';
+  $('ob-code').textContent  = O.code;
+  $('ob-you').textContent   = 'Sen: ' + O.symbol;
+  $('online-bar').style.display = 'flex';
+  $('restart-btn').textContent  = '🔄 Tekrar Oyna';
+
+  $('setup').style.display = 'none';
+  $('game').style.display  = 'flex';
+  buildBoard();
+  sndStart();
+}
+
+// ── Hamle gönder ──
+function sendOnlineMove(idx) {
+  const O = state.online;
+  if (state.current !== O.symbol) return;          // sıra bende değil
+  if (state.board[idx]) return;                    // kare dolu
+
+  const next = state.board.slice();
+  next[idx] = O.symbol;
+  sndPlace(O.symbol === 'X');
+
+  // İyimser çizim: kendi hamlemizi beklemeden göster, oda güncellemesi
+  // geldiğinde zaten aynı durum tekrar uygulanacak.
+  state.board = next;
+  renderBoard();
+  setThinking('Rakip düşünüyor... 🤔');
+
+  Net.patch({ board: boardToStr(next), turn: O.symbol === 'X' ? 'O' : 'X' })
+     .catch(() => setStatus('Bağlantı hatası — hamle gönderilemedi.', null));
+}
+
+// ── Tekrar oyna isteği ──
+function requestRematch() {
+  const O = state.online;
+  Net.patch({ ['rematch/' + O.symbol]: true });
+  setStatus('Rakibin onayı bekleniyor...', null);
+  setThinking('');
+}
+
+// ── Rakibin bağlantısı koptu (geri gelebilir) ──
+function showOpponentGone() {
+  const O = state.online;
+  if (!O || O.oppGone) return;
+  O.oppGone = true;
+  state.over = true;
+  $('ob-dot').className = 'ob-dot off';
+  $('ob-opp').textContent = 'Rakip ayrıldı';
+  setStatus('Rakibin bağlantısı koptu.', null);
+  setThinking('');
+  showOverlay('👋', 'Rakip Ayrıldı', 'Geri bağlanırsa oyun kaldığı yerden devam eder.');
+}
+
+// ── Oda tamamen kapandı (geri dönüş yok) ──
+function onOpponentGone(msg) {
+  const O = state.online;
+  if (!O || O.closed) return;
+  O.closed = true;
+  state.over = true;
+  $('ob-dot').className = 'ob-dot off';
+  $('ob-opp').textContent = 'Oda kapandı';
+  setStatus('Oda kapandı.', null);
+  setThinking('');
+  showOverlay('🚪', 'Oda Kapandı', msg || 'Menüye dönüp yeni bir oda kurabilirsin.');
+}
+
+// ── Odadan çık ──
+function leaveOnline() {
+  if (Net) Net.leave();
+  state.online = null;
+  $('online-bar').style.display = 'none';
+  $('restart-btn').textContent = '🔄 Yeniden Başla';
+  resetOnlinePanel();
+}
 </script>
 <a href="../" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#e8e0f0;font-family:'Segoe UI',Arial,sans-serif;font-size:0.85rem;font-weight:600;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.8)';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(0,0,0,0.55)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
 </body>
