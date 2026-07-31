@@ -193,8 +193,14 @@ Durum özetini **virgülle ayrılmış sayı dizisi** olarak paketle (JSON deği
 
 Katılan taraftaki girdi gecikmesini gizlemek şart, yoksa oyun "gecikmeli" hissettirir. İki yöntem:
 
-1. **Katılan kendi nesnesinin sahibi olsun** — nesnenin hareketi rakiple etkileşmiyor ise (ping-pong raketi gibi) katılan onu tamamen yerelde sürüp **konumunu** yollasın, host o konumu olduğu gibi kullansın. En temizi, sıfır gecikme. Referans: `uzay-pingpong/index.html`
-2. **Yerel tahmin + orantılı düzeltme** — nesne rakiple çarpışıyorsa (sumo savaşçısı gibi) katılan aynı fizik fonksiyonunu yerelde çalıştırsın, otoritenin sonucuyla arasındaki hatayı büyüklüğüne göre kapatsın: küçük sapma %5, çarpışma %40, ışınlanma anında. Referans: `uzay-sumo/index.html`
+1. **Katılan kendi nesnesinin sahibi olsun** — nesnenin hareketi rakiple etkileşmiyor ise (ping-pong raketi, tron motorunun yolu gibi) katılan onu tamamen yerelde sürüp **konumunu / geçtiği hücreleri** yollasın, host bunları olduğu gibi işleyip yalnızca hakemlik yapsın. En temizi, sıfır gecikme. Referans: `uzay-pingpong/index.html`, `neon-tron/index.html`
+2. **Yerel tahmin + orantılı düzeltme** — nesne rakiple çarpışıyorsa (sumo savaşçısı, tank gibi) katılan aynı hareket fonksiyonunu yerelde çalıştırsın, otoritenin sonucuyla arasındaki hatayı büyüklüğüne göre kapatsın: küçük sapma %5, çarpışma %40, ışınlanma anında. Yalnız **hareketi** tahmin et; ateş etme, hasar ve toplama otoritede kalsın, yoksa iki tarafta ayrı mermi/puan oluşur. Referans: `uzay-sumo/index.html`, `tank-savasi/index.html`
+
+**Dikkat:** Durum özetini oyun *bittiğinde de* göndermeye devam et. Yalnızca "oynanıyor" durumunda gönderirsen katılan oyuncu oyunun bittiğini hiç öğrenemez.
+
+**Bozulabilir dünya** (yıkılan duvar, değişen labirent, rastgele harita) varsa bunu özetin içine koyma — ayrı bir dalda, yalnız değiştiğinde ve kısıtlanmış sıklıkta yolla. Referans: `tank-savasi/index.html` (`map` dalı).
+
+**Lobi de senkronlanmalı** — oyun başlamadan önce karakter/silah/hazır seçimi varsa bunlar da odada tutulmalı; her oyuncu yalnızca kendi yuvasını düzenleyebilmeli ve maçı oda kuran başlatmalı. Referans: `stickman-dovus/index.html`
 
 Sesleri ve parçacıkları katılan tarafta **durum farkından türet** (hasar arttı → vuruş sesi, skor arttı → sayı sesi); ayrıca olay göndermeye gerek yok.
 
@@ -291,7 +297,7 @@ Bitirdikten sonra şunları kontrol et:
 
 ## Önemli Notlar
 
-- **Mevcut oyun referansları:** `kibrit-oyunu/` (vanilla bulmaca), `neonball/` (vanilla arcade), `xox/` (vanilla + **sıra tabanlı çok oyunculu**), `kule-yigini/` (Three.js 3D), `yildiz-avcisi/` (vanilla 2D shooter), `uzay-kacisi/` (Three.js 3D dodger), `mini-mimar/` (Three.js voxel editör), `hafiza-bahcesi/` (DOM card flip), `uzay-sumo/` (**gerçek zamanlı çok oyunculu, yerel tahmin**), `uzay-pingpong/` (**gerçek zamanlı çok oyunculu, katılan kendi raketinin sahibi**)
+- **Mevcut oyun referansları:** `kibrit-oyunu/` (vanilla bulmaca), `neonball/` (vanilla arcade), `xox/` (vanilla + **sıra tabanlı çok oyunculu**), `kule-yigini/` (Three.js 3D), `yildiz-avcisi/` (vanilla 2D shooter), `uzay-kacisi/` (Three.js 3D dodger), `mini-mimar/` (Three.js voxel editör), `hafiza-bahcesi/` (DOM card flip), `uzay-sumo/` (**gerçek zamanlı çok oyunculu, yerel tahmin**), `uzay-pingpong/` (**katılan kendi raketinin sahibi**), `tank-savasi/` (**bozulabilir harita ayrı dalda**), `neon-tron/` (**ızgara adımları delta olarak**), `stickman-dovus/` (**senkron lobi + silah seçimi**)
 - **Çok oyunculu:** Oyun 2+ kişilikse Adım 5 zorunludur — atlanırsa oyun eksik sayılır
 - **Karmaşıklığı isteğe göre ayarla** ama her zaman **tam çalışır** olsun — yarım bırakma
 - **Web Audio** ses sentezi her zaman ekle (kütüphanenin kendi audio'su yerine de kullanabilirsin) — atış, vuruş, kazanma melodisi

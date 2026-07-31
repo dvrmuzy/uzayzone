@@ -144,6 +144,31 @@
   @media (max-width: 900px) {
     #home-btn { top: auto !important; bottom: 10px !important; left: 50% !important; transform: translateX(-50%) !important; font-size: 0.66rem !important; padding: 5px 12px !important; }
   }
+
+  /* ── ARKADAŞINLA (ONLINE) ── */
+  #online-wrap { display: none; flex-direction: column; gap: 10px; align-items: center; width: 100%; max-width: 420px; }
+  #online-wrap.on { display: flex; }
+  #net-code-box { display: none; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 20px; border: 1px dashed rgba(46,230,160,0.55); border-radius: 12px; background: rgba(46,230,160,0.08); }
+  #net-code-box.on { display: flex; }
+  #net-code { font-family: 'Orbitron', monospace; font-size: 2.1rem; font-weight: 900;
+    letter-spacing: 9px; color: #2ee6a0; padding-left: 9px; text-shadow: 0 0 18px rgba(46,230,160,0.5); }
+  #net-join-row { display: none; gap: 8px; width: 100%; }
+  #net-join-row.on { display: flex; }
+  #net-code-in { flex: 1; min-width: 0; padding: 10px; border-radius: 10px; text-align: center;
+    border: 2px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.35); color: #fff;
+    font-family: 'Orbitron', monospace; font-size: 1.2rem; font-weight: 800; letter-spacing: 6px; text-transform: uppercase; }
+  #net-code-in:focus { outline: none; border-color: #2ee6a0; }
+  #net-status { font-size: 0.62rem; letter-spacing: 2px; opacity: 0.75; text-align: center; min-height: 16px; line-height: 1.6; }
+  #net-status.err { color: #ff7b8a; opacity: 1; }
+  #net-badge { position: absolute; top: 10px; right: 14px; z-index: 6; display: none;
+    align-items: center; gap: 8px; font-family: 'Orbitron', sans-serif; font-size: 0.55rem;
+    letter-spacing: 2px; padding: 6px 12px; border-radius: 20px;
+    background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15); }
+  #net-badge.on { display: flex; }
+  #net-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; }
+  #net-badge .dot.off { background: #ff7b8a; }
+  #net-badge .lag { opacity: 0.6; }
 </style>
 <script src="../analytics.js"></script>
 </head>
@@ -170,6 +195,12 @@
 <div id="stage">
   <canvas id="cv" width="1000" height="680"></canvas>
 
+  <div id="net-badge">
+    <span class="dot" id="nb-dot"></span>
+    <span id="nb-role">OYUNCU 1</span>
+    <span class="lag" id="nb-lag"></span>
+  </div>
+
   <div class="overlay" id="menu">
     <div class="o-title">TANK SAVAŞI</div>
     <div class="o-sub">Mermiler çelik duvarlardan seker, tuğla duvarları yıkar. Kendi sektirdiğin mermi seni de vurur — dikkat!</div>
@@ -178,6 +209,24 @@
     <div class="row" id="mode-row">
       <button class="btn sel" data-mode="pvp">👥 2 KİŞİ</button>
       <button class="btn" data-mode="cpu">🤖 BİLGİSAYARA KARŞI</button>
+      <button class="btn" data-mode="net">🌐 ARKADAŞINLA</button>
+    </div>
+
+    <div id="online-wrap">
+      <div class="row">
+        <button class="btn" id="net-create">🆕 ODA KUR</button>
+        <button class="btn" id="net-showjoin">🔑 KODA KATIL</button>
+      </div>
+      <div id="net-join-row">
+        <input id="net-code-in" maxlength="4" placeholder="––––" autocomplete="off" spellcheck="false" />
+        <button class="btn" id="net-join">KATIL</button>
+      </div>
+      <div id="net-code-box">
+        <div class="lbl">ODA KODUN</div>
+        <div id="net-code">––––</div>
+        <button class="btn" id="net-copy">📋 KOPYALA</button>
+      </div>
+      <div id="net-status"></div>
     </div>
 
     <div class="lbl" id="diff-lbl" style="display:none">ZORLUK</div>
@@ -432,6 +481,7 @@ function tankBlocked(x, y) {
 // ─── Akış ───
 function startRound(full) {
   buildMaze();
+  net.mapDirty = true;         // her raunt yeni labirent — katılana yollanmalı
   bullets.length = 0; particles.length = 0; powerups.length = 0;
   for (const t of tanks) {
     t.x = (t.spawn.cx + 0.5) * CELL; t.y = (t.spawn.cy + 0.5) * CELL;
@@ -465,6 +515,7 @@ function endRound(winner) {
   }
 }
 function togglePause() {
+  if (net.on) return;   // çevrimiçi oyunda tek taraflı duraklatma yok
   if (state === 'play' || state === 'count') { state = 'pause'; show('pause'); }
   else if (state === 'pause') { state = 'play'; hide('pause'); }
 }
@@ -510,7 +561,7 @@ function updateBullets() {
       const nx = b.x + b.vx / steps;
       if (solidAt(nx, b.y)) {
         const cx = Math.floor(nx / CELL), cy = Math.floor(b.y / CELL);
-        if (at(cx, cy) === BRICK) { setAt(cx, cy, EMPTY); brickBurst(cx, cy); dead = true; break; }
+        if (at(cx, cy) === BRICK) { setAt(cx, cy, EMPTY); brickBurst(cx, cy); net.mapDirty = true; dead = true; break; }
         b.vx = -b.vx; b.bounces++; sfxBounce();
         burst(nx, b.y, '#9fd8ff', 4, 2);
       } else b.x = nx;
@@ -518,7 +569,7 @@ function updateBullets() {
       const ny = b.y + b.vy / steps;
       if (solidAt(b.x, ny)) {
         const cx = Math.floor(b.x / CELL), cy = Math.floor(ny / CELL);
-        if (at(cx, cy) === BRICK) { setAt(cx, cy, EMPTY); brickBurst(cx, cy); dead = true; break; }
+        if (at(cx, cy) === BRICK) { setAt(cx, cy, EMPTY); brickBurst(cx, cy); net.mapDirty = true; dead = true; break; }
         b.vy = -b.vy; b.bounces++; sfxBounce();
         burst(b.x, ny, '#9fd8ff', 4, 2);
       } else b.y = ny;
@@ -819,8 +870,11 @@ function update() {
   if (timeAcc >= 1000) { timeAcc -= 1000; timeLeft--; updateHud(); if (timeLeft <= 5 && timeLeft > 0) tone(520, 0.07, 'square', 0.08); }
   if (timeLeft <= 0) { lastWinner = 0; state = 'dead'; deadT = 0; tone(160, 0.5, 'sawtooth', 0.12, 60); return; }
 
-  moveTank(t1, humanInput('w', 's', 'a', 'd', ' '));
+  // Çevrimiçi oyunda bu döngüyü yalnızca oda kuran çalıştırır:
+  // kendi girdisini yerelden, rakibinkini ağdan alır.
+  moveTank(t1, net.on ? myInput() : humanInput('w', 's', 'a', 'd', ' '));
   moveTank(t2, cfg.mode === 'cpu' ? aiInput(t2, t1)
+          : net.on                ? netInput()
                                   : humanInput('arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'enter'));
   updateBullets();
 
@@ -1002,7 +1056,318 @@ function drawTank(t) {
 }
 
 // ─── Döngü ───
-function loop() { update(); draw(); requestAnimationFrame(loop); }
+// ═══════════════════════════════════════════════════════════
+//  ARKADAŞINLA — host otoriteli gerçek zamanlı senkron
+//
+//  Oda kuran (OYUNCU 1) fiziği, mermileri ve skoru yönetir; ~20 Hz
+//  durum özeti yayınlar. Katılan (OYUNCU 2) yalnızca kendi tankının
+//  SÜRÜŞÜNÜ yerelde tahmin eder (ateş ve güçlendirme otoriteye ait),
+//  böylece direksiyon anında tepki verirken mermiler tek elden yönetilir.
+//  Labirent bozulabildiği için ayrı bir dalda, yalnız değiştiğinde yollanır.
+// ═══════════════════════════════════════════════════════════
+let Net = null;
+const net = {
+  on: false, host: false, started: false, code: null,
+  in2: { u: 0, d: 0, l: 0, r: 0, f: 0 },
+  tt: { x: 0, y: 0 },                  // katılanın kendi tankı için otorite hedefi
+  lastSnapT: 0, lastMapT: 0, lastRecv: 0, mapDirty: false, gotFirst: false,
+  lastSent: '', lastInputT: 0, seq: 0, lastN: 0, sentAt: new Array(64).fill(0), rtt: 0,
+  prevState: 'menu', oppHere: false
+};
+
+const SNAP_MS = 50;                    // 20 durum özeti / saniye
+const MAP_MS  = 200;                   // labirent en fazla saniyede 5 kez
+const ST = ['menu', 'count', 'play', 'dead', 'pause', 'over'];
+const ri = v => Math.round(v);
+const r2 = v => Math.round(v * 100) / 100;
+const $$ = id => document.getElementById(id);
+
+function netStatus(msg, err) {
+  const e = $$('net-status');
+  e.textContent = msg;
+  e.className = err ? 'err' : '';
+}
+
+// Çevrimiçi modda kendi tankını hem WASD hem oklarla sürebilirsin
+function myInput() {
+  return {
+    up:    !!(keys['w'] || keys['arrowup']),
+    down:  !!(keys['s'] || keys['arrowdown']),
+    left:  !!(keys['a'] || keys['arrowleft']),
+    right: !!(keys['d'] || keys['arrowright']),
+    fire:  !!(keys[' '] || keys['enter'])
+  };
+}
+function netInput() {
+  const i = net.in2 || {};
+  return { up: !!i.u, down: !!i.d, left: !!i.l, right: !!i.r, fire: !!i.f };
+}
+
+function packSnap() {
+  const a = [];
+  for (const t of tanks)
+    a.push(ri(t.x), ri(t.y), r2(t.ang), t.alive ? 1 : 0, ri(t.cd),
+           ri(t.shield), ri(t.fast), ri(t.triple), ri(t.flash));
+  a.push(timeLeft, score1, score2, round, ST.indexOf(state), countNum, lastWinner, net.lastN);
+  a.push(bullets.length);
+  for (const b of bullets) a.push(ri(b.x), ri(b.y), r2(b.vx), r2(b.vy), b.o);
+  a.push(powerups.length);
+  for (const p of powerups) a.push(ri(p.x), ri(p.y), PW_TYPES.indexOf(p.type), ri(p.t));
+  return a.join(',');
+}
+
+function applySnap(s) {
+  if (!s || !net.on || net.host) return;
+  const a = s.split(',').map(Number);
+  if (a.length < 27) return;
+  net.lastRecv = performance.now();
+
+  let p = 0;
+  for (let i = 0; i < 2; i++) {
+    const t = tanks[i], own = (i === 1);
+    const x = a[p++], y = a[p++], ang = a[p++];
+    if (own) { net.tt.x = x; net.tt.y = y; }      // kendi tankımız yerelde sürülüyor
+    else { t.x = x; t.y = y; t.ang = ang; }
+    t.alive = a[p++] === 1;
+    t.cd = a[p++]; t.shield = a[p++]; t.fast = a[p++]; t.triple = a[p++]; t.flash = a[p++];
+    if (own && !net.gotFirst) { t.x = x; t.y = y; t.ang = ang; }
+  }
+  net.gotFirst = true;
+
+  timeLeft = a[p++]; score1 = a[p++]; score2 = a[p++]; round = a[p++];
+  const st = ST[a[p++]] || 'play';
+  countNum = a[p++]; lastWinner = a[p++];
+  const ackN = a[p++];
+
+  const nb = a[p++];
+  bullets.length = 0;
+  for (let i = 0; i < nb; i++)
+    bullets.push({ x: a[p++], y: a[p++], vx: a[p++], vy: a[p++], o: a[p++], bounces: 0, age: 0 });
+
+  const np = a[p++];
+  powerups.length = 0;
+  for (let i = 0; i < np; i++)
+    powerups.push({ x: a[p++], y: a[p++], type: PW_TYPES[a[p++]] || PW_TYPES[0], t: a[p++] });
+
+  if (st !== net.prevState) {
+    if (st === 'count') { hide('win'); sfxCount(); }
+    if (st === 'over') {
+      const w = score1 >= cfg.target ? 1 : 2;
+      $$('win-title').textContent = pName(w) + ' KAZANDI';
+      $$('win-score').textContent = score1 + ' - ' + score2;
+      show('win');
+    }
+    net.prevState = st;
+  }
+  state = st;
+  updateHud();
+
+  if (ackN && net.sentAt[ackN]) {
+    const rtt = performance.now() - net.sentAt[ackN];
+    net.rtt = net.rtt ? net.rtt * 0.7 + rtt * 0.3 : rtt;
+  }
+}
+
+// Labirent: 25x17 hücre, '0' boş · '1' çelik · '2' tuğla
+function packMap() { return Array.from(grid).join(''); }
+function applyMap(s) {
+  if (!s || s.length !== COLS * ROWS) return;
+  for (let i = 0; i < grid.length; i++) grid[i] = s.charCodeAt(i) - 48;
+}
+
+// Yalnızca sürüşü tahmin et — ateş ve güçlendirme otoritenin işi,
+// yerelde çalıştırırsak iki tarafta ayrı mermi/toplama oluşurdu.
+function predictDrive(t, inp) {
+  if (!t.alive) return;
+  if (inp.left) t.ang -= ROT;
+  if (inp.right) t.ang += ROT;
+  const spd = SPD * (t.fast > 0 ? 1.45 : 1);
+  let mv = 0;
+  if (inp.up) mv = spd;
+  else if (inp.down) mv = -spd * 0.62;
+  if (mv) {
+    const nx = t.x + Math.cos(t.ang) * mv, ny = t.y + Math.sin(t.ang) * mv;
+    if (!tankBlocked(nx, t.y)) t.x = nx;
+    if (!tankBlocked(t.x, ny)) t.y = ny;
+    t.tread = (t.tread || 0) + Math.abs(mv);
+  }
+}
+
+function guestTick() {
+  if (shakeT > 0) shakeT--;
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const q = particles[i];
+    q.x += q.vx; q.y += q.vy; q.vx *= 0.93; q.vy *= 0.93; q.life -= 0.028;
+    if (q.life <= 0) particles.splice(i, 1);
+  }
+  for (const pw of powerups) pw.t++;
+
+  if (state === 'play') predictDrive(t2, myInput());
+
+  // Otoritenin konumuna hatanın büyüklüğüne göre yaklaş
+  const err = Math.hypot(net.tt.x - t2.x, net.tt.y - t2.y);
+  if (err > 90) { t2.x = net.tt.x; t2.y = net.tt.y; }
+  else {
+    const k = err > 20 ? 0.35 : err > 6 ? 0.12 : 0.04;
+    t2.x += (net.tt.x - t2.x) * k;
+    t2.y += (net.tt.y - t2.y) * k;
+  }
+
+  // Mermiler özetler arasında düz gider — kestirimle akıcı görünsün
+  for (const b of bullets) { b.x += b.vx; b.y += b.vy; }
+
+  sendInput();
+  netBadge();
+}
+
+function sendInput() {
+  const i = myInput();
+  const k = (i.up?1:0) + '' + (i.down?1:0) + (i.left?1:0) + (i.right?1:0) + (i.fire?1:0);
+  const now = performance.now();
+  if (k === net.lastSent && now - net.lastInputT < 1000) return;
+  if (k !== net.lastSent && i.fire && !/1$/.test(net.lastSent)) sfxShot();   // ateş sesi anında
+  net.lastSent = k; net.lastInputT = now;
+  net.seq = net.seq % 63 + 1;
+  net.sentAt[net.seq] = now;
+  Net.setChild('in2', { u: i.up?1:0, d: i.down?1:0, l: i.left?1:0, r: i.right?1:0, f: i.fire?1:0, n: net.seq });
+}
+
+function hostTick() {
+  const now = performance.now();
+  if (net.mapDirty && now - net.lastMapT >= MAP_MS) {
+    net.mapDirty = false; net.lastMapT = now;
+    Net.setChild('map', packMap());
+  }
+  if (now - net.lastSnapT < SNAP_MS) return;
+  net.lastSnapT = now;
+  Net.setChild('snap', packSnap());
+  netBadge();
+}
+
+function netBadge() {
+  const gone = net.host ? !net.oppHere : (performance.now() - net.lastRecv > 3000);
+  $$('nb-dot').className = 'dot' + (gone ? ' off' : '');
+  $$('nb-lag').textContent = gone ? 'BAĞLANTI YOK'
+                           : net.host ? ''
+                           : net.rtt ? Math.round(net.rtt) + 'ms' : '';
+}
+
+async function loadNet() {
+  if (!Net) { netStatus('BAĞLANILIYOR...'); Net = await import('../multiplayer.js'); }
+  return Net;
+}
+
+function onPlayers(pl) {
+  const oppKey = net.host ? 'O' : 'X';
+  const here = !!(pl && pl[oppKey]);
+  const was = net.oppHere;
+  net.oppHere = here;
+  if (here && !was && net.host && !net.started) beginOnline();
+  if (!here && was && net.started) netStatus('RAKİP AYRILDI', true);
+}
+
+function beginOnline() {
+  net.on = true; net.started = true; net.gotFirst = false;
+  $$('net-badge').classList.add('on');
+  $$('nb-role').textContent = net.host ? 'SEN: OYUNCU 1' : 'SEN: OYUNCU 2';
+  $$('n1').textContent = net.host ? 'SEN' : 'RAKİP';
+  $$('n2').textContent = net.host ? 'RAKİP' : 'SEN';
+  audio();
+  if (net.host) { net.mapDirty = true; newGame(); }
+  else { hide('menu'); state = 'count'; }
+}
+
+function netReset() {
+  $$('net-create').disabled = false;
+  $$('net-showjoin').disabled = false;
+  $$('net-join-row').classList.remove('on');
+  $$('net-code-box').classList.remove('on');
+  $$('net-code-in').value = '';
+  netStatus('');
+}
+
+function netLeave() {
+  if (Net && net.code) Net.leave();
+  net.on = false; net.host = false; net.started = false; net.code = null;
+  net.oppHere = false; net.gotFirst = false; net.lastSent = ''; net.rtt = 0;
+  net.in2 = { u: 0, d: 0, l: 0, r: 0, f: 0 };
+  net.prevState = 'menu';
+  $$('net-badge').classList.remove('on');
+  $$('n1').textContent = 'OYUNCU 1';
+  $$('n2').textContent = pName(2);
+  netReset();
+}
+
+$$('net-create').onclick = async () => {
+  $$('net-create').disabled = true;
+  $$('net-showjoin').disabled = true;
+  $$('net-join-row').classList.remove('on');
+  try {
+    const N = await loadNet();
+    const code = await N.createRoom('tank-savasi', {
+      cfg: { target: cfg.target, powerups: cfg.powerups ? 1 : 0 },
+      in2: { u: 0, d: 0, l: 0, r: 0, f: 0, n: 0 },
+      snap: '', map: ''
+    });
+    net.code = code; net.host = true;
+    $$('net-code').textContent = code;
+    $$('net-code-box').classList.add('on');
+    netStatus('ARKADAŞIN BU KODU GİRSİN — BEKLENİYOR...');
+    N.onChild('in2', v => { if (v) { net.in2 = v; net.lastN = v.n || 0; } });
+    N.onChild('players', onPlayers);
+  } catch (e) {
+    netStatus((e && e.message) || 'BAĞLANTI KURULAMADI', true);
+    netReset();
+  }
+};
+
+$$('net-showjoin').onclick = () => {
+  $$('net-join-row').classList.add('on');
+  $$('net-code-box').classList.remove('on');
+  netStatus('ARKADAŞININ PAYLAŞTIĞI 4 HANELİ KODU GİR');
+  $$('net-code-in').focus();
+};
+
+$$('net-code-in').addEventListener('keydown', e => {
+  e.stopPropagation();
+  if (e.key === 'Enter') $$('net-join').click();
+});
+
+$$('net-join').onclick = async () => {
+  const code = $$('net-code-in').value.trim().toUpperCase();
+  if (code.length !== 4) { netStatus('KOD 4 KARAKTER OLMALI', true); return; }
+  $$('net-join').disabled = true;
+  try {
+    const N = await loadNet();
+    netStatus('ODAYA BAĞLANILIYOR...');
+    const room = await N.joinRoom('tank-savasi', code);
+    net.code = code; net.host = false;
+    if (room.cfg) { cfg.target = room.cfg.target; cfg.powerups = !!room.cfg.powerups; }
+    if (room.map) applyMap(room.map);
+    N.onChild('map', applyMap);
+    N.onChild('snap', applySnap);
+    N.onChild('players', onPlayers);
+    beginOnline();
+  } catch (e) {
+    netStatus((e && e.message) || 'ODAYA KATILINAMADI', true);
+  } finally {
+    $$('net-join').disabled = false;
+  }
+};
+
+$$('net-copy').onclick = async () => {
+  const code = $$('net-code').textContent;
+  try { await navigator.clipboard.writeText(code); netStatus('KOD KOPYALANDI ✔'); }
+  catch { netStatus('ELLE KOPYALA: ' + code); }
+};
+
+function loop() {
+  if (net.on && !net.host) { guestTick(); draw(); requestAnimationFrame(loop); return; }
+  update();
+  if (net.on) hostTick();
+  draw();
+  requestAnimationFrame(loop);
+}
 buildMaze();
 loop();
 
@@ -1033,18 +1398,28 @@ pickRow('mode-row', 'mode', v => {
   document.getElementById('diff-row').style.display = on ? 'flex' : 'none';
   document.getElementById('diff-lbl').style.display = on ? 'block' : 'none';
   document.getElementById('n2').textContent = pName(2);
-  document.getElementById('k2').textContent = on ? 'YAPAY ZEKÂ' : 'OKLAR + ENTER';
+  const online = v === 'net';
+  document.getElementById('k2').textContent = on ? 'YAPAY ZEKÂ' : online ? 'ARKADAŞIN' : 'OKLAR + ENTER';
   document.body.classList.toggle('cpu', on);
+
+  document.getElementById('online-wrap').classList.toggle('on', online);
+  // Çevrimiçi modda oyun oda kurunca / koda katılınca başlar
+  document.getElementById('start-btn').style.display = online ? 'none' : '';
+  if (!online) netLeave();
 });
 pickRow('diff-row', 'diff', v => { cfg.diff = +v; });
 pickRow('target-row', 'target', v => { cfg.target = +v; updateHud(); });
 pickRow('pw-row', 'pw', v => { cfg.powerups = v === '1'; });
 
 document.getElementById('start-btn').onclick = newGame;
-document.getElementById('again-btn').onclick = newGame;
+document.getElementById('again-btn').onclick = () => {
+  // Çevrimiçi oyunda yeni maçı yalnızca oda kuran başlatabilir
+  if (net.on && !net.host) { document.getElementById('win-score').textContent = 'OYUNCU 1 BEKLENİYOR...'; return; }
+  newGame();
+};
 document.getElementById('resume-btn').onclick = togglePause;
-document.getElementById('quit-btn').onclick = () => { state = 'menu'; hide('pause'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
-document.getElementById('menu-btn').onclick = () => { state = 'menu'; hide('win'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
+document.getElementById('quit-btn').onclick = () => { netLeave(); state = 'menu'; hide('pause'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
+document.getElementById('menu-btn').onclick = () => { netLeave(); state = 'menu'; hide('win'); show('menu'); score1 = score2 = 0; round = 1; updateHud(); };
 
 updateHud();
 })();

@@ -98,11 +98,49 @@
   .tbtn.atk{border-radius:14px;font-size:.82rem;background:rgba(255,59,59,.22);border-color:rgba(255,140,46,.5);}
   .tbtn.on{background:rgba(255,140,46,.5);transform:scale(.94);}
   a.home{position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(0,0,0,0.55);color:#ffb199;font-family:var(--font);font-size:.85rem;font-weight:700;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);transition:background .3s,transform .2s;}
+
+  /* ---- Arkadaşınla (online) ---- */
+  #online-wrap{display:none;flex-direction:column;gap:10px;align-items:center;width:100%;max-width:420px;margin-top:18px;}
+  #online-wrap.on{display:flex;}
+  .netrow{display:flex;gap:8px;width:100%;}
+  .netbtn{flex:1;padding:11px 8px;border-radius:12px;cursor:pointer;font-family:var(--font);font-weight:800;
+    font-size:.82rem;color:#fff;background:linear-gradient(160deg,#3a1010,#220808);
+    border:2px solid rgba(255,140,46,.35);transition:transform .15s,border-color .2s;}
+  .netbtn:hover:not(:disabled){transform:translateY(-2px);border-color:var(--red);}
+  .netbtn:disabled{opacity:.4;cursor:not-allowed;}
+  #net-join-row{display:none;gap:8px;width:100%;}
+  #net-join-row.on{display:flex;}
+  #net-code-in{flex:1;min-width:0;padding:10px;border-radius:12px;text-align:center;color:#fff;
+    border:2px solid rgba(255,140,46,.35);background:rgba(0,0,0,.4);
+    font-family:var(--font);font-size:1.2rem;font-weight:900;letter-spacing:6px;text-transform:uppercase;}
+  #net-code-in:focus{outline:none;border-color:var(--gold);}
+  #net-code-box{display:none;flex-direction:column;align-items:center;gap:6px;padding:12px 20px;
+    border:1px dashed rgba(255,210,74,.55);border-radius:14px;background:rgba(255,210,74,.08);}
+  #net-code-box.on{display:flex;}
+  #net-code{font-size:2.1rem;font-weight:900;letter-spacing:9px;color:var(--gold);padding-left:9px;
+    text-shadow:0 0 18px rgba(255,210,74,.5);}
+  #net-status{font-size:.74rem;color:#c98;text-align:center;min-height:16px;line-height:1.5;}
+  #net-status.err{color:#ff8080;}
+  #net-badge{position:absolute;top:10px;right:14px;z-index:20;display:none;align-items:center;gap:8px;
+    font-family:var(--font);font-size:.66rem;letter-spacing:1px;padding:6px 12px;border-radius:20px;
+    background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.15);color:#e8d8d0;}
+  #net-badge.on{display:flex;}
+  #net-badge .dot{width:7px;height:7px;border-radius:50%;background:#3ddc84;}
+  #net-badge .dot.off{background:#ff7b8a;}
+  #net-badge .lag{opacity:.6;}
+  .slot.locked{opacity:.75;}
+  .slot.locked .wbtn{cursor:not-allowed;}
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
+
+  <div id="net-badge">
+    <span class="dot" id="nb-dot"></span>
+    <span id="nb-role">OYUNCU 1</span>
+    <span class="lag" id="nb-lag"></span>
+  </div>
 
   <!-- HUD -->
   <div id="hud" class="hidden"></div>
@@ -134,6 +172,24 @@
     <div class="sub">SON AYAKTA KALAN KAZANIR</div>
     <div class="q">Kaç kişi oynayacaksınız?</div>
     <div class="pcount" id="pcount"></div>
+
+    <div id="online-wrap">
+      <div class="netrow">
+        <button class="netbtn" id="net-create">🆕 ODA KUR</button>
+        <button class="netbtn" id="net-showjoin">🔑 KODA KATIL</button>
+      </div>
+      <div id="net-join-row">
+        <input id="net-code-in" maxlength="4" placeholder="––––" autocomplete="off" spellcheck="false" />
+        <button class="netbtn" id="net-join" style="flex:0 0 auto;padding:11px 18px;">KATIL</button>
+      </div>
+      <div id="net-code-box">
+        <div style="font-size:.66rem;color:#c98;letter-spacing:2px;">ODA KODUN</div>
+        <div id="net-code">––––</div>
+        <button class="netbtn" id="net-copy" style="padding:7px 16px;font-size:.72rem;">📋 KOPYALA</button>
+      </div>
+      <div id="net-status"></div>
+    </div>
+
     <div class="hint">
       <b>1</b> seçersen bilgisayara karşı oynarsın. <b>2–3</b> seçersen herkese karşı dövüşürsün.<br>
       <b>1. Oyuncu:</b> W A S D + Q E R F &nbsp;·&nbsp; <b>2. Oyuncu:</b> Ok tuşları + . , M N &nbsp;·&nbsp; <b>3. Oyuncu:</b> Fare (sol tık silah · sağ tık tekme)
@@ -455,6 +511,20 @@ class Fighter{
     }
   }
   control(){
+    // Çevrimiçi oyunda bunu yalnızca oda kuran çalıştırır:
+    // 0 numaralı savaşçı yerel tuşlarla, 1 numaralı ağdan gelen girdiyle sürülür
+    if(net.on){
+      const inp = (this.idx===0) ? localInput() : remoteInput();
+      let mv=(inp.r?1:0)-(inp.l?1:0);
+      if(mv!==0){ this.vx += mv*1.6; this.face=mv; }
+      if(inp.u && this.onGround){ this.vy=-15; this.onGround=false; }
+      if(inp.d && !this.onGround){ this.vy+=1.2; }
+      if(this.idx===0){
+        const t=localAttackKey();
+        if(t && this.canAct(t)) this.startAttack(t);
+      }
+      return;
+    }
     if(this.scheme.mouse){ this.controlMouse(); return; }
     const s=this.scheme;
     let mv=0;
@@ -728,9 +798,20 @@ function hideTouchControls(){
   for(let n=1;n<=3;n++){
     const b=document.createElement('button'); b.className='pbtn';
     b.innerHTML=`<span class="n">${n}</span><span class="l">${n===1?'vs Bilgisayar':n+' Kişi'}</span>`;
-    b.onclick=()=>{ Audio.start(); Audio.setIntensity(0.55); chooseCount(n); };
+    b.onclick=()=>{ Audio.start(); Audio.setIntensity(0.55); netLeave(); chooseCount(n); };
     c.appendChild(b);
   }
+  // Uzaktan oynama: oda kodu paylaşarak iki kişi
+  const nb=document.createElement('button'); nb.className='pbtn';
+  nb.style.width='104px';
+  nb.innerHTML='<span class="n">🌐</span><span class="l">Arkadaşınla</span>';
+  nb.onclick=()=>{
+    Audio.start(); Audio.setIntensity(0.55);
+    const w=document.getElementById('online-wrap');
+    w.classList.toggle('on');
+    if(w.classList.contains('on')) netReset();
+  };
+  c.appendChild(nb);
 })();
 
 function chooseCount(n){
@@ -748,7 +829,9 @@ function buildSetup(){
   for(let i=0;i<count;i++){
     const isBot = (NUM===1 && i===1);
     const sc=SCHEMES[i];
-    const slot=document.createElement('div'); slot.className='slot';
+    // Çevrimiçi oyunda yalnızca kendi yuvanı düzenleyebilirsin
+    const mine = !net.on || i===mySlot();
+    const slot=document.createElement('div'); slot.className='slot'+(mine?'':' locked');
     slot.innerHTML=`
       <div class="ptitle"><span class="dot" style="color:${sc.color};background:${sc.color}"></span>
         ${isBot?'Bilgisayar 🤖':'Oyuncu '+(i+1)}</div>
@@ -762,16 +845,21 @@ function buildSetup(){
     WKEYS.forEach(wk=>{
       const wb=document.createElement('button'); wb.className='wbtn'+(selWeapons[i]===wk?' sel':'');
       wb.textContent=WEAPONS[wk].icon; wb.title=WEAPONS[wk].name;
-      wb.onclick=()=>{ if(ready[i]) return; selWeapons[i]=wk;
+      wb.onclick=()=>{ if(ready[i] || !mine) return; selWeapons[i]=wk;
         wbox.querySelectorAll('.wbtn').forEach(x=>x.classList.remove('sel'));
-        wb.classList.add('sel'); slot.querySelector('.wname').textContent=WEAPONS[wk].name; Audio.beep(false); };
+        wb.classList.add('sel'); slot.querySelector('.wname').textContent=WEAPONS[wk].name;
+        Audio.beep(false); netSendLobby(); };
       wbox.appendChild(wb);
     });
     if(isBot){ ready[i]=true; }
     else{
       const rb=slot.querySelector('.ready');
-      rb.onclick=()=>{ ready[i]=!ready[i]; rb.classList.toggle('on',ready[i]);
-        rb.textContent=ready[i]?'✓ HAZIR':'HAZIR DEĞİL'; Audio.beep(ready[i]); refreshStart(); };
+      rb.classList.toggle('on', !!ready[i]);
+      rb.textContent = ready[i] ? '✓ HAZIR' : 'HAZIR DEĞİL';
+      rb.onclick=()=>{ if(!mine) return;
+        ready[i]=!ready[i]; rb.classList.toggle('on',ready[i]);
+        rb.textContent=ready[i]?'✓ HAZIR':'HAZIR DEĞİL';
+        Audio.beep(ready[i]); refreshStart(); netSendLobby(); };
     }
     slots.appendChild(slot);
   }
@@ -780,17 +868,32 @@ function buildSetup(){
 function refreshStart(){
   const count=NUM===1?2:NUM;
   let all=true; for(let i=0;i<count;i++) if(!ready[i]) all=false;
-  $('startBtn').disabled=!all;
+  // Çevrimiçi oyunda maçı yalnızca oda kuran başlatır
+  const canStart = all && (!net.on || net.host);
+  $('startBtn').disabled=!canStart;
+  if(net.on) $('startBtn').textContent = net.host
+    ? (all ? 'BAŞLAT' : 'RAKİP BEKLENİYOR…')
+    : (all ? 'OYUNCU 1 BAŞLATACAK' : 'HAZIR OLUNCA BAŞLAR');
 }
 $('startBtn').onclick=()=>{ if(!$('startBtn').disabled) startCountdown(); };
-$('backBtn').onclick=()=>{ STATE='menu'; show('menu'); };
-$('againBtn').onclick=()=>{ startCountdown(); };
-$('menuBtn').onclick=()=>{ STATE='menu'; Audio.setIntensity(0.55); show('menu'); };
+$('backBtn').onclick=()=>{ netLeave(); STATE='menu'; show('menu'); };
+$('againBtn').onclick=()=>{
+  // Çevrimiçi oyunda yeni raundu yalnızca oda kuran başlatır
+  if(net.on && !net.host){ $('winSub').textContent='OYUNCU 1 BEKLENİYOR…'; return; }
+  startCountdown();
+};
+$('menuBtn').onclick=()=>{ netLeave(); STATE='menu'; Audio.setIntensity(0.55); show('menu'); };
 
 /* ---------------- Start round ---------------- */
-function startCountdown(){
-  // pick random map
-  const maps=buildMaps(); MAP=maps[Math.floor(Math.random()*maps.length)];
+function startCountdown(mapi){
+  // pick random map — çevrimiçi oyunda haritayı oda kuran seçer ve yollar
+  const maps=buildMaps();
+  const idx = (mapi===undefined || mapi===null) ? Math.floor(Math.random()*maps.length) : mapi;
+  MAP=maps[idx];
+  if(net.on && net.host && Net){
+    net.prevGo++;
+    Net.patch({ go:net.prevGo, mapi:idx, w0:selWeapons[0], w1:selWeapons[1] });
+  }
   // build fighters
   NUM_setup();
   STATE='countdown';
@@ -872,6 +975,345 @@ function checkWin(){
 }
 
 /* ---------------- Loop ---------------- */
+/* ═══════════════════════════════════════════════════════════
+   ARKADAŞINLA — host otoriteli, 2 kişilik
+   Oda kuran Kırmızı (0), katılan Mavi (1) olur. Silah seçimi ve
+   hazır durumu lobide senkronlanır. Dövüşte oda kuran fiziği ve
+   hasarı yönetir; katılan yalnızca KENDİ hareketini yerelde tahmin
+   eder (saldırı animasyonu anında başlar, hasarı otorite verir).
+   Çevrimiçi mod her zaman 2 kişiliktir — 3 kişi ve bot yalnızca
+   aynı bilgisayarda oynanır.
+   ═══════════════════════════════════════════════════════════ */
+const ATK_TYPES = ['weapon','head','punch','kick'];
+const NET_STATES = ['menu','setup','countdown','playing','over'];
+
+let Net = null;
+const net = {
+  on:false, host:false, started:false, code:null,
+  in2:null, seenAtk:0, atkN:0,
+  tgt:{x:0,y:0},
+  lastSnapT:0, lastRecv:0, lastSent:'', lastSentT:0,
+  seq:0, lastN:0, sentAt:new Array(64).fill(0), rtt:0,
+  prevGo:0, prevState:'menu', oppHere:false, applying:false
+};
+const mySlot = () => (net.host ? 0 : 1);
+const $$ = id => document.getElementById(id);
+const r2 = v => Math.round(v*100)/100;
+
+function netStatus(msg, err){
+  const e=$$('net-status'); e.textContent=msg; e.className=err?'err':'';
+}
+
+/* ---- Girdi: çevrimiçi modda her iki tuş takımı da kendi savaşçını sürer ---- */
+function localInput(){
+  return {
+    l: !!(keys['a']||keys['arrowleft']),
+    r: !!(keys['d']||keys['arrowright']),
+    u: !!(keys['w']||keys['arrowup']),
+    d: !!(keys['s']||keys['arrowdown'])
+  };
+}
+function localAttackKey(){
+  if(keys['q']||keys['.']) return 'weapon';
+  if(keys['e']||keys[',']) return 'head';
+  if(keys['r']||keys['m']) return 'punch';
+  if(keys['f']||keys['n']) return 'kick';
+  return null;
+}
+function remoteInput(){
+  const i=net.in2||{};
+  return { l:!!i.l, r:!!i.r, u:!!i.u, d:!!i.d };
+}
+
+/* ---- Lobi senkronu ---- */
+function netSendLobby(){
+  if(!net.on || !Net || net.applying) return;
+  const me=mySlot();
+  Net.patch({ ['w'+me]: selWeapons[me], ['r'+me]: ready[me] ? 1 : 0 });
+}
+
+function netApplyLobby(room){
+  if(!room || !net.on) return;
+  const foe = 1-mySlot();
+  net.applying=true;
+  if(room['w'+foe]) selWeapons[foe]=room['w'+foe];
+  ready[foe] = !!room['r'+foe];
+  if(STATE==='setup') buildSetup();
+  net.applying=false;
+
+  // Oda kuran maçı başlattığında katılan da başlasın
+  if(room.go && room.go !== net.prevGo && !net.host){
+    net.prevGo = room.go;
+    if(room.w0) selWeapons[0]=room.w0;
+    if(room.w1) selWeapons[1]=room.w1;
+    startCountdown(room.mapi);
+  }
+}
+
+/* ---- Dövüş senkronu ---- */
+function packSnap(){
+  const a=[];
+  for(const f of fighters){
+    const at=f.attack;
+    a.push(Math.round(f.x), Math.round(f.y), r2(f.vx), r2(f.vy), f.face,
+           Math.round(f.hp), f.dead?1:0, f.onGround?1:0, r2(f.walkPhase),
+           at?ATK_TYPES.indexOf(at.type):-1,
+           at?Math.round(performance.now()-at.t):0,
+           at?at.dur:0);
+  }
+  a.push(NET_STATES.indexOf(STATE), net.lastN);
+  a.push(projectiles.length);
+  for(const p of projectiles) a.push(Math.round(p.x), Math.round(p.y), r2(p.vx), p.face, p.owner.idx);
+  return a.join(',');
+}
+
+function applySnap(s){
+  if(!s || !net.on || net.host || fighters.length<2) return;
+  const a=s.split(',').map(Number);
+  if(a.length<27) return;
+  net.lastRecv=performance.now();
+
+  let p=0;
+  for(let i=0;i<2;i++){
+    const f=fighters[i], own=(i===mySlot());
+    const x=a[p++], y=a[p++], vx=a[p++], vy=a[p++], face=a[p++];
+    const hp=a[p++], dead=a[p++]===1, og=a[p++]===1, wp=a[p++];
+    const ai=a[p++], age=a[p++], dur=a[p++];
+
+    if(own){ net.tgt.x=x; net.tgt.y=y; }        // kendi konumumuz yerelde tahmin ediliyor
+    else { f.x=x; f.y=y; f.vx=vx; f.vy=vy; f.face=face; f.onGround=og; f.walkPhase=wp; }
+    f.hp=hp; f.dead=dead;
+
+    // Saldırı animasyonunu otoritenin verdiği yaşa göre kur
+    if(!own){
+      if(ai>=0){ if(!f.attack || f.attack.type!==ATK_TYPES[ai])
+                   f.attack={ type:ATK_TYPES[ai], t:performance.now()-age, dur, hit:new Set(), fired:true }; }
+      else f.attack=null;
+    }
+  }
+
+  const st=NET_STATES[a[p++]]||'playing';
+  const ackN=a[p++];
+
+  const np=a[p++];
+  projectiles.length=0;
+  for(let i=0;i<np;i++){
+    const x=a[p++], y=a[p++], vx=a[p++], fc=a[p++], oi=a[p++];
+    projectiles.push({ x, y, vx, face:fc, owner:fighters[oi]||fighters[0],
+                       dead:false, life:120, dmg:0, kb:0 });
+  }
+
+  if(st!==net.prevState){
+    if(st==='over'){
+      // Kazananı hayatta kalandan türet — otorite ayrıca yollamasın
+      const alive=fighters.filter(f=>!f.dead);
+      const w=alive.length===1?alive[0]:null;
+      $('winText').textContent = w ? (w.idx===mySlot()?'🏆 Kazandın!':'💀 Kaybettin') : '🤝 Berabere';
+      $('winSub').textContent = w ? (w.name+' ayakta kaldı') : 'İkiniz de düştünüz';
+      show('over');
+    }
+    if(st==='playing') show(null);
+    net.prevState=st;
+  }
+  STATE=st;
+  updateHud();
+
+  if(ackN && net.sentAt[ackN]){
+    const rtt=performance.now()-net.sentAt[ackN];
+    net.rtt = net.rtt ? net.rtt*0.7 + rtt*0.3 : rtt;
+  }
+}
+
+/* ---- Katılan: kendi savaşçısının hareketini yerelde yürüt ---- */
+function predictSelf(dt){
+  const f=fighters[mySlot()];
+  if(!f) return;
+  if(f.dead){
+    f.vy+=0.6; f.y+=f.vy; f.x+=f.vx*0.96; f.vx*=0.92;
+    if(f.y>GROUND-10){ f.y=GROUND-10; f.vy=0; f.vx*=0.7; }
+    return;
+  }
+  const inp=localInput();
+  let mv=(inp.r?1:0)-(inp.l?1:0);
+  if(mv!==0){ f.vx += mv*1.6; f.face=mv; }
+  if(inp.u && f.onGround){ f.vy=-15; f.onGround=false; }
+  if(inp.d && !f.onGround){ f.vy+=1.2; }
+
+  f.vy+=0.7; f.x+=f.vx; f.y+=f.vy; f.vx*=0.82;
+  if(f.y+f.h>=GROUND){ f.y=GROUND-f.h; f.vy=0; f.onGround=true; }
+  else f.onGround=false;
+  for(const pl of MAP.plats){
+    if(f.vy>=0 && f.x+f.w>pl.x && f.x<pl.x+pl.w){
+      const feet=f.y+f.h;
+      if(feet>pl.y && feet<pl.y+pl.h+f.vy+6 && (feet-f.vy)<=pl.y+8){ f.y=pl.y-f.h; f.vy=0; f.onGround=true; }
+    }
+  }
+  if(f.x<10){ f.x=10; f.vx=0; }
+  if(f.x>W-10-f.w){ f.x=W-10-f.w; f.vx=0; }
+  if(Math.abs(f.vx)>0.6 && f.onGround) f.walkPhase+=0.3;
+
+  // Saldırı: animasyonu ve sesi hemen başlat, hasarı otorite versin
+  const wantAtk=localAttackKey();
+  if(wantAtk && f.canAct(wantAtk)){
+    f.startAttack(wantAtk);
+    net.atkN++;
+    sendInput(ATK_TYPES.indexOf(wantAtk));
+  }
+  if(f.attack && performance.now()-f.attack.t > f.attack.dur) f.attack=null;
+
+  // Otoriteye hatanın büyüklüğüne göre yaklaş
+  const err=Math.hypot(net.tgt.x-f.x, net.tgt.y-f.y);
+  if(err>150){ f.x=net.tgt.x; f.y=net.tgt.y; }
+  else { const k = err>40 ? 0.35 : err>12 ? 0.12 : 0.04;
+         f.x += (net.tgt.x-f.x)*k; f.y += (net.tgt.y-f.y)*k; }
+}
+
+function sendInput(atkType){
+  if(!Net || !net.on || net.host) return;
+  const i=localInput();
+  const k=(i.l?1:0)+''+(i.r?1:0)+(i.u?1:0)+(i.d?1:0)+net.atkN;
+  const now=performance.now();
+  if(k===net.lastSent && now-net.lastSentT<1000 && atkType===undefined) return;
+  net.lastSent=k; net.lastSentT=now;
+  net.seq=net.seq%63+1; net.sentAt[net.seq]=now;
+  Net.setChild('in2', { l:i.l?1:0, r:i.r?1:0, u:i.u?1:0, d:i.d?1:0,
+                        an:net.atkN, at:atkType===undefined?-1:atkType, n:net.seq });
+}
+
+function hostApplyRemoteAttack(){
+  const i=net.in2; if(!i) return;
+  const an=i.an||0;
+  if(an>net.seenAtk){
+    net.seenAtk=an;
+    const t=ATK_TYPES[i.at];
+    const f=fighters[1];
+    if(t && f && f.canAct(t)) f.startAttack(t);
+  }
+}
+
+function hostTick(){
+  if(fighters.length<2) return;          // savaşçılar kurulmadan yollanacak durum yok
+  const now=performance.now();
+  if(now-net.lastSnapT<50) return;
+  net.lastSnapT=now;
+  Net.setChild('snap', packSnap());
+  netBadge();
+}
+
+function netBadge(){
+  const gone = net.host ? !net.oppHere : (performance.now()-net.lastRecv>3000);
+  $$('nb-dot').className='dot'+(gone?' off':'');
+  $$('nb-lag').textContent = gone ? 'BAĞLANTI YOK'
+                           : net.host ? ''
+                           : net.rtt ? Math.round(net.rtt)+'ms' : '';
+}
+
+/* ---- Oda kurma / katılma ---- */
+async function loadNet(){
+  if(!Net){ netStatus('BAĞLANILIYOR...'); Net=await import('../multiplayer.js'); }
+  return Net;
+}
+
+function onPlayers(pl){
+  const oppKey = net.host ? 'O' : 'X';
+  const here=!!(pl && pl[oppKey]);
+  const was=net.oppHere;
+  net.oppHere=here;
+  if(here && !was && net.host && !net.started) beginOnline();
+  if(!here && was && net.started) netStatus('RAKİP AYRILDI', true);
+}
+
+function beginOnline(){
+  net.on=true; net.started=true;
+  NUM=2;
+  selWeapons=['yumruk','yumruk']; ready=[false,false];
+  $$('net-badge').classList.add('on');
+  $$('nb-role').textContent = net.host ? 'SEN: KIRMIZI' : 'SEN: MAVİ';
+  Audio.start(); Audio.setIntensity(0.55);
+  STATE='setup';
+  buildSetup();
+  show('setup');
+  netSendLobby();
+}
+
+function netReset(){
+  $$('net-create').disabled=false;
+  $$('net-showjoin').disabled=false;
+  $$('net-join-row').classList.remove('on');
+  $$('net-code-box').classList.remove('on');
+  $$('net-code-in').value='';
+  netStatus('Çevrimiçi oyun 2 kişiliktir.');
+}
+
+function netLeave(){
+  if(Net && net.code) Net.leave();
+  net.on=false; net.host=false; net.started=false; net.code=null;
+  net.oppHere=false; net.in2=null; net.rtt=0;
+  net.seenAtk=0; net.atkN=0; net.prevGo=0; net.prevState='menu'; net.lastSent='';
+  $$('net-badge').classList.remove('on');
+  netReset();
+}
+
+$$('net-create').onclick=async()=>{
+  $$('net-create').disabled=true; $$('net-showjoin').disabled=true;
+  $$('net-join-row').classList.remove('on');
+  try{
+    const N=await loadNet();
+    const code=await N.createRoom('stickman-dovus', {
+      w0:'yumruk', w1:'yumruk', r0:0, r1:0, go:0, mapi:0,
+      in2:{ l:0,r:0,u:0,d:0,an:0,at:-1,n:0 }, snap:''
+    });
+    net.code=code; net.host=true;
+    $$('net-code').textContent=code;
+    $$('net-code-box').classList.add('on');
+    netStatus('ARKADAŞIN BU KODU GİRSİN — BEKLENİYOR...');
+    N.onChild('in2', v=>{ if(v){ net.in2=v; net.lastN=v.n||0; } });
+    N.onRoom(netApplyLobby);
+    N.onChild('players', onPlayers);
+  }catch(e){
+    netStatus((e&&e.message)||'BAĞLANTI KURULAMADI', true);
+    netReset();
+  }
+};
+
+$$('net-showjoin').onclick=()=>{
+  $$('net-join-row').classList.add('on');
+  $$('net-code-box').classList.remove('on');
+  netStatus('ARKADAŞININ PAYLAŞTIĞI 4 HANELİ KODU GİR');
+  $$('net-code-in').focus();
+};
+
+$$('net-code-in').addEventListener('keydown', e=>{
+  e.stopPropagation();
+  if(e.key==='Enter') $$('net-join').click();
+});
+
+$$('net-join').onclick=async()=>{
+  const code=$$('net-code-in').value.trim().toUpperCase();
+  if(code.length!==4){ netStatus('KOD 4 KARAKTER OLMALI', true); return; }
+  $$('net-join').disabled=true;
+  try{
+    const N=await loadNet();
+    netStatus('ODAYA BAĞLANILIYOR...');
+    await N.joinRoom('stickman-dovus', code);
+    net.code=code; net.host=false;
+    N.onChild('snap', applySnap);
+    N.onRoom(netApplyLobby);
+    N.onChild('players', onPlayers);
+    beginOnline();
+  }catch(e){
+    netStatus((e&&e.message)||'ODAYA KATILINAMADI', true);
+  }finally{
+    $$('net-join').disabled=false;
+  }
+};
+
+$$('net-copy').onclick=async()=>{
+  const code=$$('net-code').textContent;
+  try{ await navigator.clipboard.writeText(code); netStatus('KOD KOPYALANDI ✔'); }
+  catch{ netStatus('ELLE KOPYALA: '+code); }
+};
+
 function loop(t){
   requestAnimationFrame(loop);
   const dt=Math.min(2,(t-lastT)/16.67); lastT=t;
@@ -879,7 +1321,21 @@ function loop(t){
   // draw background always (under overlays)
   drawScene();
 
+  // Katılan oyuncu: fizik ve hakemlik oda kuranda, burada yalnızca
+  // kendi hareketimizi tahmin edip gelen durumu çiziyoruz
+  if(net.on && !net.host){
+    if(STATE==='playing') predictSelf(dt);
+    updateParticles();
+    updateHud();
+    netBadge();
+    return;
+  }
+
+  // Anlık görüntü her durumda gitmeli — yoksa katılan "oyun bitti"yi göremez
+  if(net.on && net.host) hostTick();
+
   if(STATE==='playing'){
+    if(net.on) hostApplyRemoteAttack();
     for(const f of fighters) f.update(dt);
     // simple body separation
     for(let i=0;i<fighters.length;i++) for(let j=i+1;j<fighters.length;j++){
