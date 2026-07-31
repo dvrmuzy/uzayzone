@@ -48,20 +48,24 @@ canvas#starfield {
   z-index: 2;
   max-width: 1040px;
   margin: 0 auto;
-  padding: 40px 20px 60px;
+  padding: 16px 20px 60px;
 }
 
 /* ─── Header ─── */
 header {
   text-align: center;
-  margin-bottom: 60px;
-  padding-top: 30px;
+  margin-bottom: 20px;
+  padding-top: 4px;
 }
 
 .site-logo {
   width: 100%;
-  max-width: 560px;
+  max-width: 500px;
   height: auto;
+  /* SVG'nin viewBox'ında çizimin üstünde ve altında boş alan var.
+     Negatif kenar boşluğuyla onu geri alıyoruz — viewBox'ı kırpsaydık
+     gezegenin glow filtresi de kesilirdi. */
+  margin: -12px 0 -18px;
   filter: drop-shadow(0 0 40px rgba(0, 200, 255, 0.18));
   animation: logoFloat 5s ease-in-out infinite;
 }
@@ -74,27 +78,80 @@ header {
 }
 
 /* ─── Kategori Filtresi ─── */
+/* ─── Arama Çubuğu ─── */
+.search-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
+
+.search-box { position: relative; width: 100%; max-width: 460px; }
+
+.search-box .search-icon {
+  position: absolute; left: 17px; top: 50%; transform: translateY(-50%);
+  font-size: 0.95rem; opacity: 0.5; pointer-events: none;
+}
+
+#searchInput {
+  width: 100%;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 30px;
+  padding: 13px 44px;
+  outline: none;
+  transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+}
+#searchInput::placeholder { color: #7b7694; font-weight: 600; }
+#searchInput:focus {
+  border-color: rgba(125,249,255,0.5);
+  background: rgba(125,249,255,0.06);
+  box-shadow: 0 0 24px rgba(125,249,255,0.16);
+}
+
+#searchClear {
+  position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  width: 25px; height: 25px; padding: 0;
+  border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.10); color: #cfcae4;
+  font-size: 0.8rem; line-height: 25px; text-align: center;
+  cursor: pointer; display: none;
+  transition: background 0.2s, color 0.2s;
+}
+#searchClear.on { display: block; }
+#searchClear:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+.search-hint {
+  text-align: center;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #7b7694;
+  margin: 0 0 14px;
+  min-height: 17px;
+}
+.search-hint b { color: #7df9ff; }
+
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 40px;
+  gap: 7px;
+  margin-bottom: 26px;
 }
 
 .filter-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
   font-family: 'Nunito', sans-serif;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   letter-spacing: 0.02em;
   color: #b9b4d0;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 30px;
-  padding: 9px 16px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: all 0.25s ease;
   -webkit-tap-highlight-color: transparent;
@@ -114,12 +171,12 @@ header {
   box-shadow: 0 0 22px rgba(125,249,255,0.35);
 }
 
-.filter-chip .chip-emoji { font-size: 1rem; }
+.filter-chip .chip-emoji { font-size: 0.86rem; }
 
 .filter-chip .chip-count {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   font-weight: 900;
-  padding: 1px 7px;
+  padding: 1px 6px;
   border-radius: 20px;
   background: rgba(255,255,255,0.08);
   color: #8f8aa8;
@@ -458,10 +515,10 @@ footer {
 
 /* ─── Responsive ─── */
 @media (max-width: 640px) {
-  .site-logo { max-width: 88%; }
-  header { margin-bottom: 32px; padding-top: 20px; }
-  .filter-bar { gap: 8px; margin-bottom: 32px; }
-  .filter-chip { font-size: 0.78rem; padding: 8px 13px; gap: 5px; }
+  .site-logo { max-width: 88%; margin: -8px 0 -12px; }
+  header { margin-bottom: 14px; padding-top: 2px; }
+  .filter-bar { gap: 6px; margin-bottom: 20px; }
+  .filter-chip { font-size: 0.7rem; padding: 5px 10px; gap: 4px; }
   .filter-chip .chip-count { display: none; }
   .games-grid { gap: 24px; }
   .card-body { padding: 24px 20px 16px; }
@@ -498,6 +555,16 @@ footer {
     <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
     <h1 class="site-title-fallback">UZAY ZONE</h1>
   </header>
+  <div class="search-wrap">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input id="searchInput" type="text" placeholder="Oyun ara…  (örn. simya)"
+             autocomplete="off" spellcheck="false" aria-label="Oyun ara">
+      <button id="searchClear" type="button" aria-label="Aramayı temizle">✕</button>
+    </div>
+  </div>
+  <p class="search-hint" id="searchHint"></p>
+
   <nav class="filter-bar" id="filterBar" aria-label="Oyun kategorileri"></nav>
   <section class="games-grid" id="gamesGrid"></section>
   <footer>
@@ -511,7 +578,7 @@ const GAMES = [
   {
     title: 'Çöp Cümbüşü',
     genre: 'Bulmaca',
-    desc: 'Kibritleri hareket ettirerek hedef sayıya ulaş! Üç farklı zorluk seviyesiyle bulmaca çöz.',
+    desc: 'Kibritleri oynatarak hedef sayıya ulaş.',
     href: 'kibrit-oyunu/',
     tags: ['tek', 'mobil', 'bulmaca'],
     icon: '🔥',
@@ -526,7 +593,7 @@ const GAMES = [
   {
     title: 'NEONBALL',
     genre: 'Arcade',
-    desc: 'Neon topla tuğlaları kır, seviyeleri geç! Klasik brick-breaker neon stilde.',
+    desc: 'Neon topla sahadaki tüm tuğlaları kır.',
     href: 'neonball/',
     tags: ['tek', 'aksiyon'],
     icon: '🏓',
@@ -541,7 +608,7 @@ const GAMES = [
   {
     title: 'XOX',
     genre: 'Strateji',
-    desc: 'Klasik XOX oyunu! Yapay zekaya karşı oyna veya arkadaşınla yarış.',
+    desc: 'Üç taşı yan yana getiren kazanır.',
     href: 'xox/',
     tags: ['iki', 'mobil', 'bulmaca'],
     icon: '⭕',
@@ -556,7 +623,7 @@ const GAMES = [
   {
     title: 'Bilgi Yarışı',
     genre: 'Eğitici / Arcade',
-    desc: 'Arabayı sür, soruları çöz! Sınıfını seç, yanlış cevap verirsen afetler seni bekliyor.',
+    desc: 'Arabayı sür, çıkan soruları doğru cevapla.',
     href: 'araba-yarisi/',
     tags: ['tek', 'mobil', 'egitici'],
     icon: '🏎️',
@@ -571,7 +638,7 @@ const GAMES = [
   {
     title: 'Araba Patlatma',
     genre: 'Aksiyon / Arcade',
-    desc: '30 level, 7 silah! Arabalara tiklayip patlat, arkadaslarinla yaris!',
+    desc: 'Arabalara tıkla, yedi farklı silahla patlat.',
     href: 'araba-patlatma/',
     tags: ['tek', 'mobil', 'aksiyon'],
     icon: '💣',
@@ -586,7 +653,7 @@ const GAMES = [
   {
     title: 'Kule Yığını',
     genre: '3D Arcade',
-    desc: 'Three.js ile 3D blok yığma! Hareket eden blokları mükemmel hizala, taşan kısım düşer.',
+    desc: 'Hareket eden blokları üst üste hizala.',
     href: 'kule-yigini/',
     tags: ['tek', 'mobil', '3d'],
     icon: '🏗️',
@@ -601,7 +668,7 @@ const GAMES = [
   {
     title: 'Yıldız Avcısı',
     genre: 'Aksiyon / Uzay',
-    desc: 'Uzay gemini sür, asteroidleri ve düşmanları yok et! Power-up topla, dalgaları aş.',
+    desc: 'Uzay gemini sür, düşman dalgalarını yok et.',
     href: 'yildiz-avcisi/',
     tags: ['tek', 'mobil', 'aksiyon'],
     icon: '🚀',
@@ -616,7 +683,7 @@ const GAMES = [
   {
     title: 'Uzay Kaçışı',
     genre: '3D Aksiyon',
-    desc: 'Three.js ile 3D asteroid dodger! Uzay gemini sür, taşlardan kaç, halkalardan geç.',
+    desc: 'Asteroitlerden kaç, halkalardan geç.',
     href: 'uzay-kacisi/',
     tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '🛸',
@@ -631,7 +698,7 @@ const GAMES = [
   {
     title: 'Hafıza Bahçesi',
     genre: 'Bulmaca / Hafıza',
-    desc: 'Hayvanları eşleştir, bahçeyi keşfet! 3 zorluk seviyesi, süre ve hamle rekoru.',
+    desc: 'Hayvan kartlarını eşleştir, bahçeyi aç.',
     href: 'hafiza-bahcesi/',
     tags: ['tek', 'mobil', 'bulmaca'],
     icon: '🌻',
@@ -646,7 +713,7 @@ const GAMES = [
   {
     title: 'Mini Mimar',
     genre: '3D Yaratıcılık',
-    desc: 'Voxel bloklarla kule, köprü, saray inşa et! 5 şekil · 10 renk · hazır şablonlar.',
+    desc: 'Voxel bloklarla aklındakini inşa et.',
     href: 'mini-mimar/',
     tags: ['tek', 'mobil', '3d', 'rahat'],
     icon: '🏰',
@@ -661,7 +728,7 @@ const GAMES = [
   {
     title: 'Helezon',
     genre: '3D Arcade',
-    desc: 'Sonsuz düşüş! Kuleyi döndür, boşluklardan geç, kırmızıdan kaç. 3 kombo = Smash Modu ⚡',
+    desc: 'Kuleyi döndür, boşluklardan aşağı süzül.',
     href: 'helezon/',
     tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '🌀',
@@ -676,9 +743,9 @@ const GAMES = [
   {
     title: 'Simya',
     genre: 'Bulmaca / Keşif',
-    desc: '4 elementten 25 elemente! Su, ateş, toprak, hava ile başla. Karıştır, dünyayı keşfet.',
+    desc: 'Dört elementi karıştır, yenilerini keşfet.',
     href: 'simya/',
-    tags: ['tek', 'mobil', 'bulmaca'],
+    tags: ['tek', 'mobil', 'bulmaca', 'egitici'],
     icon: '⚗️',
     colors: {
       bg: 'linear-gradient(135deg, #1a1438, #2a1850)',
@@ -691,7 +758,7 @@ const GAMES = [
   {
     title: 'Havai Fişek',
     genre: 'Festival / Rahatlatıcı',
-    desc: 'Gece şehrinin üstünde havai fişek patlat! Ekrana tıkla, renkler dans etsin. 6 şehir · yağmur, kar, açık hava.',
+    desc: 'Gece şehrinin üstünde havai fişek patlat.',
     href: 'havai-fisek/',
     tags: ['tek', 'mobil', 'rahat'],
     icon: '🎆',
@@ -706,7 +773,7 @@ const GAMES = [
   {
     title: 'Mermi Kesici',
     genre: '3D Aksiyon / Refleks',
-    desc: 'Katanalı samuraysın! Düşmanlar sana ateş ediyor, gelen mermileri havada ikiye böl. Her level daha çok düşman, daha hızlı mermi.',
+    desc: 'Katanayla gelen mermileri havada ikiye böl.',
     href: 'mermi-kesici/',
     tags: ['tek', 'mobil', '3d', 'aksiyon'],
     icon: '⚔️',
@@ -721,7 +788,7 @@ const GAMES = [
   {
     title: 'Süper Şef',
     genre: '3D Restoran / Yönetim',
-    desc: 'Kendi restoranını işlet! Salata yap, doğra, pişir, rendele. Müşterileri mutlu et, dükkanını büyüt!',
+    desc: 'Siparişleri yetiştir, restoranını büyüt.',
     href: 'super-sef/',
     tags: ['tek', 'mobil', '3d'],
     icon: '👨‍🍳',
@@ -736,7 +803,7 @@ const GAMES = [
    {
      title: 'Stickman Dövüş',
      genre: 'Aksiyon / Dövüş',
-     desc: '1-5 kişilik çöp adam dövüşü! Bilgisayara veya arkadaşlarına karşı silah seç, geri sayımdan sonra son ayakta kalan kazansın.',
+     desc: 'Silahını seç, son ayakta kalan sen ol.',
      href: 'stickman-dovus/',
      tags: ['iki', 'mobil', 'aksiyon'],
      icon: '🥊',
@@ -751,7 +818,7 @@ const GAMES = [
    {
      title: 'Roket Görevi',
      genre: '3D Simülasyon / Uzay',
-     desc: 'Yıldız gemisi ORION\'un içindesin! WASD ile dolaş, görevlileri dinle: renkli kabloları bağla, oksijen tüplerini aç. Meteorlar gövdeye çarpar, warning sesleri çalar!',
+     desc: 'Yıldız gemisindeki görevleri sırayla tamamla.',
      href: 'roket-ucusu/',
      tags: ['tek', 'mobil', '3d', 'egitici'],
      icon: '🛰️',
@@ -766,7 +833,7 @@ const GAMES = [
    {
      title: 'Bilgisayar Toplama',
      genre: '3D Eğitici / Bulmaca',
-     desc: 'Three.js ile 3D! Tornavidayla kasayı aç, parçaları sürükleyip yuvalarına tak: anakart, işlemci, RAM, ekran & ses kartı, güç kaynağı, disk. Bilgisayarı çalıştır!',
+     desc: 'Parçaları yuvasına tak, bilgisayarı çalıştır.',
      href: 'bilgisayar-toplama/',
      tags: ['tek', 'mobil', '3d', 'egitici', 'bulmaca'],
      icon: '🖥️',
@@ -781,7 +848,7 @@ const GAMES = [
    {
     title: 'Tıkla Kazan',
     genre: 'Clicker / Eğlence',
-    desc: 'Robux, Minecoin ya da Brawl Stars elması seç, tıklaya tıklaya topla! 70\'te 2\'li tıklama, 200\'de otomatik. 10.000\'de Uzaycoin açılır!',
+    desc: 'Tıkladıkça kazan, yükseltmelerle hızlan.',
     href: 'tikla-kazan/',
     tags: ['tek', 'mobil', 'rahat'],
     icon: '🪙',
@@ -796,7 +863,7 @@ const GAMES = [
   {
     title: 'Uzay Ping-Pong',
     genre: '2 Kişilik / Arcade',
-    desc: 'Tek bilgisayarda iki kişi! Sol oyuncu W-S, sağ oyuncu ok tuşları. İlk 7 sayıyı alan kazanır. Tek başınaysan bilgisayara karşı oyna.',
+    desc: 'Topu kaçırma, yedi sayıyı ilk sen al.',
     href: 'uzay-pingpong/',
     tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🏓',
@@ -811,7 +878,7 @@ const GAMES = [
   {
     title: 'Tank Savaşı',
     genre: '2 Kişilik / Aksiyon',
-    desc: 'Tek bilgisayarda iki tank kapışır! Mermiler çelik duvarlardan seker, tuğlaları yıkar. Kalkan, hız ve üçlü atış güçlendirmeleri var. Tek başınaysan bilgisayara karşı oyna.',
+    desc: 'Duvarlardan seken mermilerle rakip tankı vur.',
     href: 'tank-savasi/',
     tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🎯',
@@ -826,7 +893,7 @@ const GAMES = [
   {
     title: 'Uzay Sumo',
     genre: '2 Kişilik / Aksiyon',
-    desc: 'Rakibini uzay arenasından dışarı it! Hasarın arttıkça daha uzağa fırlarsın, arena da zamanla daralır. İki kişi ya da bilgisayara karşı oyna.',
+    desc: 'Rakibini daralan arenadan dışarı it.',
     href: 'uzay-sumo/',
     tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🤼',
@@ -841,7 +908,7 @@ const GAMES = [
   {
     title: 'Neon Tron',
     genre: '2 Kişilik / Aksiyon',
-    desc: 'Arkanda ışık izi bırakarak sür, rakibini köşeye sıkıştır! Hız, roket ve kalkan kutuları topla; lazer, meteor yağmuru ve tsunami arenayı alt üst eder. İki kişi ya da bilgisayara karşı.',
+    desc: 'Işık izi bırak, rakibini köşeye sıkıştır.',
     href: 'neon-tron/',
     tags: ['iki', 'mobil', 'aksiyon'],
     icon: '🏍️',
@@ -893,7 +960,9 @@ function renderFilters() {
 
   bar.querySelectorAll('.filter-chip').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (btn.dataset.cat === activeCategory) return;
+      if (btn.dataset.cat === activeCategory && !searchQuery.trim()) return;
+      // Kategoriye tıklamak "bu grubu göster" demektir — açık arama varsa temizlensin
+      clearSearch(false);
       activeCategory = btn.dataset.cat;
       bar.querySelectorAll('.filter-chip').forEach(b =>
         b.classList.toggle('active', b.dataset.cat === activeCategory));
@@ -925,12 +994,15 @@ function searchingHTML() {
     </div>`;
 }
 
-function notFoundHTML() {
+function notFoundHTML(query) {
+  const sub = query
+    ? `“${esc(query)}” için sonuç yok. Farklı bir kelime dene — oyun adı, türü ya da açıklamasında arıyoruz. 🚀`
+    : 'Bu grupta şimdilik oyun yok. Yakında ekleyeceğiz — başka bir kategoriye göz at! 🚀';
   return `
     <div class="search-state not-found" role="status" aria-live="polite">
       ${spaceLoaderHTML()}
       <p class="search-title">HİÇBİR OYUN BULUNAMADI</p>
-      <p class="search-sub">Bu grupta şimdilik oyun yok. Yakında ekleyeceğiz — başka bir kategoriye göz at! 🚀</p>
+      <p class="search-sub">${sub}</p>
     </div>`;
 }
 
@@ -948,17 +1020,79 @@ function searchThenRender() {
   }, SEARCH_DELAY);
 }
 
+// ─── Arama yardımcıları ───
+const esc = s => String(s).replace(/[&<>"']/g,
+  c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Türkçe duyarlı normalleştirme: "çöp cümbüşü" ile "cop cumbusu" aynı sayılsın,
+// büyük İ/I ayrımı arama sonucunu bozmasın.
+const TR_FOLD = { 'ı': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c', 'â': 'a', 'î': 'i', 'û': 'u' };
+function norm(s) {
+  return String(s || '')
+    .toLocaleLowerCase('tr')
+    .replace(/[ışğüöçâîû]/g, c => TR_FOLD[c])
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+let searchQuery = '';
+
+// Oyunu sorguya göre puanla; 0 = eşleşme yok.
+// Başlık eşleşmesi açıklamadan ağır basar — "simya" yazınca Simya en başta çıksın.
+function scoreGame(g, tokens) {
+  const title = norm(g.title);
+  const slug  = norm((g.href || '').replace(/\//g, ''));
+  const genre = norm(g.genre);
+  const tags  = (g.tags || []).map(norm).join(' ');
+  const desc  = norm(g.desc);
+
+  let total = 0;
+  for (const t of tokens) {
+    let s = 0;
+    if (title === t)              s = 200;
+    else if (title.startsWith(t)) s = 120;
+    else if (title.includes(t))   s = 80;
+    else if (slug.includes(t))    s = 70;
+    else if (genre.includes(t))   s = 40;
+    else if (tags.includes(t))    s = 25;
+    else if (desc.includes(t))    s = 12;
+    if (!s) return 0;            // her kelime bir yerde geçmeli
+    total += s;
+  }
+  return total;
+}
+
+function updateSearchHint(count) {
+  const el = document.getElementById('searchHint');
+  if (!el) return;
+  el.innerHTML = searchQuery.trim() ? `<b>${count}</b> oyun bulundu` : '';
+}
+
 // ─── Render Cards ───
 function renderCards() {
   const grid = document.getElementById('gamesGrid');
+  const q = searchQuery.trim();
+  const tokens = q ? norm(q).split(' ').filter(Boolean) : [];
+
   // En son eklenen oyunlar (array'in sonundakiler) en başta gözüksün
-  const ordered = GAMES
-    .map((g, idx) => ({ ...g, isNew: idx >= GAMES.length - NEW_COUNT }))
-    .filter(g => activeCategory === 'all' || (g.tags || []).includes(activeCategory))
-    .reverse();
+  let ordered = GAMES
+    .map((g, idx) => ({ ...g, isNew: idx >= GAMES.length - NEW_COUNT, _i: idx }))
+    .filter(g => activeCategory === 'all' || (g.tags || []).includes(activeCategory));
+
+  if (tokens.length) {
+    // Aramada sıralama alaka düzeyine göre; eşit puanda yine yeni olan önce
+    ordered = ordered
+      .map(g => ({ ...g, _s: scoreGame(g, tokens) }))
+      .filter(g => g._s > 0)
+      .sort((a, b) => b._s - a._s || b._i - a._i);
+  } else {
+    ordered = ordered.reverse();
+  }
+
+  updateSearchHint(ordered.length);
 
   if (!ordered.length) {
-    grid.innerHTML = notFoundHTML();
+    grid.innerHTML = notFoundHTML(q);
     return;
   }
 
@@ -979,6 +1113,49 @@ function renderCards() {
     </a>
   `).join('');
 }
+
+// ─── Arama Kutusu ───
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+let typeTimer = null;
+
+function clearSearch(focus) {
+  searchInput.value = '';
+  searchQuery = '';
+  searchClear.classList.remove('on');
+  if (focus) searchInput.focus();
+}
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value;
+  searchClear.classList.toggle('on', !!searchQuery.trim());
+
+  // Aramada kategori kısıtı kalksın: yazdığın oyun hangi kategoride olursa olsun çıksın
+  if (searchQuery.trim() && activeCategory !== 'all') {
+    activeCategory = 'all';
+    document.querySelectorAll('.filter-chip').forEach(b =>
+      b.classList.toggle('active', b.dataset.cat === 'all'));
+    history.replaceState(null, '', location.pathname);
+  }
+
+  // Yazarken 700 ms'lik "aranıyor" sahnesi gösterilmez — sonuç anında güncellenir
+  clearTimeout(typeTimer);
+  typeTimer = setTimeout(renderCards, 160);
+});
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { clearSearch(true); renderCards(); }
+});
+
+searchClear.addEventListener('click', () => { clearSearch(true); renderCards(); });
+
+// "/" tuşu aramaya odaklanır
+addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== searchInput) {
+    e.preventDefault();
+    searchInput.focus();
+  }
+});
 
 // ─── Uzay Sahnesi ───
 const canvas = document.getElementById('starfield');

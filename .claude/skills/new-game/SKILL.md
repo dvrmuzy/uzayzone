@@ -1,6 +1,6 @@
 ---
 name: new-game
-description: Uzay Zone portalına yeni bir oyun ekle. Yeni klasör oluşturur, oyunun index.html dosyasını yapar, ana sayfaya kart olarak ekler ve ana sayfaya dön butonu koyar.
+description: Uzay Zone portalına yeni bir oyun ekle. Yeni klasör oluşturur, oyunun index.html dosyasını yapar, ana sayfaya kart olarak ekler ve ana sayfaya dön butonu koyar. 2+ kişilik oyunlara oda kodu ile "Arkadaşınla Oyna" çok oyunculu modunu da ekler.
 argument-hint: [oyun-açıklaması]
 user-invocable: true
 ---
@@ -141,7 +141,100 @@ Oyunun `</body>` tagından hemen önce şu butonu ekle (renkleri oyunun temasın
 
 Butonun `color` ve `font-family` değerlerini oyunun temasına göre ayarla. Buton sabit kalmalı, oynanışı engellemeyecek konumda olmalı (mobilde alt kısma da alabilirsin).
 
-## Adım 5: Ana Sayfaya Kart Ekle
+## Adım 5: Çok Oyunculu — "Arkadaşınla Oyna" (2+ kişilik oyunlarda ZORUNLU)
+
+Oyun **2 veya daha fazla kişiyle** oynanabiliyorsa (aynı ekranda iki oyuncu, sıra tabanlı, düello, vb.) mutlaka **oda kodu ile uzaktan oynama** modunu da ekle. İki arkadaş farklı bilgisayarlardan 4 haneli kod paylaşarak aynı oyuna girer.
+
+Tek kişilik oyunlarda (skor koşusu, bulmaca, endless runner) bu adımı **atla**.
+
+### Altyapı
+
+Kök dizindeki paylaşılan modülü kullan — her oyun için yeniden yazma:
+
+- `multiplayer.js` — oda kur/katıl, durum senkronu, bağlantı takibi (Firebase Realtime Database)
+- `firebase-config.js` — yapılandırma (hazır, dokunma)
+- `firebase-rules.json` — güvenlik kuralları (referans)
+
+**Firebase SDK'sını tembel yükle** — yalnızca kullanıcı çevrimiçi modu seçince inmeli, normal oynayanlar indirmemeli:
+
+```js
+let Net = null;
+async function loadNet() {
+  if (!Net) Net = await import('../multiplayer.js');
+  return Net;
+}
+```
+
+Modülün API'si:
+
+```js
+const kod  = await Net.createRoom('klasor-adi', { ...başlangıçDurumu });  // kuran = 'X'
+const oda  = await Net.joinRoom('klasor-adi', 'ABCD');                    // katılan = 'O'
+Net.onRoom(oda => { ... });          // tüm odayı dinle (sıra tabanlı oyunlar)
+Net.onChild('snap', s => { ... });   // tek dalı dinle (gerçek zamanlı — çok daha ucuz)
+Net.patch({ alan: değer });          // birden fazla alanı güncelle
+Net.setChild('snap', metin);         // tek dalı yaz
+Net.leave();
+```
+
+### İki desen — oyunun türüne göre seç
+
+**A) Sıra tabanlı** (XOX, dama, kelime oyunu, kart oyunu)
+
+Oda durumu **tek doğruluk kaynağıdır**. Hamle yapan oyuncu yerel durumu değiştirmez; doğrudan odaya yazar. Ekranı **iki taraf da odadan gelen güncellemeyle** çizer. Böylece durum ayrışması imkânsız hale gelir.
+
+Skor gibi biriken değerleri **yalnızca oda kuran** yazsın (iki taraf da yazarsa çift sayılır). Referans: `xox/index.html`.
+
+**B) Gerçek zamanlı** (dövüş, yarış, top oyunu, nişancı)
+
+**Host-otoriteli** kur: oda kuran fiziğin tamamını çalıştırıp ~20 Hz durum özeti yayınlar; katılan fizik çalıştırmaz, girdisini yollayıp gelen durumu yumuşatarak çizer.
+
+Durum özetini **virgülle ayrılmış sayı dizisi** olarak paketle (JSON değil) — 50-200 bayt aralığında kalır, saniyede 20 kez göndermek ~1-2 KB/sn eder. Konumları `Math.round(v*10)/10` ile yuvarla.
+
+Katılan taraftaki girdi gecikmesini gizlemek şart, yoksa oyun "gecikmeli" hissettirir. İki yöntem:
+
+1. **Katılan kendi nesnesinin sahibi olsun** — nesnenin hareketi rakiple etkileşmiyor ise (ping-pong raketi gibi) katılan onu tamamen yerelde sürüp **konumunu** yollasın, host o konumu olduğu gibi kullansın. En temizi, sıfır gecikme. Referans: `uzay-pingpong/index.html`
+2. **Yerel tahmin + orantılı düzeltme** — nesne rakiple çarpışıyorsa (sumo savaşçısı gibi) katılan aynı fizik fonksiyonunu yerelde çalıştırsın, otoritenin sonucuyla arasındaki hatayı büyüklüğüne göre kapatsın: küçük sapma %5, çarpışma %40, ışınlanma anında. Referans: `uzay-sumo/index.html`
+
+Sesleri ve parçacıkları katılan tarafta **durum farkından türet** (hasar arttı → vuruş sesi, skor arttı → sayı sesi); ayrıca olay göndermeye gerek yok.
+
+### Arayüz düzeni (tüm oyunlarda aynı olsun)
+
+Mod seçim satırına üçüncü düğme: `🌐 ARKADAŞINLA`. Seçilince oyunun başlat düğmesi gizlenir, yerine şu panel çıkar:
+
+```html
+<div id="online-wrap">
+  <div class="row">
+    <button id="net-create">🆕 ODA KUR</button>
+    <button id="net-showjoin">🔑 KODA KATIL</button>
+  </div>
+  <div id="net-join-row">
+    <input id="net-code-in" maxlength="4" placeholder="––––" autocomplete="off" spellcheck="false" />
+    <button id="net-join">KATIL</button>
+  </div>
+  <div id="net-code-box">
+    <div class="lbl">ODA KODUN</div><div id="net-code">––––</div>
+    <button id="net-copy">📋 KOPYALA</button>
+  </div>
+  <div id="net-status"></div>
+</div>
+```
+
+Oyun alanının köşesine bağlantı rozeti koy: yeşil/kırmızı nokta + rol ("SEN: OYUNCU 2") + katılan tarafta ölçülen **ms gecikme**. Gecikmeyi gerçekten ölç — katılanın girdisine sıra numarası koy, host özette geri yansıtsın, katılan kendi saatiyle gidiş-dönüşü hesaplasın.
+
+### Sık yapılan hatalar
+
+- **CSS'te `display:none` olan paneli `style.display = ''` ile açma** — bu inline stili siler ve eleman CSS kuralına geri düşerek gizli kalır. `classList.toggle('on')` + `#panel.on { display: flex }` kullan.
+- Kod girme kutusunda `keydown` olayına `e.stopPropagation()` ekle, yoksa yazarken oyunun tuş kısayolları tetiklenir.
+- Çevrimiçi modda **duraklatmayı kapat** (tek taraflı duraklatma diğerini dondurur) ve **yeni maçı yalnızca oda kuran başlatabilsin**.
+- Katılan oyuncu kendi bilgisayarında yalnız olduğu için **her iki tuş takımını da** (WASD ve oklar) kendi karakteri için kabul et.
+- Oda kodu üretirken karıştırılan karakterleri çıkar (`0/O`, `1/I/L`) — modül bunu zaten yapıyor.
+
+### Test uyarısı (kullanıcıya mutlaka söyle)
+
+ES modülü kullanıldığı için dosyayı çift tıklayarak (`file://`) açmak **çalışmaz**; yerel sunucu gerekir. Ayrıca tek bilgisayarda iki pencereyle test ederken pencereler **yan yana ve tamamen görünür** olmalı — Chrome arkada kalan sekmelerde `requestAnimationFrame`'i saniyede ~1 kareye düşürür ve bu gecikme sanılır.
+
+## Adım 6: Ana Sayfaya Kart Ekle
 
 `uzayzone/index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle.
 
@@ -182,7 +275,7 @@ Array'in **son `NEW_COUNT` (varsayılan 2)** oyunu otomatik olarak `is-new` sın
 
 Bunlar için ekstra bir şey yapmana gerek yok; sadece yeni oyunu array'in sonuna ekle. Böylece son eklenen 2 oyun her zaman "YENİ" olarak işaretli kalır, daha eskiler otomatik olarak normale döner. Kaç oyunun "YENİ" sayılacağını değiştirmek istersen `index.html` içindeki `const NEW_COUNT = 2;` değerini güncelle.
 
-## Adım 6: Doğrulama
+## Adım 7: Doğrulama
 
 Bitirdikten sonra şunları kontrol et:
 
@@ -192,12 +285,14 @@ Bitirdikten sonra şunları kontrol et:
 4. Oyun bağımsız çalışıyor mu (mantık hatası, asset yükleme hatası yok mu)
 5. Ana sayfaya dön butonu oyunda görünüyor mu
 6. `<script src="../analytics.js"></script>` oyunun `</head>` öncesine eklendi mi (Google Analytics)
-7. `uzayzone/index.html` GAMES array'ine kart eklendi mi
-8. Kullanıcıya oyunu tarayıcıda test etmesini söyle, ana sayfa URL'sini hatırlat
+7. **2+ kişilik oyunsa** "🌐 ARKADAŞINLA" modu eklendi mi; panel açılıyor mu (`classList.toggle('on')` kullanıldı mı), Firebase tembel yükleniyor mu, referans verilen ID'lerin hepsi HTML'de var mı
+8. `uzayzone/index.html` GAMES array'ine kart eklendi mi
+9. Kullanıcıya oyunu tarayıcıda test etmesini söyle, ana sayfa URL'sini hatırlat — çok oyunculu eklendiyse **yerel sunucu gerektiğini** de belirt
 
 ## Önemli Notlar
 
-- **Mevcut oyun referansları:** `kibrit-oyunu/` (vanilla bulmaca), `neonball/` (vanilla arcade), `xox/` (vanilla), `kule-yigini/` (Three.js 3D), `yildiz-avcisi/` (vanilla 2D shooter), `uzay-kacisi/` (Three.js 3D dodger), `mini-mimar/` (Three.js voxel editör), `hafiza-bahcesi/` (DOM card flip)
+- **Mevcut oyun referansları:** `kibrit-oyunu/` (vanilla bulmaca), `neonball/` (vanilla arcade), `xox/` (vanilla + **sıra tabanlı çok oyunculu**), `kule-yigini/` (Three.js 3D), `yildiz-avcisi/` (vanilla 2D shooter), `uzay-kacisi/` (Three.js 3D dodger), `mini-mimar/` (Three.js voxel editör), `hafiza-bahcesi/` (DOM card flip), `uzay-sumo/` (**gerçek zamanlı çok oyunculu, yerel tahmin**), `uzay-pingpong/` (**gerçek zamanlı çok oyunculu, katılan kendi raketinin sahibi**)
+- **Çok oyunculu:** Oyun 2+ kişilikse Adım 5 zorunludur — atlanırsa oyun eksik sayılır
 - **Karmaşıklığı isteğe göre ayarla** ama her zaman **tam çalışır** olsun — yarım bırakma
 - **Web Audio** ses sentezi her zaman ekle (kütüphanenin kendi audio'su yerine de kullanabilirsin) — atış, vuruş, kazanma melodisi
 - **Oyun durumu görünür**: Skor, can, seviye, süre, ilerleme HUD'da
