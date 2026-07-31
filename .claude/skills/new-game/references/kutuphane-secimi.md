@@ -1,4 +1,4 @@
-# Motor / Kütüphane Seçimi
+# Kütüphane Seçimi
 
 Oyun türüne göre **en uygun aracı** seç. Tek bir CDN `<script>` etiketiyle ekle — npm/build adımı yok, hepsi browser-ready. Birden fazla kütüphane gerekirse birleştirebilirsin (örn. PixiJS + Matter.js).
 

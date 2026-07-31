@@ -23,11 +23,11 @@ Kullanıcının `$ARGUMENTS` ile verdiği açıklamadan şunları çıkar veya g
 - **Renk paleti** (oyunun temasına uygun ana renk, accent renk, glow renk)
 - **Kaç kişilik?** — Adım 5'i bu belirler, şimdi karara bağla.
 
-## Adım 2: Motor / Kütüphane Seçimi
+## Adım 2: Kütüphane Seçimi
 
 Basit 2D bulmaca / kart / sıra tabanlı / DOM ağırlıklı oyunlarda **vanilla JS + Canvas** kal, referans dosyasını açma.
 
-Sprite'lı arcade, fizik, 3D veya yüksek performans grafik gerekiyorsa → **oku:** `references/motor-secimi.md` (motor tablosu + CDN URL'leri)
+Sprite'lı arcade, fizik, 3D veya yüksek performans grafik gerekiyorsa → **oku:** `references/kutuphane-secimi.md` (kütüphane tablosu + CDN URL'leri)
 
 ## Adım 3: Asset Kararı
 
