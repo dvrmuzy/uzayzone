@@ -1,0 +1,1392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>???</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #ffffff;
+    --panel: #f1f3f4;
+    --ink: #202124;
+    --ink-soft: #5f6368;
+    --line: #dadce0;
+    --pixel: #535353;
+    --blue: #1a73e8;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body { overflow-x: hidden; }
+
+  /* ───────── Hata sayfası ───────── */
+
+  #errorPage {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 90px 24px 70px;
+  }
+  #errorPage.off { display: none; }
+
+  #dinoIcon {
+    display: block;
+    image-rendering: pixelated;
+    margin-bottom: 26px;
+    width: 96px;
+    height: auto;
+  }
+
+  #errorPage h1 {
+    font-size: 1.6rem;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    margin-bottom: 18px;
+  }
+
+  .sub {
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  #errorPage ol {
+    margin: 0 0 22px 20px;
+    font-size: 0.95rem;
+    color: var(--ink-soft);
+    line-height: 1.9;
+  }
+
+  .err-code {
+    font-size: 0.78rem;
+    color: #80868b;
+    letter-spacing: 0.4px;
+    margin-bottom: 26px;
+  }
+
+  .btn {
+    font: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    border: 0;
+    border-radius: 4px;
+    padding: 10px 20px;
+    background: var(--blue);
+    color: #fff;
+    cursor: pointer;
+    transition: background .2s, transform .12s;
+  }
+  .btn:hover { background: #1765cc; }
+  .btn:active { transform: scale(0.97); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--blue);
+    border: 1px solid var(--line);
+  }
+  .btn.ghost:hover { background: #f1f3f4; }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .shake { animation: shake .4s; }
+
+  #retryNote {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-top: 14px;
+    min-height: 20px;
+    opacity: 0;
+    transition: opacity .3s;
+  }
+  #retryNote.on { opacity: 1; }
+
+  .divider {
+    height: 1px;
+    background: var(--line);
+    margin: 40px 0 30px;
+  }
+
+  #errorPage h2 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .h2-sub {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin-bottom: 20px;
+  }
+
+  .choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .choice {
+    font: inherit;
+    text-align: left;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 14px 14px;
+    cursor: pointer;
+    transition: transform .15s, border-color .2s, background .2s;
+  }
+  .choice:hover {
+    transform: translateY(-3px);
+    border-color: #9aa0a6;
+    background: #e8eaed;
+  }
+  .choice:active { transform: translateY(-1px); }
+
+  .choice canvas {
+    display: block;
+    image-rendering: pixelated;
+    width: 100%;
+    max-width: 74px;
+    height: auto;
+    margin-bottom: 12px;
+  }
+  .choice b {
+    display: block;
+    font-size: 0.92rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .choice span {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--ink-soft);
+    line-height: 1.35;
+  }
+
+  /* ───────── Oyun ekranı ───────── */
+
+  #gameScreen {
+    display: none;
+    min-height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 70px 16px 24px;
+    gap: 12px;
+  }
+  #gameScreen.on { display: flex; }
+
+  .bar {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+  .bar b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  #gameTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-right: auto;
+  }
+  #livesWrap { display: none; }
+  #livesWrap.on { display: inline; }
+
+  .chips { display: flex; gap: 6px; }
+  .chip {
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all .18s;
+  }
+  .chip:hover { border-color: #9aa0a6; }
+  .chip.active { background: var(--pixel); border-color: var(--pixel); color: #fff; }
+
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+  }
+
+  #gameCanvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    background: #f7f7f7;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    touch-action: none;
+  }
+
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    background: rgba(247, 247, 247, 0.92);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  #overlay.on { display: flex; }
+  #overlayTitle { font-size: 1.25rem; font-weight: 600; }
+  #overlayText { font-size: 0.88rem; color: var(--ink-soft); line-height: 1.6; }
+  .overlay-btns { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+
+  #hint {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    text-align: center;
+    max-width: 680px;
+    line-height: 1.6;
+  }
+
+  /* Mobil yön tuşları */
+  #dpad {
+    display: none;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-rows: repeat(2, 56px);
+    gap: 8px;
+    margin-top: 4px;
+  }
+  #dpad.on { display: grid; }
+  #dpad button {
+    font: inherit;
+    font-size: 1.2rem;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--pixel);
+    border-radius: 10px;
+    cursor: pointer;
+    touch-action: none;
+  }
+  #dpad button:active { background: #dadce0; }
+  .pad-up { grid-column: 2; grid-row: 1; }
+  .pad-left { grid-column: 1; grid-row: 2; }
+  .pad-down { grid-column: 2; grid-row: 2; }
+  .pad-right { grid-column: 3; grid-row: 2; }
+
+  @media (max-width: 620px) {
+    #errorPage { padding: 84px 18px 50px; }
+    #errorPage h1 { font-size: 1.35rem; }
+    .choices { grid-template-columns: 1fr; }
+    .choice { display: flex; align-items: center; gap: 14px; padding: 12px 14px; }
+    .choice canvas { margin-bottom: 0; max-width: 54px; flex: 0 0 54px; }
+    .choice div { min-width: 0; }
+    #gameScreen { padding: 66px 10px 18px; }
+    .bar { font-size: 0.8rem; }
+  }
+</style>
+<script src="../analytics.js"></script>
+</head>
+<body>
+
+<section id="errorPage">
+  <canvas id="dinoIcon" width="48" height="52"></canvas>
+  <h1>İnternet bağlantısı yok</h1>
+  <p class="sub">Şunları deneyin:</p>
+  <ol>
+    <li>İnternete bağlı olduğunuzu kontrol edin</li>
+  </ol>
+  <p class="err-code">ERR_INTERNET_DISCONNECTED</p>
+  <button class="btn" id="retryBtn" type="button">Yeniden dene</button>
+  <p id="retryNote"></p>
+
+  <div class="divider"></div>
+
+  <h2>Lütfen oyun seçin</h2>
+  <p class="h2-sub">Bağlantı gelene kadar vakit geçirmen için üç tane var.</p>
+  <div class="choices">
+    <button class="choice" type="button" data-game="dino">
+      <canvas class="thumb" data-thumb="dino" width="40" height="30"></canvas>
+      <div>
+        <b>Zıplayan Dino</b>
+        <span>Kaktüsleri atla, kuşların altına eğil. Bitiş yok.</span>
+      </div>
+    </button>
+    <button class="choice" type="button" data-game="yilan">
+      <canvas class="thumb" data-thumb="yilan" width="40" height="30"></canvas>
+      <div>
+        <b>Piksel Yılan</b>
+        <span>Yem topla, uza, kendine çarpma.</span>
+      </div>
+    </button>
+    <button class="choice" type="button" data-game="tugla">
+      <canvas class="thumb" data-thumb="tugla" width="40" height="30"></canvas>
+      <div>
+        <b>Tuğla Kır</b>
+        <span>Topu sektir, bütün tuğlaları temizle.</span>
+      </div>
+    </button>
+  </div>
+</section>
+
+<section id="gameScreen">
+  <div class="bar">
+    <span id="gameTitle">Oyun</span>
+    <span>Skor: <b id="scoreVal">0</b></span>
+    <span>Rekor: <b id="bestVal">0</b></span>
+    <span id="livesWrap">Can: <b id="livesVal">3</b></span>
+    <div class="chips" id="diffChips">
+      <button class="chip" type="button" data-diff="kolay">Kolay</button>
+      <button class="chip" type="button" data-diff="orta">Orta</button>
+      <button class="chip" type="button" data-diff="zor">Zor</button>
+    </div>
+    <button class="btn ghost" id="menuBtn" type="button">Oyun listesi</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="gameCanvas" width="640" height="260"></canvas>
+    <div id="overlay">
+      <div id="overlayTitle">Hazır mısın?</div>
+      <div id="overlayText">Başlamak için tıkla.</div>
+      <div class="overlay-btns">
+        <button class="btn" id="restartBtn" type="button">Başla</button>
+        <button class="btn ghost" id="backBtn" type="button">Başka oyun</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dpad">
+    <button class="pad-up" type="button" data-dir="up">▲</button>
+    <button class="pad-left" type="button" data-dir="left">◀</button>
+    <button class="pad-down" type="button" data-dir="down">▼</button>
+    <button class="pad-right" type="button" data-dir="right">▶</button>
+  </div>
+
+  <p id="hint">Zıplamak için boşluk tuşu ya da ekrana dokun.</p>
+</section>
+
+<script>
+(function () {
+  'use strict';
+
+  // ═══════════════ Ses (Web Audio ile sentez) ═══════════════
+  var actx = null;
+  function audio() {
+    if (!actx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      actx = new AC();
+    }
+    if (actx.state === 'suspended') actx.resume();
+    return actx;
+  }
+  function beep(freq, dur, type, vol) {
+    var a = audio();
+    if (!a) return;
+    try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'square';
+      o.frequency.setValueAtTime(freq, a.currentTime);
+      g.gain.setValueAtTime(vol == null ? 0.06 : vol, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + dur);
+    } catch (e) {}
+  }
+  function sweep(f1, f2, dur, vol) {
+    var a = audio();
+    if (!a) return;
+    try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(f1, a.currentTime);
+      o.frequency.exponentialRampToValueAtTime(Math.max(30, f2), a.currentTime + dur);
+      g.gain.setValueAtTime(vol == null ? 0.07 : vol, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + dur);
+    } catch (e) {}
+  }
+  var SFX = {
+    jump:  function () { beep(620, 0.09, 'square', 0.05); },
+    duck:  function () { beep(220, 0.06, 'square', 0.04); },
+    point: function () { beep(900, 0.07, 'square', 0.04); },
+    eat:   function () { beep(760, 0.07, 'square', 0.05); setTimeout(function(){ beep(1040, 0.07, 'square', 0.04); }, 60); },
+    hit:   function () { beep(480, 0.05, 'square', 0.05); },
+    die:   function () { sweep(420, 70, 0.42, 0.08); },
+    win:   function () { [523, 659, 784, 1046].forEach(function (f, i) { setTimeout(function(){ beep(f, 0.14, 'square', 0.05); }, i * 110); }); }
+  };
+
+  // ═══════════════ Piksel çizim yardımcıları ═══════════════
+  function drawMap(c, map, x, y, px, color) {
+    c.fillStyle = color;
+    for (var r = 0; r < map.length; r++) {
+      var row = map[r];
+      for (var i = 0; i < row.length; i++) {
+        if (row[i] !== '.') c.fillRect(x + i * px, y + r * px, px, px);
+      }
+    }
+  }
+
+  // Dino gövdesi (20x18 piksel) — bacaklar ayrı çizilir
+  var DINO_BODY = [
+    '..............XXXXXX',
+    '.............XXXXXXX',
+    '.............XXXXXXX',
+    '.............XX.XXXX',
+    '.............XXXXXXX',
+    '.............XXXX...',
+    '.............XXXXX..',
+    'X............XXXXXXX',
+    'XX..........XXXXXXX.',
+    'XXX........XXXXXXXX.',
+    'XXXX......XXXXXXXXX.',
+    'XXXXX....XXXXXXXXXX.',
+    'XXXXXXXXXXXXXXXXXXX.',
+    '.XXXXXXXXXXXXXXXXX..',
+    '..XXXXXXXXXXXXXXX...',
+    '...XXXXXXXXXXXXXX...',
+    '....XXXXXXXXXXXX....',
+    '....XXXXXXXXXX......'
+  ];
+  var DINO_LEGS = [
+    [ // duruş / adım A
+      '....XXX...XXXX......',
+      '....XX......XX......',
+      '....XX.....XXX......',
+      '....XXX....XX.......'
+    ],
+    [ // adım B
+      '....XXX...XXXX......',
+      '....XXX....XX.......',
+      '.....XX....XX.......',
+      '....XXX...XXXX......'
+    ],
+    [ // çarpışma (iki ayak da yerde)
+      '....XXX...XXXX......',
+      '....XX.....XX.......',
+      '....XX.....XX.......',
+      '...XXXX...XXXX......'
+    ]
+  ];
+  var BIRD = [
+    [
+      '..........XX....',
+      '.........XXXX...',
+      'XXXX....XXXXXX..',
+      '.XXXXXXXXXXXXXXX',
+      '..XXXXXXXXXXXX..',
+      '...XXXXXXXX.....',
+      '....XX..........'
+    ],
+    [
+      '................',
+      '........XX......',
+      '.......XXXXX....',
+      'XXXXXXXXXXXXXXXX',
+      '.XXXXXXXXXXXX...',
+      '..XXXX..XXXX....',
+      '..XXXX..........'
+    ]
+  ];
+
+  function drawDino(c, x, groundY, px, frame, ducking, color) {
+    if (ducking) {
+      c.save();
+      c.translate(x, groundY);
+      c.scale(1.25, 0.58);
+      drawMap(c, DINO_BODY, 0, -22 * px, px, color);
+      drawMap(c, DINO_LEGS[frame % 2], 0, -4 * px, px, color);
+      c.restore();
+    } else {
+      drawMap(c, DINO_BODY, x, groundY - 22 * px, px, color);
+      drawMap(c, DINO_LEGS[frame], x, groundY - 4 * px, px, color);
+    }
+  }
+
+  // ═══════════════ Ortak durum ═══════════════
+  var errorPage = document.getElementById('errorPage');
+  var gameScreen = document.getElementById('gameScreen');
+  var canvas = document.getElementById('gameCanvas');
+  var ctx = canvas.getContext('2d');
+  var overlay = document.getElementById('overlay');
+  var overlayTitle = document.getElementById('overlayTitle');
+  var overlayText = document.getElementById('overlayText');
+  var restartBtn = document.getElementById('restartBtn');
+  var backBtn = document.getElementById('backBtn');
+  var menuBtn = document.getElementById('menuBtn');
+  var gameTitle = document.getElementById('gameTitle');
+  var scoreVal = document.getElementById('scoreVal');
+  var bestVal = document.getElementById('bestVal');
+  var livesWrap = document.getElementById('livesWrap');
+  var livesVal = document.getElementById('livesVal');
+  var hint = document.getElementById('hint');
+  var dpad = document.getElementById('dpad');
+  var diffChips = document.getElementById('diffChips');
+  var retryBtn = document.getElementById('retryBtn');
+  var retryNote = document.getElementById('retryNote');
+
+  var DIFFS = ['kolay', 'orta', 'zor'];
+  var diff = localStorage.getItem('baglantiYok_zorluk');
+  if (DIFFS.indexOf(diff) === -1) diff = 'orta';
+
+  var current = null;   // aktif oyun nesnesi
+  var rafId = 0, lastT = 0;
+
+  function store(key, val) {
+    try { localStorage.setItem(key, val); } catch (e) {}
+  }
+  function best(key) {
+    var v = parseInt(localStorage.getItem('baglantiYok_' + key) || '0', 10);
+    return isNaN(v) ? 0 : v;
+  }
+  function setBest(key, v) {
+    if (v > best(key)) { store('baglantiYok_' + key, String(v)); return true; }
+    return false;
+  }
+
+  function setScore(n) { scoreVal.textContent = n; }
+  function setBestLabel(n) { bestVal.textContent = n; }
+
+  function showOverlay(title, text, btn) {
+    overlayTitle.textContent = title;
+    overlayText.innerHTML = text;
+    restartBtn.textContent = btn || 'Başla';
+    overlay.classList.add('on');
+  }
+  function hideOverlay() { overlay.classList.remove('on'); }
+
+  function loop(t) {
+    rafId = requestAnimationFrame(loop);
+    var dt = lastT ? Math.min(0.05, (t - lastT) / 1000) : 0;
+    lastT = t;
+    if (current) { current.update(dt); current.draw(); }
+  }
+  function startLoop() {
+    if (rafId) cancelAnimationFrame(rafId);
+    lastT = 0;
+    rafId = requestAnimationFrame(loop);
+  }
+  function stopLoop() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = 0;
+  }
+
+  // ═══════════════ 1) Zıplayan Dino ═══════════════
+  var Dino = {
+    key: 'dino',
+    title: 'Zıplayan Dino',
+    w: 640, h: 260,
+    hint: 'Zıpla: <b>Boşluk</b> / <b>↑</b> / ekranın üst yarısına dokun &nbsp;•&nbsp; Eğil: <b>↓</b> / ekranın alt şeridine dokun',
+    tune: { kolay: { v: 290, a: 7, gap: 1.35 }, orta: { v: 340, a: 11, gap: 1.15 }, zor: { v: 400, a: 16, gap: 0.98 } },
+    reset: function () {
+      var t = this.tune[diff];
+      this.groundY = 200;
+      this.px = 2;
+      this.dinoX = 46;
+      this.y = 0;          // yerden yükseklik
+      this.vy = 0;
+      this.ducking = false;
+      this.speed = t.v;
+      this.accel = t.a;
+      this.gapMul = t.gap;
+      this.obs = [];
+      this.clouds = [{ x: 400, y: 50 }, { x: 620, y: 84 }];
+      this.dist = 0;
+      this.nextSpawn = 340;
+      this.legTimer = 0;
+      this.leg = 0;
+      this.score = 0;
+      this.lastMile = 0;
+      this.night = false;
+      this.nightAt = 700;
+      this.dead = false;
+      this.running = false;
+      setScore(0);
+      setBestLabel(best('dino'));
+    },
+    start: function () { this.running = true; this.dead = false; },
+    jump: function () {
+      if (this.dead) return;
+      if (!this.running) { hideOverlay(); this.start(); return; }
+      if (this.y === 0) { this.vy = -820; SFX.jump(); }
+    },
+    setDuck: function (on) {
+      if (this.dead || !this.running) return;
+      if (on && !this.ducking && this.y === 0) SFX.duck();
+      this.ducking = on;
+      if (on && this.y > 0) this.vy += 60;  // havadayken hızlı iniş
+    },
+    keydown: function (e) {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { this.jump(); return true; }
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { this.setDuck(true); return true; }
+      return false;
+    },
+    keyup: function (e) {
+      if (e.code === 'ArrowDown' || e.code === 'KeyS') { this.setDuck(false); return true; }
+      return false;
+    },
+    pointerdown: function (p) {
+      this.lastPointerY = p.y;
+      // Tuvalin alt şeridi = eğil, üstü = zıpla
+      if (this.running && !this.dead && p.y > this.h * 0.68) this.setDuck(true);
+      else this.jump();
+    },
+    pointermove: function (p) {
+      if (this.lastPointerY != null && p.y - this.lastPointerY > 30) this.setDuck(true);
+    },
+    pointerup: function () {
+      this.lastPointerY = null;
+      this.setDuck(false);
+    },
+    dirBtn: function (d) {
+      if (d === 'up') this.jump();
+      else if (d === 'down') this.setDuck(true);
+    },
+    dirBtnUp: function (d) { if (d === 'down') this.setDuck(false); },
+
+    spawn: function () {
+      var r = Math.random();
+      if (this.score > 220 && r < 0.28) {
+        // kuş: alçak (zıpla) veya yüksek (eğil)
+        var high = Math.random() < 0.5;
+        this.obs.push({ type: 'bird', x: this.w + 30, y: this.groundY - (high ? 62 : 26), w: 32, h: 14, f: 0, t: 0 });
+      } else {
+        var big = r > 0.6;
+        var n = 1 + Math.floor(Math.random() * (big ? 2 : 3));
+        var uw = big ? 16 : 12;
+        this.obs.push({ type: 'cactus', x: this.w + 20, big: big, n: n, w: uw * n, h: big ? 40 : 28 });
+      }
+      var base = (260 + Math.random() * 260) * this.gapMul;
+      this.nextSpawn = base * (this.speed / 340);
+    },
+
+    update: function (dt) {
+      if (!this.running || this.dead) return;
+      this.speed += this.accel * dt;
+      var move = this.speed * dt;
+      this.dist += move;
+
+      // dino
+      var g = this.ducking ? 3400 : 2500;
+      this.vy += g * dt;
+      this.y -= this.vy * dt;
+      if (this.y < 0) { this.y = 0; this.vy = 0; }
+      this.legTimer += dt;
+      if (this.legTimer > 0.09) { this.legTimer = 0; this.leg = 1 - this.leg; }
+
+      // engeller
+      this.nextSpawn -= move;
+      if (this.nextSpawn <= 0) this.spawn();
+      for (var i = this.obs.length - 1; i >= 0; i--) {
+        var o = this.obs[i];
+        o.x -= move + (o.type === 'bird' ? move * 0.25 : 0);
+        if (o.type === 'bird') { o.t += dt; o.f = (o.t * 6 | 0) % 2; }
+        if (o.x + o.w < -10) this.obs.splice(i, 1);
+      }
+
+      // bulutlar
+      for (var k = 0; k < this.clouds.length; k++) {
+        var c = this.clouds[k];
+        c.x -= move * 0.22;
+        if (c.x < -60) { c.x = this.w + Math.random() * 160; c.y = 30 + Math.random() * 70; }
+      }
+
+      // skor
+      var sc = Math.floor(this.dist / 12);
+      if (sc !== this.score) {
+        this.score = sc;
+        setScore(sc);
+        if (sc - this.lastMile >= 100) { this.lastMile = sc; SFX.point(); }
+        if (sc >= this.nightAt) { this.night = !this.night; this.nightAt += 700; }
+      }
+
+      // çarpışma
+      var db = this.box();
+      for (var j = 0; j < this.obs.length; j++) {
+        var ob = this.obs[j];
+        var obox = { x: ob.x + 3, y: (ob.type === 'bird' ? ob.y : this.groundY - ob.h) + 3, w: ob.w - 6, h: ob.h - 6 };
+        if (db.x < obox.x + obox.w && db.x + db.w > obox.x && db.y < obox.y + obox.h && db.y + db.h > obox.y) {
+          this.die();
+          return;
+        }
+      }
+    },
+
+    box: function () {
+      var top = this.groundY - this.y;
+      if (this.ducking) return { x: this.dinoX + 4, y: top - 24, w: 44, h: 22 };
+      return { x: this.dinoX + 6, y: top - 42, w: 28, h: 40 };
+    },
+
+    die: function () {
+      this.dead = true;
+      SFX.die();
+      var rec = setBest('dino', this.score);
+      setBestLabel(best('dino'));
+      showOverlay(
+        rec ? 'Yeni rekor! 🏆' : 'Oyun bitti',
+        'Skor: <b>' + this.score + '</b> &nbsp;•&nbsp; Rekor: <b>' + best('dino') + '</b><br>Bağlantı hâlâ yok.',
+        'Tekrar oyna'
+      );
+    },
+
+    draw: function () {
+      var fg = this.night ? '#f7f7f7' : '#535353';
+      var bg = this.night ? '#2b2b2b' : '#f7f7f7';
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, this.w, this.h);
+
+      // bulutlar
+      ctx.fillStyle = this.night ? '#4a4a4a' : '#c8c8c8';
+      for (var k = 0; k < this.clouds.length; k++) {
+        var c = this.clouds[k];
+        ctx.fillRect(c.x, c.y, 26, 5);
+        ctx.fillRect(c.x + 6, c.y - 5, 16, 5);
+        ctx.fillRect(c.x + 4, c.y + 5, 20, 4);
+      }
+
+      // zemin
+      ctx.fillStyle = fg;
+      ctx.fillRect(0, this.groundY, this.w, 2);
+      var off = (this.dist % 40);
+      for (var x = -off; x < this.w; x += 40) {
+        ctx.fillRect(x + 8, this.groundY + 5, 6, 2);
+        ctx.fillRect(x + 24, this.groundY + 9, 3, 2);
+      }
+
+      // engeller
+      for (var i = 0; i < this.obs.length; i++) {
+        var o = this.obs[i];
+        if (o.type === 'bird') {
+          drawMap(ctx, BIRD[o.f], o.x, o.y, 2, fg);
+        } else {
+          var uw = o.big ? 16 : 12;
+          for (var n = 0; n < o.n; n++) {
+            var cx = o.x + n * uw, h = o.h, base = this.groundY;
+            var tw = o.big ? 6 : 5;
+            ctx.fillRect(cx + (uw - tw) / 2, base - h, tw, h);              // gövde
+            ctx.fillRect(cx + 1, base - h * 0.62, 3, h * 0.3);              // sol kol
+            ctx.fillRect(cx + 1, base - h * 0.62, (uw - tw) / 2 + 1, 3);
+            ctx.fillRect(cx + uw - 4, base - h * 0.75, 3, h * 0.34);        // sağ kol
+            ctx.fillRect(cx + (uw + tw) / 2 - 1, base - h * 0.75, (uw - tw) / 2, 3);
+          }
+        }
+      }
+
+      // dino
+      var frame = this.dead ? 2 : (this.y > 0 ? 0 : this.leg);
+      drawDino(ctx, this.dinoX, this.groundY - this.y, this.px, frame, this.ducking && this.y === 0, fg);
+    }
+  };
+
+  // ═══════════════ 2) Piksel Yılan ═══════════════
+  var Snake = {
+    key: 'yilan',
+    title: 'Piksel Yılan',
+    w: 420, h: 420,
+    dpad: true,
+    hint: 'Yön tuşları / <b>WASD</b> ile yönet, mobilde kaydır ya da alttaki tuşları kullan.',
+    tune: { kolay: 150, orta: 110, zor: 78 },
+    cell: 20,
+    reset: function () {
+      this.cols = this.w / this.cell;
+      this.rows = this.h / this.cell;
+      this.body = [{ x: 8, y: 10 }, { x: 7, y: 10 }, { x: 6, y: 10 }];
+      this.dirV = { x: 1, y: 0 };
+      this.queue = [];
+      this.stepMs = this.tune[diff];
+      this.acc = 0;
+      this.score = 0;
+      this.dead = false;
+      this.running = false;
+      this.grow = 0;
+      this.pop = 0;
+      this.placeFood();
+      setScore(0);
+      setBestLabel(best('yilan'));
+    },
+    start: function () { this.running = true; },
+    placeFood: function () {
+      var free = [];
+      for (var y = 0; y < this.rows; y++) {
+        for (var x = 0; x < this.cols; x++) {
+          var hit = false;
+          for (var i = 0; i < this.body.length; i++) if (this.body[i].x === x && this.body[i].y === y) { hit = true; break; }
+          if (!hit) free.push({ x: x, y: y });
+        }
+      }
+      this.food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+    },
+    turn: function (dx, dy) {
+      if (!this.running || this.dead) return;
+      var last = this.queue.length ? this.queue[this.queue.length - 1] : this.dirV;
+      if (last.x === -dx && last.y === -dy) return;   // geri dönüş yok
+      if (last.x === dx && last.y === dy) return;
+      if (this.queue.length < 2) this.queue.push({ x: dx, y: dy });
+    },
+    keydown: function (e) {
+      var c = e.code;
+      if (c === 'ArrowUp' || c === 'KeyW') { this.turn(0, -1); return true; }
+      if (c === 'ArrowDown' || c === 'KeyS') { this.turn(0, 1); return true; }
+      if (c === 'ArrowLeft' || c === 'KeyA') { this.turn(-1, 0); return true; }
+      if (c === 'ArrowRight' || c === 'KeyD') { this.turn(1, 0); return true; }
+      if (c === 'Space') { if (!this.running && !this.dead) { hideOverlay(); this.start(); } return true; }
+      return false;
+    },
+    keyup: function () { return false; },
+    dirBtn: function (d) {
+      if (d === 'up') this.turn(0, -1);
+      else if (d === 'down') this.turn(0, 1);
+      else if (d === 'left') this.turn(-1, 0);
+      else if (d === 'right') this.turn(1, 0);
+    },
+    pointerdown: function (p) {
+      this.sx = p.x; this.sy = p.y; this.swiped = false;
+      if (!this.running && !this.dead) { hideOverlay(); this.start(); }
+    },
+    pointermove: function (p) {
+      if (this.sx == null || this.swiped) return;
+      var dx = p.x - this.sx, dy = p.y - this.sy;
+      if (Math.abs(dx) > 24 || Math.abs(dy) > 24) {
+        if (Math.abs(dx) > Math.abs(dy)) this.turn(dx > 0 ? 1 : -1, 0);
+        else this.turn(0, dy > 0 ? 1 : -1);
+        this.swiped = true;
+        this.sx = p.x; this.sy = p.y;
+        setTimeout((function (s) { return function () { s.swiped = false; }; })(this), 60);
+      }
+    },
+    pointerup: function () { this.sx = null; },
+
+    update: function (dt) {
+      if (!this.running || this.dead) return;
+      if (this.pop > 0) this.pop -= dt;
+      this.acc += dt * 1000;
+      while (this.acc >= this.stepMs) {
+        this.acc -= this.stepMs;
+        this.step();
+        if (this.dead) return;
+      }
+    },
+    step: function () {
+      if (this.queue.length) this.dirV = this.queue.shift();
+      if (!this.dirV) this.dirV = { x: 1, y: 0 };
+      var head = this.body[0];
+      var nx = head.x + this.dirV.x, ny = head.y + this.dirV.y;
+
+      if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) { this.die('Duvara çarptın.'); return; }
+      for (var i = 0; i < this.body.length - 1; i++) {
+        if (this.body[i].x === nx && this.body[i].y === ny) { this.die('Kendini yedin.'); return; }
+      }
+
+      this.body.unshift({ x: nx, y: ny });
+      if (this.food && nx === this.food.x && ny === this.food.y) {
+        this.score += 10;
+        setScore(this.score);
+        SFX.eat();
+        this.pop = 0.18;
+        this.placeFood();
+        if (this.stepMs > 55) this.stepMs -= 1.6;
+      } else {
+        this.body.pop();
+      }
+    },
+    die: function (msg) {
+      this.dead = true;
+      SFX.die();
+      var rec = setBest('yilan', this.score);
+      setBestLabel(best('yilan'));
+      showOverlay(
+        rec ? 'Yeni rekor! 🏆' : 'Oyun bitti',
+        msg + '<br>Skor: <b>' + this.score + '</b> &nbsp;•&nbsp; Rekor: <b>' + best('yilan') + '</b>',
+        'Tekrar oyna'
+      );
+    },
+    draw: function () {
+      var cs = this.cell;
+      ctx.fillStyle = '#f7f7f7';
+      ctx.fillRect(0, 0, this.w, this.h);
+
+      // ızgara
+      ctx.fillStyle = '#e6e6e6';
+      for (var x = cs; x < this.w; x += cs) ctx.fillRect(x, 0, 1, this.h);
+      for (var y = cs; y < this.h; y += cs) ctx.fillRect(0, y, this.w, 1);
+
+      // yem
+      if (this.food) {
+        var pad = this.pop > 0 ? 2 : 4;
+        ctx.fillStyle = '#535353';
+        ctx.fillRect(this.food.x * cs + pad, this.food.y * cs + pad, cs - pad * 2, cs - pad * 2);
+        ctx.fillStyle = '#f7f7f7';
+        ctx.fillRect(this.food.x * cs + cs / 2 - 1, this.food.y * cs + pad + 1, 2, 3);
+      }
+
+      // yılan
+      for (var i = this.body.length - 1; i >= 0; i--) {
+        var s = this.body[i];
+        ctx.fillStyle = i === 0 ? '#3c3c3c' : (i % 2 ? '#5f5f5f' : '#535353');
+        ctx.fillRect(s.x * cs + 1, s.y * cs + 1, cs - 2, cs - 2);
+      }
+      // göz
+      if (this.body.length) {
+        var h = this.body[0], d = this.dirV || { x: 1, y: 0 };
+        ctx.fillStyle = '#f7f7f7';
+        var ex = h.x * cs + cs / 2 + d.x * 4 - 1.5, ey = h.y * cs + cs / 2 + d.y * 4 - 1.5;
+        ctx.fillRect(ex - d.y * 3, ey - d.x * 3, 3, 3);
+        ctx.fillRect(ex + d.y * 3, ey + d.x * 3, 3, 3);
+      }
+    }
+  };
+
+  // ═══════════════ 3) Tuğla Kır ═══════════════
+  var Brick = {
+    key: 'tugla',
+    title: 'Tuğla Kır',
+    w: 480, h: 360,
+    hasLives: true,
+    hint: 'Fareyi/parmağını kaydır ya da <b>←</b> <b>→</b> ile raketi oynat. Topu düşürme!',
+    tune: { kolay: { pw: 92, v: 250 }, orta: { pw: 74, v: 305 }, zor: { pw: 58, v: 360 } },
+    reset: function () {
+      var t = this.tune[diff];
+      this.padW = t.pw;
+      this.padH = 10;
+      this.padX = (this.w - this.padW) / 2;
+      this.padY = this.h - 26;
+      this.baseV = t.v;
+      this.level = 1;
+      this.lives = 3;
+      this.score = 0;
+      this.dead = false;
+      this.running = false;
+      this.keyLeft = this.keyRight = false;
+      this.buildBricks();
+      this.resetBall();
+      setScore(0);
+      setBestLabel(best('tugla'));
+      livesVal.textContent = this.lives;
+    },
+    start: function () { this.running = true; },
+    buildBricks: function () {
+      this.bricks = [];
+      var cols = 9, rows = 5, gap = 4, left = 18, top = 40;
+      var bw = (this.w - left * 2 - gap * (cols - 1)) / cols, bh = 16;
+      for (var r = 0; r < rows; r++) {
+        for (var c = 0; c < cols; c++) {
+          this.bricks.push({
+            x: left + c * (bw + gap), y: top + r * (bh + gap),
+            w: bw, h: bh, hp: r < 1 ? 2 : 1, alive: true
+          });
+        }
+      }
+    },
+    resetBall: function () {
+      this.ball = {
+        x: this.padX + this.padW / 2,
+        y: this.padY - 8,
+        r: 5,
+        vx: (Math.random() < 0.5 ? -1 : 1) * this.baseV * 0.6,
+        vy: -this.baseV
+      };
+      this.stuck = true;
+    },
+    launch: function () {
+      if (this.dead) return;
+      if (!this.running) { hideOverlay(); this.start(); return; }  // ilk dokunuş sadece başlatır
+      if (this.stuck) { this.stuck = false; SFX.jump(); }
+    },
+    keydown: function (e) {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { this.keyLeft = true; return true; }
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') { this.keyRight = true; return true; }
+      if (e.code === 'Space') { this.launch(); return true; }
+      return false;
+    },
+    keyup: function (e) {
+      if (e.code === 'ArrowLeft' || e.code === 'KeyA') { this.keyLeft = false; return true; }
+      if (e.code === 'ArrowRight' || e.code === 'KeyD') { this.keyRight = false; return true; }
+      return false;
+    },
+    pointerdown: function (p) { this.movePad(p.x); this.drag = true; this.launch(); },
+    pointermove: function (p) { if (this.drag) this.movePad(p.x); },
+    pointerup: function () { this.drag = false; },
+    dirBtn: function (d) {
+      if (d === 'left') this.keyLeft = true;
+      else if (d === 'right') this.keyRight = true;
+      else this.launch();
+    },
+    dirBtnUp: function (d) {
+      if (d === 'left') this.keyLeft = false;
+      else if (d === 'right') this.keyRight = false;
+    },
+    movePad: function (x) {
+      this.padX = Math.max(0, Math.min(this.w - this.padW, x - this.padW / 2));
+    },
+
+    update: function (dt) {
+      if (!this.running || this.dead) return;
+      var pv = 460 * dt;
+      if (this.keyLeft) this.padX = Math.max(0, this.padX - pv);
+      if (this.keyRight) this.padX = Math.min(this.w - this.padW, this.padX + pv);
+
+      var b = this.ball;
+      if (this.stuck) {
+        b.x = this.padX + this.padW / 2;
+        b.y = this.padY - b.r - 2;
+        return;
+      }
+
+      // alt adımlarla hareket — hızlı topta tünelleme olmasın
+      var steps = 3;
+      for (var s = 0; s < steps; s++) {
+        b.x += b.vx * dt / steps;
+        b.y += b.vy * dt / steps;
+
+        if (b.x - b.r < 0) { b.x = b.r; b.vx = Math.abs(b.vx); SFX.hit(); }
+        if (b.x + b.r > this.w) { b.x = this.w - b.r; b.vx = -Math.abs(b.vx); SFX.hit(); }
+        if (b.y - b.r < 0) { b.y = b.r; b.vy = Math.abs(b.vy); SFX.hit(); }
+
+        // raket
+        if (b.vy > 0 && b.y + b.r >= this.padY && b.y - b.r <= this.padY + this.padH &&
+            b.x >= this.padX - 4 && b.x <= this.padX + this.padW + 4) {
+          b.y = this.padY - b.r;
+          var rel = (b.x - (this.padX + this.padW / 2)) / (this.padW / 2);
+          rel = Math.max(-1, Math.min(1, rel));
+          var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+          var ang = rel * 1.05;                      // ±60°
+          b.vx = Math.sin(ang) * sp;
+          b.vy = -Math.abs(Math.cos(ang) * sp);
+          SFX.jump();
+        }
+
+        // tuğlalar
+        for (var i = 0; i < this.bricks.length; i++) {
+          var k = this.bricks[i];
+          if (!k.alive) continue;
+          if (b.x + b.r > k.x && b.x - b.r < k.x + k.w && b.y + b.r > k.y && b.y - b.r < k.y + k.h) {
+            var ox = Math.min(b.x + b.r - k.x, k.x + k.w - (b.x - b.r));
+            var oy = Math.min(b.y + b.r - k.y, k.y + k.h - (b.y - b.r));
+            if (ox < oy) b.vx = -b.vx; else b.vy = -b.vy;
+            k.hp--;
+            if (k.hp <= 0) { k.alive = false; this.score += 10 * this.level; }
+            else this.score += 4 * this.level;
+            setScore(this.score);
+            SFX.hit();
+            break;
+          }
+        }
+
+        if (b.y - b.r > this.h) { this.loseLife(); return; }
+      }
+
+      var left = 0;
+      for (var j = 0; j < this.bricks.length; j++) if (this.bricks[j].alive) left++;
+      if (left === 0) this.nextLevel();
+    },
+
+    nextLevel: function () {
+      this.level++;
+      this.score += 50;
+      setScore(this.score);
+      SFX.win();
+      this.baseV *= 1.08;
+      this.buildBricks();
+      this.resetBall();
+      this.running = false;
+      showOverlay('Seviye ' + this.level, 'Tuğlalar temizlendi. Top biraz daha hızlanıyor.', 'Devam');
+    },
+
+    loseLife: function () {
+      this.lives--;
+      livesVal.textContent = Math.max(0, this.lives);
+      if (this.lives <= 0) {
+        this.dead = true;
+        SFX.die();
+        var rec = setBest('tugla', this.score);
+        setBestLabel(best('tugla'));
+        showOverlay(
+          rec ? 'Yeni rekor! 🏆' : 'Oyun bitti',
+          'Seviye <b>' + this.level + '</b> &nbsp;•&nbsp; Skor: <b>' + this.score + '</b><br>Rekor: <b>' + best('tugla') + '</b>',
+          'Tekrar oyna'
+        );
+      } else {
+        SFX.duck();
+        this.resetBall();
+      }
+    },
+
+    draw: function () {
+      ctx.fillStyle = '#f7f7f7';
+      ctx.fillRect(0, 0, this.w, this.h);
+
+      // üst çerçeve
+      ctx.fillStyle = '#dadce0';
+      ctx.fillRect(0, 22, this.w, 1);
+      ctx.fillStyle = '#9aa0a6';
+      ctx.font = '12px system-ui, sans-serif';
+      ctx.fillText('SEVİYE ' + this.level, 12, 16);
+
+      // tuğlalar
+      for (var i = 0; i < this.bricks.length; i++) {
+        var k = this.bricks[i];
+        if (!k.alive) continue;
+        ctx.fillStyle = k.hp > 1 ? '#3c3c3c' : '#6b6b6b';
+        ctx.fillRect(k.x, k.y, k.w, k.h);
+        ctx.fillStyle = k.hp > 1 ? '#5a5a5a' : '#8a8a8a';
+        ctx.fillRect(k.x, k.y, k.w, 3);
+      }
+
+      // raket
+      ctx.fillStyle = '#535353';
+      ctx.fillRect(this.padX, this.padY, this.padW, this.padH);
+      ctx.fillStyle = '#8a8a8a';
+      ctx.fillRect(this.padX + 4, this.padY + 2, this.padW - 8, 2);
+
+      // top
+      ctx.fillStyle = '#535353';
+      ctx.fillRect(this.ball.x - this.ball.r, this.ball.y - this.ball.r, this.ball.r * 2, this.ball.r * 2);
+
+      if (this.stuck && this.running) {
+        ctx.fillStyle = '#9aa0a6';
+        ctx.font = '13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Topu fırlatmak için tıkla / boşluk', this.w / 2, this.padY - 26);
+        ctx.textAlign = 'left';
+      }
+    }
+  };
+
+  var GAMES = { dino: Dino, yilan: Snake, tugla: Brick };
+
+  // ═══════════════ Ekran geçişleri ═══════════════
+  function openGame(key) {
+    current = GAMES[key];
+    if (!current) return;
+    canvas.width = current.w;
+    canvas.height = current.h;
+    canvas.style.maxWidth = current.w + 'px';
+    gameTitle.textContent = current.title;
+    hint.innerHTML = current.hint;
+    livesWrap.classList.toggle('on', !!current.hasLives);
+    dpad.classList.toggle('on', !!current.dpad);
+    errorPage.classList.add('off');
+    gameScreen.classList.add('on');
+    window.scrollTo(0, 0);
+    current.reset();
+    current.paused = false;
+    showOverlay(current.title, 'Zorluk: <b>' + diff + '</b><br>Hazır olduğunda başla.', 'Başla');
+    startLoop();
+  }
+
+  function closeGame() {
+    stopLoop();
+    current = null;
+    hideOverlay();
+    gameScreen.classList.remove('on');
+    errorPage.classList.remove('off');
+  }
+
+  function restart() {
+    if (!current) return;
+    hideOverlay();
+    // Duraklatmadan dönüş — ilerlemeyi koru
+    if (current.paused) {
+      current.paused = false;
+      current.running = true;
+      return;
+    }
+    // Seviye arası "Devam" ise sıfırlama, sadece devam et
+    if (current.key === 'tugla' && !current.dead && current.level > 1 && current.stuck) {
+      current.start();
+      return;
+    }
+    current.reset();
+    current.start();
+  }
+
+  // Oyun seçimi
+  var choiceBtns = document.querySelectorAll('.choice');
+  for (var i = 0; i < choiceBtns.length; i++) {
+    (function (btn) {
+      btn.addEventListener('click', function () {
+        audio();
+        SFX.point();
+        openGame(btn.getAttribute('data-game'));
+      });
+    })(choiceBtns[i]);
+  }
+
+  menuBtn.addEventListener('click', closeGame);
+  backBtn.addEventListener('click', closeGame);
+  restartBtn.addEventListener('click', function () { audio(); restart(); });
+
+  // Zorluk seçimi
+  function paintChips() {
+    var chips = diffChips.querySelectorAll('.chip');
+    for (var i = 0; i < chips.length; i++) {
+      chips[i].classList.toggle('active', chips[i].getAttribute('data-diff') === diff);
+    }
+  }
+  diffChips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (!b) return;
+    diff = b.getAttribute('data-diff');
+    store('baglantiYok_zorluk', diff);
+    paintChips();
+    if (current) {
+      current.reset();
+      current.paused = false;
+      showOverlay(current.title, 'Zorluk: <b>' + diff + '</b><br>Hazır olduğunda başla.', 'Başla');
+    }
+  });
+  paintChips();
+
+  // "Yeniden dene" — bağlantı gelmiyor
+  var retryTexts = [
+    'Hâlâ bağlanamıyor. Belki bir oyun oynarsın?',
+    'Yok, gelmedi. Aşağıda üç tane oyun var.',
+    'Kablo takılı mı? Neyse, dino seni bekliyor.',
+    'Modem yanıp sönüyor ama boşuna. Oyna gitsin.'
+  ];
+  var retryIdx = 0;
+  retryBtn.addEventListener('click', function () {
+    audio();
+    SFX.hit();
+    retryBtn.classList.remove('shake');
+    void retryBtn.offsetWidth;
+    retryBtn.classList.add('shake');
+    retryNote.textContent = retryTexts[retryIdx % retryTexts.length];
+    retryNote.classList.add('on');
+    retryIdx++;
+  });
+
+  // ═══════════════ Girdi ═══════════════
+  window.addEventListener('keydown', function (e) {
+    if (!current || !gameScreen.classList.contains('on')) return;
+    if (e.code === 'Escape') { closeGame(); return; }
+    if (overlay.classList.contains('on') && (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyR')) {
+      e.preventDefault();
+      audio();
+      restart();
+      return;
+    }
+    if (current.keydown && current.keydown(e)) e.preventDefault();
+  });
+  window.addEventListener('keyup', function (e) {
+    if (!current) return;
+    if (current.keyup && current.keyup(e)) e.preventDefault();
+  });
+
+  function canvasPoint(ev) {
+    var r = canvas.getBoundingClientRect();
+    return {
+      x: (ev.clientX - r.left) * (canvas.width / r.width),
+      y: (ev.clientY - r.top) * (canvas.height / r.height)
+    };
+  }
+  canvas.addEventListener('pointerdown', function (ev) {
+    if (!current) return;
+    audio();
+    canvas.setPointerCapture(ev.pointerId);
+    if (current.pointerdown) current.pointerdown(canvasPoint(ev));
+    ev.preventDefault();
+  });
+  canvas.addEventListener('pointermove', function (ev) {
+    if (!current || !current.pointermove) return;
+    current.pointermove(canvasPoint(ev));
+  });
+  canvas.addEventListener('pointerup', function (ev) {
+    if (!current || !current.pointerup) return;
+    current.pointerup(canvasPoint(ev));
+  });
+  canvas.addEventListener('pointercancel', function () {
+    if (current && current.pointerup) current.pointerup({ x: 0, y: 0 });
+  });
+
+  // Yön tuşu paneli (mobil)
+  var padBtns = dpad.querySelectorAll('button');
+  for (var p = 0; p < padBtns.length; p++) {
+    (function (b) {
+      var d = b.getAttribute('data-dir');
+      b.addEventListener('pointerdown', function (ev) {
+        ev.preventDefault();
+        audio();
+        if (current && current.dirBtn) current.dirBtn(d);
+      });
+      b.addEventListener('pointerup', function () {
+        if (current && current.dirBtnUp) current.dirBtnUp(d);
+      });
+      b.addEventListener('pointerleave', function () {
+        if (current && current.dirBtnUp) current.dirBtnUp(d);
+      });
+    })(padBtns[p]);
+  }
+
+  // Sekme arkaya alınırsa duraklat
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && current && current.running && !current.dead) {
+      current.running = false;
+      current.paused = true;
+      showOverlay('Duraklatıldı', 'Sekmeden ayrıldın.', 'Devam et');
+    }
+  });
+
+  // ═══════════════ Hata sayfasındaki piksel çizimler ═══════════════
+  (function () {
+    var ic = document.getElementById('dinoIcon');
+    var c = ic.getContext('2d');
+    c.clearRect(0, 0, ic.width, ic.height);
+    drawMap(c, DINO_BODY, 4, 4, 2, '#9aa0a6');
+    drawMap(c, DINO_LEGS[0], 4, 40, 2, '#9aa0a6');
+  })();
+
+  (function () {
+    var thumbs = document.querySelectorAll('.thumb');
+    for (var i = 0; i < thumbs.length; i++) {
+      var t = thumbs[i], c = t.getContext('2d');
+      c.fillStyle = '#f7f7f7';
+      c.fillRect(0, 0, 40, 30);
+      c.fillStyle = '#535353';
+      var kind = t.getAttribute('data-thumb');
+      if (kind === 'dino') {
+        drawMap(c, DINO_BODY, 4, 2, 1, '#535353');
+        drawMap(c, DINO_LEGS[1], 4, 20, 1, '#535353');
+        c.fillRect(0, 25, 40, 1);
+        c.fillRect(28, 17, 3, 8);       // kaktüs
+        c.fillRect(26, 19, 2, 4);
+        c.fillRect(31, 18, 2, 4);
+      } else if (kind === 'yilan') {
+        for (var s = 0; s < 5; s++) c.fillRect(6 + s * 5, 14, 4, 4);
+        c.fillRect(26, 9, 4, 4);
+        c.fillStyle = '#9aa0a6';
+        c.fillRect(4, 6, 32, 1); c.fillRect(4, 22, 32, 1);
+        c.fillRect(4, 6, 1, 17); c.fillRect(35, 6, 1, 17);
+      } else {
+        for (var r = 0; r < 2; r++) {
+          for (var k = 0; k < 5; k++) c.fillRect(5 + k * 6, 5 + r * 5, 5, 3);
+        }
+        c.fillRect(15, 24, 11, 3);
+        c.fillRect(21, 18, 3, 3);
+      }
+    }
+  })();
+})();
+</script>
+
+<a href="../" style="position:fixed;top:16px;left:16px;z-index:9999;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:rgba(255,255,255,0.9);color:#5f6368;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;font-size:0.85rem;font-weight:600;border-radius:30px;text-decoration:none;backdrop-filter:blur(8px);border:1px solid #dadce0;transition:background 0.3s,transform 0.2s;" onmouseover="this.style.background='#f1f3f4';this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255,255,255,0.9)';this.style.transform='scale(1)'">&#8592; Ana Sayfa</a>
+
+</body>
+</html>
