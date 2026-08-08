@@ -25,7 +25,9 @@ Mevcut bir oyunu düzenlerken de geçerli:
 
 ## Uzay Coin ve skor tablosu
 
-`hesap.js` = Firebase Auth (Google + misafir) + nickname + coin cüzdanı + sağ üst rozet. Skor tablosu `skor-tablosu/` altında: haftanın ve ayın en iyi 5'i. Dönem anahtarları Europe/Istanbul (sabit UTC+3) saatine göre üretilir, sıfırlama işi yoktur — anahtar kendiliğinden değişir.
+`hesap.js` = Firebase Auth (Google + misafir + nickname/şifre) + nickname + coin cüzdanı + sağ üst rozet.
+
+Misafir hesabı kaydolurken şifre belirler: Firebase'de kullanıcı adı diye bir yöntem olmadığı için nickname'den sahte bir adres türetilir (`u_<nick>@misafir.uzayzone.com`, Türkçe harfler `-c`/`-s`… diye kaçışlanır) ve anonim hesaba `linkWithCredential` ile bağlanır — uid değişmediği için coin ve skor tablosu kaydı korunur, oyuncu başka bir bilgisayardan aynı nickname + şifreyle girer. Giriş adı ayrı bir alanda tutulmaz, `auth.currentUser.email`'den okunur; nickname sonradan değişse bile giriş adı kayıt anındaki isim olarak kalır. **Firebase konsolunda Authentication → Sign-in method → E-posta/Şifre açık olmalı**, kapalıysa kayıt `auth/operation-not-allowed` verir. Skor tablosu `skor-tablosu/` altında: haftanın ve ayın en iyi 5'i. Dönem anahtarları Europe/Istanbul (sabit UTC+3) saatine göre üretilir, sıfırlama işi yoktur — anahtar kendiliğinden değişir.
 
 **Her oyundan coin kazanılır** ve miktar sabittir; oyunun zorluğuna/uzunluğuna göre 50 ile 250 arasında değişir (`hesap.js` → `ODUL`). Her satırda `coin` (kazanılan miktar) ve `esik` (`odul()`'e geçirilen değerin en az kaçı olması gerektiği) durur: skorlu oyunlarda skor, sayaçlı oyunlarda sayaç (tıklama/blok/sipariş), "başardım" oyunlarında 1. Eşiğin altı 0 coin — açıp hemen kaybederek coin toplanamasın. Sonu olmayan oyunlar (mini-mimar, havai-fişek, süper şef, simya, tıkla kazan) ödülü aralıklarla verir; ana sayfa kartlarında coin rozeti yoktur, ayırt edici değil.
 

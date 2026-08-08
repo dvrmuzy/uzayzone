@@ -13,6 +13,11 @@
 //    window.UzayHesap.kullanici()                   → { uid, nick, coin } | null
 //    window.UzayHesap.onDegisim(cb)                 → giriş/çıkış/coin değişiminde çağrılır
 //
+//  GİRİŞ YOLLARI: Google, misafir (anonim) ve nickname+şifre. Misafir kaydolurken
+//  şifre belirler; hesap nickname'den türetilmiş sahte bir e-postayla anonim uid'e
+//  BAĞLANIR (uid değişmez → coin korunur), böylece başka bir bilgisayardan da
+//  girilebilir. Firebase konsolunda "E-posta/Şifre" yöntemi açık olmalı.
+//
 //  HİLE NOTU: Site statik olduğu için coin'i tarayıcı yazar. Realtime
 //  Database kuralları (firebase-rules.json) bunu tavanlarla sınırlar:
 //  tek ödül ≤ 250, iki ödül arası ≥ 10 sn, günlük toplam ≤ 1000.
@@ -73,6 +78,39 @@ const BEKLE        = 10000;  // iki ödül arası en az süre (ms)
 
 const NICK_DESEN  = /^[a-z0-9çğıöşü_]{3,16}$/;
 const YASAK_PARCA = ['admin', 'yonetici', 'uzayzone', 'moderator', 'sistem'];
+
+// ─── Misafir hesabına şifre ───
+// Firebase'de "kullanıcı adı + şifre" diye bir yöntem yok, yalnızca e-posta var.
+// O yüzden nickname'den sahte bir adres türetip misafir (anonim) hesabı ona
+// bağlıyoruz: uid değişmediği için coin ve nickname aynı hesapta kalır, oyuncu
+// başka bir bilgisayardan aynı nickname + şifreyle girebilir.
+// Bu adrese posta gitmez — sadece Firebase'in kimlik anahtarıdır.
+// Kurulum: Firebase konsolunda Authentication → Sign-in method → E-posta/Şifre
+// AÇIK olmalı; kapalıysa kayıt "auth/operation-not-allowed" ile döner.
+const MISAFIR_ALAN = 'misafir.uzayzone.com';
+const SIFRE_MIN    = 6;
+
+// Türkçe harfler e-posta adresinde geçersiz. Nickname'de tire olamadığı için
+// (NICK_DESEN) tireyi kaçış işareti yapıyoruz: "kuş" → "ku-s". Kayıpsız ve
+// geri çevrilebilir — "kus" ile "kuş" farklı hesaplar olarak kalır.
+const TR_KACIS = { 'ç': '-c', 'ğ': '-g', 'ı': '-i', 'ö': '-o', 'ş': '-s', 'ü': '-u' };
+const TR_COZ   = { c: 'ç', g: 'ğ', i: 'ı', o: 'ö', s: 'ş', u: 'ü' };
+
+// "u_" öneki: kaçış tiresiyle başlayan adresler (ör. "-ci-gdem@…") bazı
+// e-posta doğrulayıcılarına takılabiliyor, adres hep harfle başlasın.
+const eposta = ad => 'u_' + String(ad).replace(/[çğıöşü]/g, h => TR_KACIS[h]) + '@' + MISAFIR_ALAN;
+
+// Şifreli misafir hesaplarında giriş adı, kayıt anındaki nickname'dir ve
+// nickname sonradan değişse bile aynı kalır. Ayrı bir alanda tutmuyoruz,
+// Firebase'in kendi e-posta kaydından okuyoruz.
+function girisAdi() {
+  const e = (auth && auth.currentUser && auth.currentUser.email) || '';
+  const son = '@' + MISAFIR_ALAN;
+  if (!e.endsWith(son)) return null;
+  return e.slice(0, -son.length).replace(/^u_/, '').replace(/-([cgiosu])/g, (_, h) => TR_COZ[h]);
+}
+
+const misafirMi = () => !!(auth && auth.currentUser && auth.currentUser.isAnonymous);
 
 // Rastgele nickname havuzu — "RedTiger", "NovaFalcon" gibi anlamlı çiftler.
 // En uzun sıfat + en uzun isim = 14 karakter, 16'lık sınırı aşmıyor.
@@ -256,6 +294,17 @@ const CSS = `
   font: 700 1rem 'Nunito', sans-serif; text-align: center; letter-spacing: 0.04em;
 }
 .uzh-giris:focus { outline: 0; border-color: #7df9ff; box-shadow: 0 0 0 3px rgba(125,249,255,0.14); }
+.uzh-sifre { position: relative; }
+.uzh-sifre .uzh-giris { padding-right: 46px; }
+.uzh-goz {
+  /* Kutunun 8px alt boşluğunu düşerek tam ortada dur */
+  position: absolute; top: 0; right: 4px; height: calc(100% - 8px);
+  display: flex; align-items: center;
+  background: none; border: 0; cursor: pointer; padding: 0 8px;
+  font-size: 1rem; line-height: 1; opacity: 0.6;
+}
+.uzh-goz:hover { opacity: 1; }
+.uzh-ipucu { text-align: center; font-size: 0.76rem; color: #8d88ab; line-height: 1.5; margin: -2px 0 12px; }
 .uzh-durum { min-height: 1.4em; text-align: center; font-size: 0.82rem; margin: 4px 0 14px; color: #a9a4c2; }
 .uzh-durum.hata { color: #ff8fa8; }
 .uzh-durum.iyi  { color: #7dffb0; }
@@ -279,6 +328,7 @@ kok.innerHTML =
   '<div class="uzh-menu" id="uzhMenu" role="menu">' +
     '<a href="' + url('skor-tablosu/') + '" role="menuitem">🏆 Skor Tablosu</a>' +
     '<button type="button" id="uzhNickDegis" role="menuitem">✏️ Nickname değiştir</button>' +
+    '<button type="button" id="uzhSifreEkle" role="menuitem">🔐 Şifre belirle</button>' +
     '<div class="uzh-ayrac"></div>' +
     '<button type="button" class="uzh-cikis" id="uzhCikis" role="menuitem">🚪 Çıkış yap</button>' +
   '</div>';
@@ -358,6 +408,8 @@ rozetEl.addEventListener('click', () => {
   if (hazirHata) { kapaliModali(); return; }
   if (!uid) { girisModali(); return; }
   if (!prof.nick) { nickModali(true); return; }
+  // "Şifre belirle" yalnızca hâlâ misafir olanlara gösterilir
+  $('uzhSifreEkle').style.display = misafirMi() ? '' : 'none';
   const acik = menuEl.classList.toggle('acik');
   rozetEl.setAttribute('aria-expanded', String(acik));
 });
@@ -369,6 +421,8 @@ $('uzhCikis').addEventListener('click', async () => {
 });
 
 $('uzhNickDegis').addEventListener('click', () => nickModali(false));
+
+$('uzhSifreEkle').addEventListener('click', sifreEkleModali);
 
 // ─── Rozeti tazele ───
 function rozetiCiz() {
@@ -443,7 +497,8 @@ function girisModali() {
         '<path fill="#FBBC05" d="M11.5 28.3c-.5-1.4-.7-2.8-.7-4.3s.3-3 .7-4.3l-7.1-5.5C2.9 17.1 2 20.4 2 24s.9 6.9 2.4 9.8l7.1-5.5z"/>' +
         '<path fill="#EA4335" d="M24 9.5c3.2 0 6 1.1 8.2 3.2l6.1-6.1C34.9 3.1 29.9 1 24 1 15.4 1 8.1 6 4.4 14.2l7.1 5.5C13.3 13.4 18.2 9.5 24 9.5z"/>' +
       '</svg> Google ile Giriş Yap</button>' +
-    '<button type="button" class="uzh-buton sade" id="uzhMisafir">👾 Misafir olarak oyna</button>';
+    '<button type="button" class="uzh-buton sade" id="uzhMisafir">👾 Misafir olarak oyna</button>' +
+    '<button type="button" class="uzh-buton sade" id="uzhSifreyle">🔐 Şifreyle giriş yap</button>';
 
   modalAc('UZAY ZONE HESABI',
     'Giriş yap, kendine bir nickname seç ve oynadığın oyunlardan <b style="color:#ffd75e">Uzay Coin</b> kazan.<br>Haftanın ve ayın en iyi 5 oyuncusu skor tablosunda yayınlanır 🏆',
@@ -451,6 +506,68 @@ function girisModali() {
 
   $('uzhGoogle').addEventListener('click', () => sar($('uzhGoogle'), googleGiris));
   $('uzhMisafir').addEventListener('click', () => sar($('uzhMisafir'), misafirGiris));
+  $('uzhSifreyle').addEventListener('click', sifreGirisModali);
+}
+
+// Şifre kutusu + "göster" gözü. HTML'i döndürür, gözü bağlamak için
+// sonrasında sifreGozBagla(id) çağrılır.
+function sifreAlaniHTML(id, yerTutucu, tamamlama) {
+  return '<div class="uzh-sifre">' +
+      '<input class="uzh-giris" id="' + id + '" type="password" maxlength="64" ' +
+        'autocomplete="' + tamamlama + '" placeholder="' + yerTutucu + '">' +
+      '<button type="button" class="uzh-goz" id="' + id + 'Goz" aria-label="Şifreyi göster">👁</button>' +
+    '</div>';
+}
+
+function sifreGozBagla(id) {
+  const kutu = $(id), goz = $(id + 'Goz');
+  goz.addEventListener('click', () => {
+    const gizli = kutu.type === 'password';
+    kutu.type = gizli ? 'text' : 'password';
+    goz.textContent = gizli ? '🙈' : '👁';
+    goz.setAttribute('aria-label', gizli ? 'Şifreyi gizle' : 'Şifreyi göster');
+    kutu.focus();
+  });
+}
+
+function sifreDogrula(sifre) {
+  if (String(sifre).length < SIFRE_MIN) throw new Error('Şifre en az ' + SIFRE_MIN + ' karakter olmalı.');
+}
+
+function nickDogrula(alt) {
+  if (!NICK_DESEN.test(alt)) throw new Error('3–16 karakter olmalı; harf, rakam ve _ kullanabilirsin.');
+  if (YASAK_PARCA.some(k => alt.includes(k))) throw new Error('Bu nickname kullanılamaz, başka bir tane seç.');
+}
+
+// Şifre belirlemiş bir misafir hesabına başka bir bilgisayardan giriş
+function sifreGirisModali() {
+  const govde = document.createElement('div');
+  govde.innerHTML =
+    '<input class="uzh-giris" id="uzhGirisNick" maxlength="16" autocomplete="username" ' +
+      'spellcheck="false" placeholder="nickname">' +
+    sifreAlaniHTML('uzhGirisSifre', 'şifre', 'current-password') +
+    '<button type="button" class="uzh-buton sonuc" id="uzhSifreGiris">GİRİŞ YAP</button>' +
+    '<button type="button" class="uzh-buton sade" id="uzhGirisGeri">← Geri</button>';
+
+  modalAc('ŞİFREYLE GİRİŞ',
+    'Misafir hesabına şifre belirlediysen buradan gir.<br>Coin\'lerin ve nickname\'in seninle gelir 🚀',
+    govde);
+
+  sifreGozBagla('uzhGirisSifre');
+  const nickEl = $('uzhGirisNick'), sifreEl = $('uzhGirisSifre');
+  nickEl.focus();
+  [nickEl, sifreEl].forEach(el =>
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') $('uzhSifreGiris').click(); }));
+
+  $('uzhGirisGeri').addEventListener('click', girisModali);
+  $('uzhSifreGiris').addEventListener('click', () => sar($('uzhSifreGiris'), async () => {
+    const ad = kucuk(nickEl.value.trim());
+    if (!NICK_DESEN.test(ad)) throw new Error('Nickname 3–16 karakter olmalı.');
+    if (!sifreEl.value) throw new Error('Şifreni yaz.');
+    const fb = await firebase();
+    await fb.signInWithEmailAndPassword(auth, eposta(ad), sifreEl.value);
+    modalKapat(true);
+  }));
 }
 
 // Butonu kilitle, hatayı modalda göster — her giriş yolunda aynı davranış.
@@ -477,6 +594,15 @@ function hataMetni(e) {
   if (kod === 'auth/network-request-failed') return 'Bağlantı kurulamadı, internetini kontrol et.';
   if (kod === 'auth/operation-not-allowed') return 'Bu giriş yöntemi Firebase konsolunda açık değil.';
   if (kod === 'auth/unauthorized-domain') return 'Bu alan adı Firebase\'de yetkili değil.';
+  // Şifreli misafir hesapları
+  if (kod === 'auth/email-already-in-use' || kod === 'auth/credential-already-in-use')
+    return 'Bu nickname ile şifreli bir hesap zaten var. Senin hesabınsa "Şifreyle giriş yap" ile gir.';
+  if (kod === 'auth/weak-password') return 'Şifre en az ' + SIFRE_MIN + ' karakter olmalı.';
+  if (kod === 'auth/provider-already-linked') return 'Bu hesapta zaten şifre var.';
+  if (kod === 'auth/invalid-credential' || kod === 'auth/wrong-password' ||
+      kod === 'auth/user-not-found' || kod === 'auth/invalid-login-credentials')
+    return 'Nickname veya şifre hatalı.';
+  if (kod === 'auth/too-many-requests') return 'Çok fazla denedin, biraz bekleyip tekrar dene.';
   return (e && e.message) || 'Bir şeyler ters gitti, tekrar dene.';
 }
 
@@ -517,21 +643,33 @@ async function misafirGiris() {
 // ═══════════════════════════════════════════════════════════
 
 function nickModali(ilkKez) {
+  // Misafir ilk kez kaydolurken şifre de belirler: hesabı yalnızca bu
+  // tarayıcıda kalmasın, başka bir bilgisayardan da girebilsin.
+  const sifreli = ilkKez && misafirMi();
+  const girisAd = girisAdi();
+
   const govde = document.createElement('div');
   govde.innerHTML =
     '<input class="uzh-giris" id="uzhNick" maxlength="16" autocomplete="off" spellcheck="false" ' +
       'placeholder="nickname" value="' + kacisla(prof.nick || '') + '">' +
     '<button type="button" class="uzh-buton sade" id="uzhNickRastgele">🎲 Rastgele öner</button>' +
+    (sifreli ? sifreAlaniHTML('uzhNickSifre', 'şifre (en az ' + SIFRE_MIN + ' karakter)', 'new-password') +
+               '<p class="uzh-ipucu">Şifreni not et — unutursan geri alınamaz.</p>' : '') +
     '<button type="button" class="uzh-buton sonuc" id="uzhNickKaydet">KAYDET</button>' +
-    (ilkKez ? '' : '<button type="button" class="uzh-buton sade" id="uzhNickVazgec">Vazgeç</button>');
+    '<button type="button" class="uzh-buton sade" id="uzhNickVazgec">Vazgeç</button>';
 
-  modalAc(ilkKez ? 'NICKNAME SEÇ' : 'NICKNAME DEĞİŞTİR',
-    'Skor tablosunda bu isimle görüneceksin.<br>3–16 karakter; harf, rakam ve alt çizgi.',
-    govde, !ilkKez);
+  let alt = 'Skor tablosunda bu isimle görüneceksin.<br>3–16 karakter; harf, rakam ve alt çizgi.';
+  if (sifreli) alt += '<br>Şifreni de belirle: aynı hesaba <b>başka bir bilgisayardan</b> bu isim ve şifreyle girersin.';
+  else if (!ilkKez && girisAd) alt += '<br>Giriş adın <b>' + kacisla(girisAd) + '</b> olarak kalır.';
+
+  modalAc(ilkKez ? 'NICKNAME SEÇ' : 'NICKNAME DEĞİŞTİR', alt, govde, !ilkKez);
 
   const girisEl = $('uzhNick');
+  const sifreEl = sifreli ? $('uzhNickSifre') : null;
+  if (sifreli) sifreGozBagla('uzhNickSifre');
   girisEl.focus();
-  girisEl.addEventListener('keydown', e => { if (e.key === 'Enter') $('uzhNickKaydet').click(); });
+  [girisEl, sifreEl].forEach(el =>
+    el && el.addEventListener('keydown', e => { if (e.key === 'Enter') $('uzhNickKaydet').click(); }));
 
   $('uzhNickRastgele').addEventListener('click', () => sar($('uzhNickRastgele'), async () => {
     girisEl.value = await musaitNickBul();
@@ -539,10 +677,95 @@ function nickModali(ilkKez) {
   }));
 
   $('uzhNickKaydet').addEventListener('click', () => sar($('uzhNickKaydet'), async () => {
-    await nickKaydet(girisEl.value.trim());
-    modalKapat(true);
+    if (!sifreli) { await nickKaydet(girisEl.value.trim()); modalKapat(true); return; }
+    await misafirKayit(girisEl.value.trim(), sifreEl.value);
+    // "Kaydedildi" mesajı okunacak kadar açık kalsın
+    kapatilabilir = true;
+    setTimeout(() => modalKapat(true), 2600);
   }));
-  if (!ilkKez) $('uzhNickVazgec').addEventListener('click', () => modalKapat(true));
+
+  // İlk kayıtta "Vazgeç" oturumu da kapatır — yoksa oyuncu nickname'siz,
+  // coin kazanamayan bir hesapta asılı kalırdı.
+  $('uzhNickVazgec').addEventListener('click', () => {
+    if (!ilkKez) { modalKapat(true); return; }
+    sar($('uzhNickVazgec'), async () => {
+      const fb = await firebase();
+      await fb.signOut(auth);
+      modalKapat(true);
+    });
+  });
+}
+
+// Misafir hesabını nickname + şifreyle kalıcı hale getirir. uid değişmediği
+// için o ana kadar kazanılmış coin ve skor tablosu kaydı korunur.
+async function misafirKayit(nick, sifre) {
+  if (!uid) throw new Error('Önce giriş yapmalısın.');
+  if (!misafirMi()) throw new Error('Bu hesapta zaten şifre var.');
+  const alt = kucuk(nick);
+  nickDogrula(alt);
+  sifreDogrula(sifre);
+
+  const fb = await firebase();
+  // Önce ismi kilitle: aynı anda iki kişi aynı nickname'i alamasın
+  let yeniKilit = false;
+  const sonuc = await fb.runTransaction(fb.ref(db, 'nicks/' + alt), mevcut => {
+    yeniKilit = mevcut === null;
+    return (mevcut === null || mevcut === uid) ? uid : undefined;
+  });
+  if (!sonuc.committed) throw new Error('Bu nickname alınmış, başka bir tane dene.');
+
+  try {
+    await fb.linkWithCredential(auth.currentUser, fb.EmailAuthProvider.credential(eposta(alt), sifre));
+  } catch (e) {
+    // Konsolda E-posta/Şifre yöntemi kapalıysa oyuncuyu nickname'siz bırakma:
+    // şifresiz kaydet, hesap bu tarayıcıda çalışmaya devam etsin.
+    if (e && e.code === 'auth/operation-not-allowed') {
+      console.warn('[hesap] şifreli kayıt kapalı (Firebase konsolunda E-posta/Şifre açık değil)', e);
+      await nickYaz(nick, alt);
+      durumYaz('Kaydedildi. Şifre şu an kullanılamıyor — hesabın bu tarayıcıda kalır.', 'iyi');
+      return;
+    }
+    // Şifre bağlanamadıysa bu çağrıda aldığımız ismi geri bırak — başkası
+    // alabilsin. Zaten bizimse dokunma: profildeki nickLower ona bağlı.
+    if (yeniKilit) { try { await fb.set(fb.ref(db, 'nicks/' + alt), null); } catch (_) {} }
+    throw e;
+  }
+
+  await nickYaz(nick, alt);
+  durumYaz('Kaydedildi! Artık "' + nick + '" ve şifrenle her yerden girebilirsin 🚀', 'iyi');
+}
+
+// Zaten nickname'i olan bir misafir sonradan şifre belirlerse
+function sifreEkleModali() {
+  const ad = prof.nick || '';
+  const govde = document.createElement('div');
+  govde.innerHTML =
+    sifreAlaniHTML('uzhYeniSifre', 'şifre (en az ' + SIFRE_MIN + ' karakter)', 'new-password') +
+    '<p class="uzh-ipucu">Şifreni not et — unutursan geri alınamaz.</p>' +
+    '<button type="button" class="uzh-buton sonuc" id="uzhSifreKaydet">KAYDET</button>' +
+    '<button type="button" class="uzh-buton sade" id="uzhSifreVazgec">Vazgeç</button>';
+
+  modalAc('ŞİFRE BELİRLE',
+    'Şu an misafir hesabındasın — tarayıcı verilerini silersen coin\'lerin kaybolur.<br>' +
+    'Şifre belirlersen <b>' + kacisla(ad) + '</b> ve şifrenle başka bilgisayarlardan da girebilirsin.',
+    govde);
+
+  sifreGozBagla('uzhYeniSifre');
+  const sifreEl = $('uzhYeniSifre');
+  sifreEl.focus();
+  sifreEl.addEventListener('keydown', e => { if (e.key === 'Enter') $('uzhSifreKaydet').click(); });
+
+  $('uzhSifreVazgec').addEventListener('click', () => modalKapat(true));
+  $('uzhSifreKaydet').addEventListener('click', () => sar($('uzhSifreKaydet'), async () => {
+    if (!misafirMi()) throw new Error('Bu hesapta zaten şifre var.');
+    if (!prof.nickLower) throw new Error('Önce bir nickname seçmelisin.');
+    sifreDogrula(sifreEl.value);
+    const fb = await firebase();
+    await fb.linkWithCredential(auth.currentUser,
+      fb.EmailAuthProvider.credential(eposta(prof.nickLower), sifreEl.value));
+    durumYaz('Şifren kaydedildi! Giriş adın: ' + prof.nick, 'iyi');
+    sifreEl.value = '';
+  }));
 }
 
 // Boşta olan bir öneri bul. Havuz 400 kombinasyon, çakışma nadirdir;
@@ -561,8 +784,7 @@ async function musaitNickBul() {
 async function nickKaydet(nick) {
   if (!uid) throw new Error('Önce giriş yapmalısın.');
   const alt = kucuk(nick);
-  if (!NICK_DESEN.test(alt)) throw new Error('3–16 karakter olmalı; harf, rakam ve _ kullanabilirsin.');
-  if (YASAK_PARCA.some(k => alt.includes(k))) throw new Error('Bu nickname kullanılamaz, başka bir tane seç.');
+  nickDogrula(alt);
   if (alt === prof.nickLower) { if (nick !== prof.nick) await nickYaz(nick, alt); return; }
 
   const fb = await firebase();
