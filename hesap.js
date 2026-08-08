@@ -32,7 +32,8 @@ const ORAN = {
   'yildiz-avcisi': s => s / 60,
   'uzay-kacisi':   s => s / 40,
   'kule-yigini':   s => s * 5,
-  'helezon':       s => s * 4
+  'helezon':       s => s * 4,
+  'uzay-yolculugu': s => s / 100
 };
 
 const TEK_MAX      = 250;    // tek oyunda kazanılabilecek en fazla coin

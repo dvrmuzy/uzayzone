@@ -207,6 +207,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -567,6 +568,17 @@ function oyunSifirla(){
   O.simsek = 0;
   O.gezegenDonus = 0;
   O.toplananYol = 0;
+  O.odullenen = 0;
+}
+
+/* Uzay Coin: her varışta ve görev sonunda yalnızca o ana kadar
+   ödüllendirilmemiş skor farkı gönderilir — skor yolculuklar boyunca
+   biriktiği için toplamı tekrar tekrar yollamak çifte ödül olurdu. */
+function coinVer(){
+  var fark = Math.round(O.skor) - O.odullenen;
+  if (fark <= 0) return;
+  O.odullenen = Math.round(O.skor);
+  window.UzayHesap?.odul('uzay-yolculugu', fark);
 }
 
 function yildizUret(){
@@ -1965,6 +1977,7 @@ function gorevBitti(baslik, metin){
   S.hata();
   patlamaEkle(O.rx, roketY(), 40, '#ff6a3d');
   if (O.skor > KAYIT.rekor){ KAYIT.rekor = Math.round(O.skor); kayitYaz(); }
+  coinVer();
   el('failBaslik').textContent = baslik;
   el('failMetin').textContent = metin;
   el('failSkor').textContent = sayiFmt(O.skor);
@@ -2081,6 +2094,7 @@ function varisPaneliAc(){
   if (toplam > KAYIT.rekor) KAYIT.rekor = toplam;
   if (KAYIT.rozetler.indexOf(h.id) === -1) KAYIT.rozetler.push(h.id);
   kayitYaz();
+  coinVer();
 
   el('dokunmaIpucu').classList.remove('on');
   paneliAc('varisPanel');
