@@ -663,6 +663,9 @@ window.UzayHesap = {
   kullanici: kullanici,
   onDegisim: fn => { dinleyiciler.push(fn); try { fn(kullanici()); } catch (e) { console.warn(e); } },
   girisAc: girisModali,
+  // Ana sayfa kartlarındaki 🪙 rozetini bu liste besler — ORAN tablosu tek
+  // kaynaktır, index.html'de ikinci bir liste tutulmaz.
+  coinliOyunlar: () => Object.keys(ORAN),
   // skor-tablosu sayfası bunları kullanıyor
   _haftaKey: haftaKey,
   _ayKey: ayKey,
