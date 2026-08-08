@@ -250,6 +250,7 @@ html, body {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -705,6 +706,7 @@ function gameOver() {
     STATE.best = Math.floor(STATE.distance);
     localStorage.setItem('uzayKacisiBest', String(STATE.best));
   }
+  window.UzayHesap?.odul('uzay-kacisi', Math.floor(STATE.distance));
   sndCrash();
   STATE.shake = 30;
   document.getElementById('endDist').textContent = Math.floor(STATE.distance);

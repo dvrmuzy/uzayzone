@@ -12,15 +12,11 @@
 //    Net.patch({ board: yeniTahta, turn: 'O' });
 // ═══════════════════════════════════════════════════════════
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import {
-  getDatabase, ref, child, get, set, update, onValue,
+  ref, child, get, set, update, onValue,
   onDisconnect, runTransaction
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-import { firebaseConfig } from './firebase-config.js';
-
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+import { db } from './firebase-init.js';
 
 // Karıştırılması kolay karakterler (0/O, 1/I/L) bilinçli olarak çıkarıldı
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';

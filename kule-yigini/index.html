@@ -230,6 +230,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -869,6 +870,7 @@ function endGame() {
     bestScore = score;
     try { localStorage.setItem('kuleYiginiBest', String(bestScore)); } catch (e) {}
   }
+  window.UzayHesap?.odul('kule-yigini', score);
   finalScoreEl.textContent = score;
   bestScoreEl.textContent  = `EN İYİ: ${bestScore}`;
   newBestEl.classList.toggle('show', isNewBest);

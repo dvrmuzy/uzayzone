@@ -307,6 +307,7 @@ html, body {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -981,6 +982,7 @@ function gameOver() {
     STATE.best = STATE.score;
     localStorage.setItem('yildizAvcisiBest', String(STATE.best));
   }
+  window.UzayHesap?.odul('yildiz-avcisi', STATE.score);
   document.getElementById('endScore').textContent = STATE.score;
   document.getElementById('endWave').textContent = STATE.wave;
   document.getElementById('endBest').textContent = STATE.best;

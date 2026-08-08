@@ -16,6 +16,76 @@
           "createdAt": { ".validate": "newData.isNumber()" }
         }
       }
+    },
+
+    "users": {
+      "$uid": {
+        ".read":  "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+
+        "coin": {
+          ".validate":
+            "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000 && newData.val() >= (data.isNumber() ? data.val() : 0) && newData.val() - (data.isNumber() ? data.val() : 0) <= 250 && newData.parent().child('lastOdul').val() == now && (!data.parent().child('lastOdul').isNumber() || data.parent().child('lastOdul').val() + 10000 <= now) && newData.parent().child('gun/toplam').val() - (data.parent().child('gun/tarih').val() == newData.parent().child('gun/tarih').val() && data.parent().child('gun/toplam').isNumber() ? data.parent().child('gun/toplam').val() : 0) == newData.val() - (data.isNumber() ? data.val() : 0)"
+        },
+
+        "lastOdul": { ".validate": "newData.val() == now" },
+
+        "gun": {
+          "tarih":  { ".validate": "newData.isString() && newData.val().length == 10" },
+          "toplam": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000" },
+          "$other": { ".validate": false }
+        },
+
+        "gunluk": {
+          "$oyun": {
+            "$gun": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 500 && newData.val() >= (data.isNumber() ? data.val() : 0)"
+            }
+          }
+        },
+
+        "nick": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16"
+        },
+
+        "nickLower": {
+          ".validate": "newData.isString() && root.child('nicks').child(newData.val()).val() === $uid"
+        },
+
+        "olusturuldu": { ".validate": "newData.isNumber()" },
+
+        "$other": { ".validate": false }
+      }
+    },
+
+    "nicks": {
+      "$nick": {
+        ".read":  true,
+        ".write": "auth != null && (!data.exists() || data.val() === auth.uid)",
+        ".validate": "newData.isString() && newData.val() === auth.uid && $nick.matches(/^[a-z0-9çğıöşü_]{3,16}$/)"
+      }
+    },
+
+    "board": {
+      "$tur": {
+        "$donem": {
+          ".read": true,
+          ".indexOn": "coin",
+
+          "$uid": {
+            ".write":
+              "auth != null && auth.uid === $uid && ($tur === 'haftalik' || $tur === 'aylik') && $donem.matches(/^[0-9]{4}-(W[0-9]{2}|[0-9]{2})$/)",
+
+            "coin": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() >= (data.isNumber() ? data.val() : 0) && newData.val() - (data.isNumber() ? data.val() : 0) <= 250"
+            },
+            "nick": {
+              ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16"
+            },
+            "$other": { ".validate": false }
+          }
+        }
+      }
     }
   }
 }

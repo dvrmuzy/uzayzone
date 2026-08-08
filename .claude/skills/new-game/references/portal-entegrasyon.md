@@ -1,6 +1,6 @@
 # Portal Entegrasyonu
 
-Her yeni oyunun portala bağlanması için gereken üç parça: analytics, Ana Sayfa butonu, `GAMES` kartı.
+Her yeni oyunun portala bağlanması için gereken dört parça: analytics, hesap/coin, Ana Sayfa butonu, `GAMES` kartı.
 
 ## 1. Google Analytics (zorunlu)
 
@@ -14,7 +14,37 @@ Oyunun `</head>` tagından hemen önce:
 - Ölçüm Kimliği (Measurement ID) tek yerde — `analytics.js` içinde — tutulur, sayfalara tekrar yazma.
 - Eksikse o oyunun ziyaretleri analitiğe düşmez. `oyun-kontrol.js` hook'u bunu yakalar.
 
-## 2. Ana Sayfaya Dön butonu
+## 2. Hesap ve Uzay Coin (zorunlu)
+
+Oyunun `</head>` tagından hemen önce, analytics satırının yanına:
+
+```html
+<script src="../hesap.js" defer></script>
+```
+
+Bu, sağ üst köşeye giriş/nickname/coin rozetini ekler ve `window.UzayHesap` arayüzünü açar.
+
+Sonra **oyun bittiği yerde** — mevcut `localStorage` en-iyi-skor kaydının hemen yanında — tek satır:
+
+```javascript
+window.UzayHesap?.odul('klasor-adi', skor);
+```
+
+- `?.` şart: `file://` ile açıldığında veya Firebase ulaşılamazsa `UzayHesap` hiç tanımlanmaz, oyun yine de çalışmalı.
+- Sadece **oyun bitişinde bir kez** çağır — her karede değil.
+- Mevcut `localStorage` best mantığını **kaldırma**; giriş yapmayan oyuncu için o çalışmaya devam eder.
+- Son adım: kök dizindeki **`hesap.js` içindeki `ORAN` tablosuna** oyunun satırını ekle, yoksa `odul()` uyarı basıp 0 döner:
+
+```javascript
+const ORAN = {
+  ...
+  'klasor-adi': s => s / 60      // iyi bir oyun ~30–120 coin getirmeli
+};
+```
+
+Denge ölçüsü: tek ödül tavanı 250, günlük toplam tavanı 1000 coin. Oranı, ortalama bir oyuncunun bir turda 30–120 coin alacağı şekilde seç — skoru binlerle giden oyunlarda böl (`s / 60`), onlarla giden oyunlarda çarp (`s * 5`).
+
+## 3. Ana Sayfaya Dön butonu
 
 Oyunun `</body>` tagından hemen önce:
 
@@ -24,7 +54,7 @@ Oyunun `</body>` tagından hemen önce:
 
 `color` ve `font-family` değerlerini oyunun temasına göre ayarla. Buton sabit kalmalı, oynanışı engellemeyecek konumda olmalı (mobilde alt kısma da alabilirsin).
 
-## 3. Ana sayfa kartı
+## 4. Ana sayfa kartı
 
 `index.html` dosyasındaki `GAMES` JavaScript array'ine yeni oyun objesini ekle:
 

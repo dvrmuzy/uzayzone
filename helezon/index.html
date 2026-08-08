@@ -154,6 +154,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -818,6 +819,7 @@ function endGame() {
     const best = parseInt(localStorage.getItem('helezon_best') || '0', 10);
     const isNewBest = state.score > best;
     if (isNewBest) localStorage.setItem('helezon_best', String(state.score));
+    window.UzayHesap?.odul('helezon', state.score);
     document.getElementById('finalScore').textContent = state.score;
     document.getElementById('bestScore').textContent = 'En İyi: ' + Math.max(best, state.score);
     document.getElementById('newBest').style.display = isNewBest && state.score > 0 ? 'block' : 'none';

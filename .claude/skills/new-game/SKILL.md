@@ -54,7 +54,7 @@ Gerçekten sprite / 3D model / hazır ses gerekiyorsa → **oku:** `references/a
 - **Web Audio** ses sentezi her zaman ekle (kütüphanenin kendi audio'su yerine de kullanabilirsin)
 - **Zorluk seviyeleri** (Kolay/Orta/Zor) genelde değer katar — uygunsa ekle, seçim `localStorage`'da saklansın
 
-Analytics satırı ve Ana Sayfa butonu zorunlu → **oku:** `references/portal-entegrasyon.md`
+Analytics satırı, `hesap.js` + coin ödülü ve Ana Sayfa butonu zorunlu → **oku:** `references/portal-entegrasyon.md`
 
 ## Adım 5: Çok Oyunculu — "Arkadaşınla Oyna"
 
@@ -78,6 +78,7 @@ Obje şeması ve renk türetme → `references/portal-entegrasyon.md` (Adım 4't
 3. Kütüphane CDN'i doğru ve güncel mi
 4. Oyun bağımsız çalışıyor mu (mantık hatası, asset yükleme hatası yok mu)
 5. `index.html` GAMES array'ine kart eklendi mi
+5b. `hesap.js` içindeki `ORAN` tablosuna oyunun satırı eklendi mi (yoksa coin kazanılmaz)
 6. Kullanıcıya oyunu tarayıcıda test etmesini söyle, ana sayfa URL'sini hatırlat — çok oyunculu eklendiyse **yerel sunucu gerektiğini** de belirt
 
 ## Mevcut Oyun Referansları

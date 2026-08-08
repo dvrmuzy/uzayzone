@@ -11,6 +11,7 @@
 <link rel="apple-touch-icon" href="logo/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <script src="analytics.js"></script>
+<script src="hesap.js" defer></script>
 <script src="destek.js" defer></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -79,6 +80,20 @@ header {
 
 /* ─── Kategori Filtresi ─── */
 /* ─── Arama Çubuğu ─── */
+.skor-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin-bottom: 18px; padding: 9px 20px; text-decoration: none;
+  border-radius: 30px; border: 1px solid rgba(255, 215, 94, 0.35);
+  background: rgba(255, 215, 94, 0.07); color: #ffd75e;
+  font-family: 'Orbitron', sans-serif; font-weight: 700;
+  font-size: 0.72rem; letter-spacing: 0.12em;
+  transition: all 0.3s ease;
+}
+.skor-link:hover {
+  background: rgba(255, 215, 94, 0.18); color: #fff;
+  box-shadow: 0 0 26px rgba(255, 215, 94, 0.3); transform: translateY(-2px);
+}
+
 .search-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
 
 .search-box { position: relative; width: 100%; max-width: 460px; }
@@ -554,6 +569,7 @@ footer {
   <header>
     <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
     <h1 class="site-title-fallback">UZAY ZONE</h1>
+    <a class="skor-link" href="skor-tablosu/">🏆 SKOR TABLOSU</a>
   </header>
   <div class="search-wrap">
     <div class="search-box">
@@ -933,6 +949,21 @@ const GAMES = [
       glow: 'rgba(154,160,166,0.20)',
       bar: 'linear-gradient(90deg, #9aa0a6, #ffffff, #5f6368)',
       border: 'rgba(154,160,166,0.22)'
+    }
+  },
+  {
+    title: 'Uzay Yolculuğu',
+    genre: 'Macera / Eğitici',
+    desc: 'Roketi fırlat, kuşları ve fırtınaları geç, atmosferden çık ve gideceğin gezegeni seç.',
+    href: 'uzay-yolculugu/',
+    tags: ['tek', 'mobil', 'aksiyon', 'egitici'],
+    icon: '🚀',
+    colors: {
+      bg: 'linear-gradient(135deg, #061024, #17284f)',
+      accent: '#4dd8ff',
+      glow: 'rgba(77,216,255,0.20)',
+      bar: 'linear-gradient(90deg, #4dd8ff, #a06bff, #ff8a3d)',
+      border: 'rgba(77,216,255,0.22)'
     }
   }
 ];
