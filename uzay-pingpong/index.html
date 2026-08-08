@@ -183,6 +183,7 @@
   #net-badge .lag { opacity: 0.6; }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -425,6 +426,14 @@ function newGame() {
   audio();
 }
 
+// Uzay Coin: maçı bu bilgisayardaki insan oyuncu kazandıysa ödül var.
+// Bilgisayara ya da çevrimiçi rakibe yenilince yok.
+function coinVer(w) {
+  if (net.on) { if (w !== (net.host ? 1 : 2)) return; }
+  else if (cfg.mode === 'cpu' && w === 2) return;
+  window.UzayHesap?.odul('uzay-pingpong', 1);
+}
+
 function point(who) {
   if (who === 1) score1++; else score2++;
   updateHud();
@@ -436,6 +445,7 @@ function point(who) {
   if (score1 >= cfg.target || score2 >= cfg.target) {
     state = 'over';
     const w = score1 > score2 ? 1 : 2;
+    coinVer(w);
     const nm = w === 1 ? 'OYUNCU 1' : (cfg.mode === 'cpu' ? 'BİLGİSAYAR' : 'OYUNCU 2');
     const t = document.getElementById('win-title');
     t.textContent = nm + ' KAZANDI';
@@ -771,6 +781,7 @@ function applySnap(s) {
     if (st === 'count') hide('win');
     if (st === 'over') {
       const w = score1 > score2 ? 1 : 2;
+      coinVer(w);
       $$('win-title').textContent = (w === 1 ? 'RAKİP' : 'SEN') + ' KAZANDI';
       $$('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();

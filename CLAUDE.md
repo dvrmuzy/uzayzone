@@ -18,7 +18,7 @@ Mevcut bir oyunu düzenlerken de geçerli:
 - **Türkçe**: `lang="tr"` ve tüm görünür metinler Türkçe.
 - **Bağımsız**: Oyun, portal olmadan `<klasor>/index.html` açılarak da çalışmalı.
 - **Her sayfada analytics**: `</head>` öncesinde `<script src="../analytics.js"></script>`. Measurement ID yalnız `analytics.js` içinde durur.
-- **Her oyunda hesap**: yanına `<script src="../hesap.js" defer></script>`, oyun bitişinde tek satır `window.UzayHesap?.odul('klasor-adi', skor)` ve `hesap.js` içindeki `ORAN` tablosuna oyunun satırı. `?.` şart — hesap sistemi yoksa oyun yine çalışmalı.
+- **Her oyunda hesap**: yanına `<script src="../hesap.js" defer></script>`, oyun bitişinde tek satır `window.UzayHesap?.odul('klasor-adi', deger)` ve `hesap.js` içindeki `ODUL` tablosuna oyunun satırı. `?.` şart — hesap sistemi yoksa oyun yine çalışmalı.
 - **Her oyunda Ana Sayfa butonu**: `href="../"` ile sabit konumlu dönüş linki.
 - **Mobil**: viewport meta + dokunmatik kontrol zorunlu.
 - **npm/build yok**: Bağımlılık eklemek = bir CDN `<script>` etiketi.
@@ -26,6 +26,8 @@ Mevcut bir oyunu düzenlerken de geçerli:
 ## Uzay Coin ve skor tablosu
 
 `hesap.js` = Firebase Auth (Google + misafir) + nickname + coin cüzdanı + sağ üst rozet. Skor tablosu `skor-tablosu/` altında: haftanın ve ayın en iyi 5'i. Dönem anahtarları Europe/Istanbul (sabit UTC+3) saatine göre üretilir, sıfırlama işi yoktur — anahtar kendiliğinden değişir.
+
+**Her oyundan coin kazanılır** ve miktar sabittir; oyunun zorluğuna/uzunluğuna göre 50 ile 250 arasında değişir (`hesap.js` → `ODUL`). Her satırda `coin` (kazanılan miktar) ve `esik` (`odul()`'e geçirilen değerin en az kaçı olması gerektiği) durur: skorlu oyunlarda skor, sayaçlı oyunlarda sayaç (tıklama/blok/sipariş), "başardım" oyunlarında 1. Eşiğin altı 0 coin — açıp hemen kaybederek coin toplanamasın. Sonu olmayan oyunlar (mini-mimar, havai-fişek, süper şef, simya, tıkla kazan) ödülü aralıklarla verir; ana sayfa kartlarında coin rozeti yoktur, ayırt edici değil.
 
 Coin'i tarayıcı yazar (site statik, sunucu yok). Hile **imkansız değil, tavanlı**: tek ödül ≤ 250, iki ödül arası ≥ 10 sn, günlük toplam ≤ 1000, oyun başına günlük ≤ 500. Bu sayılar `hesap.js` ile `firebase-rules.json` içinde **iki yerde** durur; birini değiştirirsen diğerini de değiştir, yoksa yazımlar `PERMISSION_DENIED` alır.
 

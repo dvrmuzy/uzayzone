@@ -231,6 +231,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -473,6 +474,7 @@ function nextLevel() {
 function gameOver(win) {
   state = win ? 'win' : 'dead';
   if (!win) sfxGameOver();
+  window.UzayHesap?.odul('neonball', score);
   best = Math.max(best, score);
   document.getElementById('best-display').textContent = best;
 

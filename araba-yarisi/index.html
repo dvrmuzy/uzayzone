@@ -432,6 +432,7 @@ canvas {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -1364,6 +1365,7 @@ function triggerDisaster() {
 function gameOver() {
   state.isPlaying = false;
   sfxGameOver();
+  window.UzayHesap?.odul('araba-yarisi', state.score);
 
   document.getElementById('goScore').textContent = `Skor: ${state.score}`;
   document.getElementById('goInfo').textContent = `${Math.floor(state.distance)} km yol kat ettin!`;

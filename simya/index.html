@@ -459,6 +459,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -1267,6 +1268,8 @@ function mix() {
       if (isNew) {
         recipeLog.push(recipeText);
         saveProgress();
+        // Uzay Coin: her 5 yeni keşifte bir ödül
+        if (discovered.size % 5 === 0) window.UzayHesap?.odul('simya', discovered.size);
         showDiscovery(result, recipeText);
         showRecipeDisplay(recipeText);
         sfx.discover();

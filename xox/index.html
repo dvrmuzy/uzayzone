@@ -368,6 +368,7 @@
     }
   </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -821,6 +822,12 @@ function handleEnd(result) {
     setTimeout(() => showOverlay('🤝', 'Berabere!', sub), 600);
   } else {
     const isPC = state.mode === 'pvc' && result.winner === 'O';
+
+    // Uzay Coin: kazanan bu bilgisayardaki insan oyuncuysa. Bilgisayar ya da
+    // çevrimiçi rakip kazandığında ödül yok.
+    const benKazandim = state.online ? result.winner === state.online.symbol : !isPC;
+    if (benKazandim) window.UzayHesap?.odul('xox', 1);
+
     if (keepScore) state.scores[result.winner]++;
     updateScores();
     const name = isPC ? 'Bilgisayar' : `Oyuncu ${result.winner}`;

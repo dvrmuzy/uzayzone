@@ -568,17 +568,12 @@ function oyunSifirla(){
   O.simsek = 0;
   O.gezegenDonus = 0;
   O.toplananYol = 0;
-  O.odullenen = 0;
 }
 
-/* Uzay Coin: her varışta ve görev sonunda yalnızca o ana kadar
-   ödüllendirilmemiş skor farkı gönderilir — skor yolculuklar boyunca
-   biriktiği için toplamı tekrar tekrar yollamak çifte ödül olurdu. */
+/* Uzay Coin: ödül sabit, hesap.js'teki eşiği yalnızca gezegene varan
+   yolculuklar geçer — yolda patlayan bir roket eşiğin altında kalır. */
 function coinVer(){
-  var fark = Math.round(O.skor) - O.odullenen;
-  if (fark <= 0) return;
-  O.odullenen = Math.round(O.skor);
-  window.UzayHesap?.odul('uzay-yolculugu', fark);
+  window.UzayHesap?.odul('uzay-yolculugu', Math.round(O.skor));
 }
 
 function yildizUret(){

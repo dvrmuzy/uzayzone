@@ -117,6 +117,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -1808,6 +1809,7 @@ function levelComplete(){
 }
 function gameOver(){
   running=false;cancelAnimationFrame(animId);
+  window.UzayHesap?.odul('araba-patlatma', score);
   document.getElementById('weaponBar').classList.add('hidden');
   document.getElementById('missionBar').classList.remove('show');
   document.getElementById('effectBar').innerHTML='';

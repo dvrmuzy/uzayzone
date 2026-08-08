@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bilgisayar Tamiri 🖥️🔧 | Uzay Zone</title>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 <style>
   :root{
     --accent:#2bd9a0;
@@ -865,6 +866,7 @@ function showPowerButton(){
 function powerOn(){
   if(finished) return;
   finished=true;phase='done';
+  window.UzayHesap?.odul('bilgisayar-toplama', 1);
   sfxPower();
   fill.intensity=3;fill.color.setHex(0x3da8ff);
   Object.values(partMeshes).forEach(pm=>setEmissive(pm,0x123a2c,0.5));

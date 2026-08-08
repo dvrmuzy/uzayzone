@@ -623,6 +623,7 @@ canvas#scene {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -2169,9 +2170,18 @@ function userLaunch(worldX, worldY) {
   updateHUD();
 }
 
+// Uzay Coin: gösterinin sonu yok, ödül her 500 puanda bir verilir. Skor yeni
+// gösteride sıfırlandığında dilim sayacı da kendiliğinden başa döner.
+const COIN_DILIM = 500;
+let coinDilim = 0;
+
 function updateHUD() {
   document.getElementById('scoreVal').textContent = STATE.score;
   document.getElementById('comboVal').textContent = 'x' + STATE.combo;
+
+  const dilim = Math.floor(STATE.score / COIN_DILIM);
+  if (dilim > coinDilim) window.UzayHesap?.odul('havai-fisek', STATE.score);
+  coinDilim = dilim;
 }
 
 const clockIconEl = document.getElementById('clockIcon');

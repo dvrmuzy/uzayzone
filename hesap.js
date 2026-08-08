@@ -8,6 +8,8 @@
 //
 //  Oyunlara açtığı tek arayüz:
 //    window.UzayHesap.odul('yildiz-avcisi', skor)   → kazanılan coin (Promise<number>)
+//      Ödül miktarı aşağıdaki ODUL tablosunda sabittir; ikinci argüman yalnızca
+//      "hak edildi mi" eşiğidir. Başarı/başarısızlık oyunlarında 1 geçilir.
 //    window.UzayHesap.kullanici()                   → { uid, nick, coin } | null
 //    window.UzayHesap.onDegisim(cb)                 → giriş/çıkış/coin değişiminde çağrılır
 //
@@ -26,14 +28,42 @@
 const KOK = new URL('.', document.currentScript.src).href;
 const url = yol => new URL(yol, KOK).href;
 
-// ─── Denge: skor → coin ───
-// Oyunların içine dağıtılmaz, hepsi burada durur ki tek dosyadan ayarlanabilsin.
-const ORAN = {
-  'yildiz-avcisi': s => s / 60,
-  'uzay-kacisi':   s => s / 40,
-  'kule-yigini':   s => s * 5,
-  'helezon':       s => s * 4,
-  'uzay-yolculugu': s => s / 100
+// ─── Denge: oyun → coin ───
+// Her oyun SABİT bir ödül verir; miktar oyunun zorluğuna ve bir turun ne kadar
+// sürdüğüne göre 50 ile 250 arasında değişir. Oyunların içine dağıtılmaz, hepsi
+// burada durur ki denge tek dosyadan ayarlanabilsin.
+//
+//   coin → başarıda kazanılan miktar
+//   esik → oyunun odul()'e geçirdiği değerin en az kaç olması gerektiği.
+//          Skorlu oyunlarda skor, sayaçlı oyunlarda (tıklama, blok, sipariş)
+//          o sayaç, "başardın/başaramadın" oyunlarında ise 1 gelir.
+//          Eşiğin altı 0 coin — oyunu açıp hemen kaybederek coin toplanamasın.
+const ODUL = {
+  'xox':                { coin:  50, esik: 1 },
+  'tikla-kazan':        { coin:  50, esik: 1000 },   // her 1000 elle tıklama
+  'mini-mimar':         { coin:  50, esik: 50 },     // her 50 blok
+  'havai-fisek':        { coin:  50, esik: 500 },    // her 500 puan
+  'kibrit-oyunu':       { coin:  75, esik: 1 },
+  'hafiza-bahcesi':     { coin:  75, esik: 1 },
+  'araba-patlatma':     { coin:  75, esik: 800 },
+  'baglanti-yok':       { coin:  75, esik: 100 },
+  'uzay-pingpong':      { coin:  75, esik: 1 },
+  'tank-savasi':        { coin:  75, esik: 1 },
+  'uzay-sumo':          { coin:  75, esik: 1 },
+  'neon-tron':          { coin:  75, esik: 1 },
+  'araba-yarisi':       { coin: 100, esik: 100 },
+  'neonball':           { coin: 100, esik: 400 },
+  'simya':              { coin: 100, esik: 5 },      // her 5 keşif
+  'bilgisayar-toplama': { coin: 100, esik: 1 },
+  'stickman-dovus':     { coin: 100, esik: 1 },
+  'super-sef':          { coin: 150, esik: 10 },     // her 10 sipariş
+  'kule-yigini':        { coin: 150, esik: 12 },
+  'helezon':            { coin: 150, esik: 8 },
+  'roket-ucusu':        { coin: 150, esik: 1 },
+  'yildiz-avcisi':      { coin: 200, esik: 1500 },
+  'uzay-kacisi':        { coin: 200, esik: 3000 },
+  'uzay-yolculugu':     { coin: 200, esik: 2500 },
+  'mermi-kesici':       { coin: 250, esik: 600 }
 };
 
 const TEK_MAX      = 250;    // tek oyunda kazanılabilecek en fazla coin
@@ -573,17 +603,20 @@ async function boardNickTazele(nick) {
 //  Uzay Coin
 // ═══════════════════════════════════════════════════════════
 
-async function odul(oyunId, skor) {
+async function odul(oyunId, deger) {
   if (!uid || !prof.nick) return 0;              // giriş yok / nickname yok → sessizce geç
-  const oran = ORAN[oyunId];
-  if (!oran) { console.warn('[hesap] tanımsız oyun:', oyunId); return 0; }
+  const tanim = ODUL[oyunId];
+  if (!tanim) { console.warn('[hesap] tanımsız oyun:', oyunId); return 0; }
+
+  // Değer geçmeyen oyunlar "başardım" demiş sayılır
+  const basari = (deger === undefined || deger === null) ? 1 : (Number(deger) || 0);
+  if (basari < tanim.esik) return 0;
 
   const gun = gunKey();
   const gunToplam = (prof.gun && prof.gun.tarih === gun && prof.gun.toplam) || 0;
   const oyunGun   = (prof.gunluk && prof.gunluk[oyunId] && prof.gunluk[oyunId][gun]) || 0;
 
-  let coin = Math.floor(oran(Math.max(0, Number(skor) || 0)));
-  coin = Math.min(coin, TEK_MAX, GUN_MAX - gunToplam, OYUN_GUN_MAX - oyunGun);
+  let coin = Math.min(tanim.coin, TEK_MAX, GUN_MAX - gunToplam, OYUN_GUN_MAX - oyunGun);
   if (coin <= 0) return 0;
 
   const simdi = Date.now();
@@ -660,13 +693,10 @@ firebase().then(fb => {
 
 // ─── Oyunlara açılan arayüz ───
 window.UzayHesap = {
-  odul: (oyunId, skor) => odul(oyunId, skor).catch(e => { console.warn('[hesap]', e); return 0; }),
+  odul: (oyunId, deger) => odul(oyunId, deger).catch(e => { console.warn('[hesap]', e); return 0; }),
   kullanici: kullanici,
   onDegisim: fn => { dinleyiciler.push(fn); try { fn(kullanici()); } catch (e) { console.warn(e); } },
   girisAc: girisModali,
-  // Ana sayfa kartlarındaki 🪙 rozetini bu liste besler — ORAN tablosu tek
-  // kaynaktır, index.html'de ikinci bir liste tutulmaz.
-  coinliOyunlar: () => Object.keys(ORAN),
   // skor-tablosu sayfası bunları kullanıyor
   _haftaKey: haftaKey,
   _ayKey: ayKey,

@@ -172,6 +172,7 @@ body::before{
 @media(max-width:380px){.header h1{font-size:1.9rem}.target-num{font-size:1.2rem}}
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 <div class="floaters" id="floaters"></div>
@@ -464,6 +465,7 @@ function placeMatch(di,si){
       const pts=S.diff==='easy'?10:S.diff==='medium'?25:50;
       S.score+=pts;S.streak++;if(S.streak>S.best)S.best=S.streak;
       S.fb={ok:true,msg:'Süpersin! 🎉',sub:`+${pts} puan kazandın!`};
+      window.UzayHesap?.odul('kibrit-oyunu', 1);
       setTimeout(()=>{ S.streak>=3?SFX.streak():SFX.win(); },180);
       doConfetti();doCelebrate();
     } else {

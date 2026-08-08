@@ -140,6 +140,7 @@
 }
 </script>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 <script type="module">
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -913,6 +914,7 @@ function renderMissionList(){
 }
 function missionComplete(){
   score++;
+  window.UzayHesap?.odul('roket-ucusu', 1);
   sWin();
   showSpeech('<b>Görev tamam!</b> Aferin. ✅', 2200);
   setTimeout(nextMission, 2600);

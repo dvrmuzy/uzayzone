@@ -236,6 +236,7 @@ body {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -379,6 +380,7 @@ updateCamera();
 
 // ─── Blocks ───
 const blocks = new Map(); // key "x,y,z" -> mesh
+let konanBlok = 0;        // bu oturumda elle konan blok sayısı (Uzay Coin sayacı)
 const blockGroup = new THREE.Group();
 scene.add(blockGroup);
 
@@ -674,6 +676,9 @@ function onPointerUp(cx, cy) {
         if (!blocks.has(key(hover.x, hover.y, hover.z))) {
           placeBlock(hover.x, hover.y, hover.z, currentShape, COLORS[currentColor].hex);
           sndPlace();
+          // Uzay Coin: oyunun sonu yok, ödül elle konan her 50 blokta bir verilir.
+          // Hazır şablonların tek tuşla döktüğü bloklar sayılmaz.
+          if (++konanBlok % 50 === 0) window.UzayHesap?.odul('mini-mimar', konanBlok);
         }
       }
     }

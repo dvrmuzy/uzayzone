@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Stickman Dövüş</title>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 <style>
   :root{
     --red:#ff3b3b; --accent:#ff8c2e; --gold:#ffd24a;
@@ -958,6 +959,11 @@ function checkWin(){
       setTimeout(()=>{
         STATE='over';
         const w=alive[0];
+
+        // Uzay Coin: kazanan bu bilgisayardaki insan oyuncuysa. Bot kazanınca
+        // ya da çevrimiçi oyunda rakip kazanınca ödül yok.
+        if(w && !w.isBot && (!net.on || w.idx===mySlot())) window.UzayHesap?.odul('stickman-dovus', 1);
+
         const wt=$('winText'), ws=$('winSub');
         if(w){
           wt.textContent = (w.isBot?'🤖 Bilgisayar Kazandı!': '🏆 '+w.name+' Kazandı!');

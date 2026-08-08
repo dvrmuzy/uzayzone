@@ -181,6 +181,7 @@
   #net-badge .lag { opacity: 0.6; }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -1066,6 +1067,7 @@ function update(dt) {
     if (overTimer <= 0) {
       if (score1 >= cfg.target || score2 >= cfg.target) {
         state = 'win';
+        coinVer(score1 > score2 ? 1 : 2);
         document.getElementById('win-title').textContent =
           (score1 > score2 ? pName(1) : pName(2)) + ' KAZANDI';
         document.getElementById('win-score').textContent = score1 + ' - ' + score2;
@@ -1473,6 +1475,14 @@ bindRow('arena-row', 'arena', Number);
   .forEach(([r, k]) => syncRow(r, k));
 refreshMode();
 
+// Uzay Coin: maçı bu bilgisayardaki insan oyuncu kazandıysa ödül var.
+// Bilgisayara ya da çevrimiçi rakibe yenilince yok.
+function coinVer(w) {
+  if (net.on) { if (w !== (net.host ? 1 : 2)) return; }
+  else if (cfg.mode === 'cpu' && w === 2) return;
+  window.UzayHesap?.odul('neon-tron', 1);
+}
+
 function newMatch() {
   score1 = score2 = 0; round = 1;
   hide('menu'); hide('win'); hide('pause');
@@ -1699,6 +1709,7 @@ function applySnap(s) {
 
   if (st !== net.prevState) {
     if (st === 'win') {
+      coinVer(score1 > score2 ? 1 : 2);
       $$('win-title').textContent = (score1 > score2 ? pName(1) : pName(2)) + ' KAZANDI';
       $$('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();

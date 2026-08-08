@@ -477,34 +477,6 @@ header {
   animation: badgePulse 1.5s ease-in-out infinite;
 }
 
-/* Uzay Coin kazandıran oyunlar. "YENİ" rozeti sağ üstte durduğu için
-   bu sol üstte — ikisi aynı kartta çakışmasın. */
-.coin-badge {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 5;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 700;
-  font-size: 0.6rem;
-  letter-spacing: 0.12em;
-  color: #ffd75e;
-  background: rgba(18, 13, 3, 0.75);
-  border: 1px solid rgba(255, 215, 94, 0.45);
-  padding: 4px 10px;
-  border-radius: 20px;
-  box-shadow: 0 0 14px rgba(255, 215, 94, 0.18);
-  backdrop-filter: blur(4px);
-}
-
-.game-card:hover .coin-badge {
-  border-color: rgba(255, 215, 94, 0.85);
-  box-shadow: 0 0 22px rgba(255, 215, 94, 0.35);
-}
-
 /* ─── Footer ─── */
 footer {
   text-align: center;
@@ -1142,10 +1114,8 @@ function updateSearchHint(count) {
 }
 
 // ─── Render Cards ───
-// Uzay Coin kazandıran oyunların klasör adları. Kaynak liste hesap.js'teki
-// ORAN tablosudur — burada ikinci bir liste tutulmaz, aşağıda ondan doldurulur.
-let COINLI = new Set();
-
+// Kartlarda coin rozeti yok: her oyundan Uzay Coin kazanılıyor, rozet ayırt
+// edici bir bilgi taşımıyordu. Miktarlar hesap.js'teki ODUL tablosunda.
 function renderCards() {
   const grid = document.getElementById('gamesGrid');
   const q = searchQuery.trim();
@@ -1177,7 +1147,6 @@ function renderCards() {
     <a href="${g.href}" class="game-card${g.isNew ? ' is-new' : ''}"
        style="--card-bg:${g.colors.bg};--card-accent:${g.colors.accent};--card-glow:${g.colors.glow};--card-bar:${g.colors.bar};--card-border:${g.colors.border};animation-delay:${i * 0.12}s">
       ${g.isNew ? '<span class="new-badge">YENİ</span>' : ''}
-      ${COINLI.has(g.href.replace(/\/$/, '')) ? '<span class="coin-badge" title="Bu oyundan Uzay Coin kazanırsın">🪙 COIN</span>' : ''}
       <div class="card-top-bar"></div>
       <div class="card-body">
         <div class="card-icon">${g.icon}</div>
@@ -1793,16 +1762,6 @@ if (activeCategory === 'all') renderCards();
 else searchThenRender();
 animate();
 
-// hesap.js defer ile yüklendiği için bu satırlar çalışırken henüz hazır değil.
-// Hazır olduğunda coin listesini alıp kartları bir kez daha çiziyoruz.
-// Açılış animasyonu sürerken (grid henüz boşken) dokunmuyoruz — o akışın
-// kendi renderCards çağrısı rozetleri zaten getirir.
-addEventListener('DOMContentLoaded', () => {
-  const oyunlar = window.UzayHesap && window.UzayHesap.coinliOyunlar();
-  if (!oyunlar || !oyunlar.length) return;
-  COINLI = new Set(oyunlar);
-  if (document.querySelector('#gamesGrid .game-card')) renderCards();
-});
 </script>
 </body>
 </html>

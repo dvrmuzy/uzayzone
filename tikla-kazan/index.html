@@ -16,6 +16,7 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
@@ -536,14 +537,23 @@ function spawnFloat(txt, x, y) {
   setTimeout(() => el.remove(), 900);
 }
 
+// Uzay Coin: her 1000 ELLE tıklamada bir ödül. Otomatik tıklayıcının
+// ürettiği tıklamalar sayılmaz, yoksa ödül kendiliğinden gelirdi.
+let elleTik = 0;
+
+function elleTikla(x, y) {
+  doClick(x, y);
+  if (++elleTik % 1000 === 0) window.UzayHesap?.odul('tikla-kazan', elleTik);
+}
+
 clicker.addEventListener('click', (e) => {
-  doClick(e.clientX, e.clientY);
+  elleTikla(e.clientX, e.clientY);
 });
 // Dokunmatik: anında tepki
 clicker.addEventListener('touchstart', (e) => {
   e.preventDefault();
   const t = e.changedTouches[0];
-  doClick(t.clientX, t.clientY);
+  elleTikla(t.clientX, t.clientY);
 }, { passive: false });
 
 // ─────────── Yükseltmeler ───────────

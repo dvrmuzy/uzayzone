@@ -354,6 +354,7 @@ canvas#petals {
 }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -637,6 +638,7 @@ function onCardClick(card) {
 
 function win() {
   STATE.running = false;
+  window.UzayHesap?.odul('hafiza-bahcesi', 1);
   const totalMs = performance.now() - STATE.startTime;
   const totalSec = Math.floor(totalMs / 1000);
   const moves = STATE.moves;

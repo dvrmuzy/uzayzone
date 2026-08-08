@@ -27,22 +27,23 @@ Bu, sağ üst köşeye giriş/nickname/coin rozetini ekler ve `window.UzayHesap`
 Sonra **oyun bittiği yerde** — mevcut `localStorage` en-iyi-skor kaydının hemen yanında — tek satır:
 
 ```javascript
-window.UzayHesap?.odul('klasor-adi', skor);
+window.UzayHesap?.odul('klasor-adi', skor);   // "başardım/başaramadım" oyunlarında skor yerine 1
 ```
 
 - `?.` şart: `file://` ile açıldığında veya Firebase ulaşılamazsa `UzayHesap` hiç tanımlanmaz, oyun yine de çalışmalı.
-- Sadece **oyun bitişinde bir kez** çağır — her karede değil.
+- Sadece **oyun bitişinde bir kez** çağır — her karede değil. Sonu olmayan oyunlarda (sandbox, clicker) aralıklı bir eşikte çağır: her 50 blokta, her 1000 tıklamada, her 10 siparişte…
 - Mevcut `localStorage` best mantığını **kaldırma**; giriş yapmayan oyuncu için o çalışmaya devam eder.
-- Son adım: kök dizindeki **`hesap.js` içindeki `ORAN` tablosuna** oyunun satırını ekle, yoksa `odul()` uyarı basıp 0 döner:
+- İki kişilik oyunlarda ödülü **yalnızca bu bilgisayardaki insan oyuncu kazandığında** ver; bilgisayar ya da çevrimiçi rakip kazanınca verme.
+- Son adım: kök dizindeki **`hesap.js` içindeki `ODUL` tablosuna** oyunun satırını ekle, yoksa `odul()` uyarı basıp 0 döner:
 
 ```javascript
-const ORAN = {
+const ODUL = {
   ...
-  'klasor-adi': s => s / 60      // iyi bir oyun ~30–120 coin getirmeli
+  'klasor-adi': { coin: 100, esik: 500 }
 };
 ```
 
-Denge ölçüsü: tek ödül tavanı 250, günlük toplam tavanı 1000 coin. Oranı, ortalama bir oyuncunun bir turda 30–120 coin alacağı şekilde seç — skoru binlerle giden oyunlarda böl (`s / 60`), onlarla giden oyunlarda çarp (`s * 5`).
+Denge ölçüsü: ödül **sabittir**, oyunun zorluğuna ve bir turun uzunluğuna göre 50 (kısa/kolay) ile 250 (zor/uzun) arasında seç — mevcut oyunlara bakıp benzerlerinin yanına yerleştir. `esik`, `odul()`'e geçirilen değerin en az kaçı olması gerektiğidir: ortalama bir oyuncunun düzgün bir turda geçebileceği, ama oyunu açıp hemen kaybedenin geçemeyeceği bir değer. Değer geçmeyen çağrılar 1 sayılır, o yüzden başarı anında çağrılan oyunlarda `esik: 1` yeter. Tavanlar: tek ödül 250, oyun başına günlük 500, günlük toplam 1000 coin.
 
 ## 3. Ana Sayfaya Dön butonu
 

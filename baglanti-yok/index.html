@@ -301,6 +301,7 @@
   }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -737,6 +738,7 @@
     die: function () {
       this.dead = true;
       SFX.die();
+      window.UzayHesap?.odul('baglanti-yok', this.score);
       var rec = setBest('dino', this.score);
       setBestLabel(best('dino'));
       showOverlay(
@@ -909,6 +911,7 @@
     die: function (msg) {
       this.dead = true;
       SFX.die();
+      window.UzayHesap?.odul('baglanti-yok', this.score);
       var rec = setBest('yilan', this.score);
       setBestLabel(best('yilan'));
       showOverlay(
@@ -1115,6 +1118,7 @@
       if (this.lives <= 0) {
         this.dead = true;
         SFX.die();
+        window.UzayHesap?.odul('baglanti-yok', this.score);
         var rec = setBest('tugla', this.score);
         setBestLabel(best('tugla'));
         showOverlay(

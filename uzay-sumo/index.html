@@ -167,6 +167,7 @@
   #net-badge .lag { opacity: 0.6; }
 </style>
 <script src="../analytics.js"></script>
+<script src="../hesap.js" defer></script>
 </head>
 <body>
 
@@ -420,6 +421,14 @@ function newGame() {
   hide('menu'); hide('win'); hide('pause');
   audio(); startRound();
 }
+// Uzay Coin: maçı bu bilgisayardaki insan oyuncu kazandıysa ödül var.
+// Bilgisayara ya da çevrimiçi rakibe yenilince yok.
+function coinVer(w) {
+  if (net.on) { if (w !== (net.host ? 1 : 2)) return; }
+  else if (cfg.mode === 'cpu' && w === 2) return;
+  window.UzayHesap?.odul('uzay-sumo', 1);
+}
+
 function endRound(winner, reason) {
   if (state !== 'play') return;              // bir raunt yalnızca bir kez biter
   lastWinner = winner; deadReason = reason;
@@ -430,6 +439,7 @@ function endRound(winner, reason) {
     setTimeout(() => {
       state = 'over';
       const w = score1 >= cfg.target ? 1 : 2;
+      coinVer(w);
       document.getElementById('win-title').textContent = pName(w) + ' KAZANDI';
       document.getElementById('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();
@@ -974,6 +984,7 @@ function applySnap(s) {
     if (st === 'count') { hide('win'); sfxCount(); }
     if (st === 'over') {
       const w = score1 >= cfg.target ? 1 : 2;
+      coinVer(w);
       $$('win-title').textContent = pName(w) + ' KAZANDI';
       $$('win-score').textContent = score1 + ' - ' + score2;
       show('win'); sfxWin();
