@@ -94,6 +94,22 @@ header {
   box-shadow: 0 0 26px rgba(255, 215, 94, 0.3); transform: translateY(-2px);
 }
 
+/* Başlık altındaki bağlantı sırası — dar ekranda alt alta geçer */
+.ust-linkler {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+}
+
+/* UzayGPT: skor tablosunun sarısı yerine mor/mavi */
+.gpt-link {
+  border-color: rgba(180, 78, 255, 0.4);
+  background: rgba(180, 78, 255, 0.09);
+  color: #d9a8ff;
+}
+.gpt-link:hover {
+  background: rgba(180, 78, 255, 0.22); color: #fff;
+  box-shadow: 0 0 26px rgba(180, 78, 255, 0.35);
+}
+
 .search-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
 
 .search-box { position: relative; width: 100%; max-width: 460px; }
@@ -569,7 +585,10 @@ footer {
   <header>
     <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
     <h1 class="site-title-fallback">UZAY ZONE</h1>
-    <a class="skor-link" href="skor-tablosu/">🏆 SKOR TABLOSU</a>
+    <div class="ust-linkler">
+      <a class="skor-link" href="skor-tablosu/">🏆 SKOR TABLOSU</a>
+      <a class="skor-link gpt-link" href="uzaygpt/">🛰️ UZAYGPT</a>
+    </div>
   </header>
   <div class="search-wrap">
     <div class="search-box">
@@ -964,6 +983,36 @@ const GAMES = [
       glow: 'rgba(77,216,255,0.20)',
       bar: 'linear-gradient(90deg, #4dd8ff, #a06bff, #ff8a3d)',
       border: 'rgba(77,216,255,0.22)'
+    }
+  },
+  {
+    title: 'Yörünge Düellosu',
+    genre: 'Strateji / Düello',
+    desc: 'Açıyı ve gücü seç, ateş et. Mermin gezegenlerin çekimiyle kıvrılır — 3 turu alan kazanır.',
+    href: 'yorunge-duellosu/',
+    tags: ['iki', 'mobil', 'bulmaca'],
+    icon: '🪐',
+    colors: {
+      bg: 'linear-gradient(135deg, #0a0618, #2a1150)',
+      accent: '#c084fc',
+      glow: 'rgba(192,132,252,0.20)',
+      bar: 'linear-gradient(90deg, #4de1ff, #c084fc, #ff6b9d)',
+      border: 'rgba(192,132,252,0.22)'
+    }
+  },
+  {
+    title: 'Astro Blok',
+    genre: 'Bulmaca / Arcade',
+    desc: 'Düşen blokları döndürüp yerleştir, satırları temizle. Her 10 satırda hız artar.',
+    href: 'astro-blok/',
+    tags: ['tek', 'mobil', 'bulmaca'],
+    icon: '🧱',
+    colors: {
+      bg: 'linear-gradient(135deg, #04050e, #141a3d)',
+      accent: '#22e8f5',
+      glow: 'rgba(34,232,245,0.18)',
+      bar: 'linear-gradient(90deg, #22e8f5, #c084fc, #ffd93d)',
+      border: 'rgba(34,232,245,0.20)'
     }
   }
 ];

@@ -8,7 +8,7 @@ Statik oyun portalı. GitHub Pages'ten yayınlanır (`CNAME`), build adımı yok
 - Ana sayfa `index.html` — oyun kartları içindeki `GAMES` array'inden üretilir
 - Paylaşılan kök dosyalar: `analytics.js` (GA4), `hesap.js` (giriş + Uzay Coin), `multiplayer.js` (oda kodlu çok oyunculu), `destek.js`
 - Firebase: `firebase-config.js` (anahtarlar) + `firebase-init.js` (tek `initializeApp` — `multiplayer.js` ve `hesap.js` ikisi de bunu import eder) + `firebase-rules.json` (kaynak kopya; **konsola elle yapıştırılmadan geçerli olmaz**)
-- Oyun olmayan klasörler: `admin/`, `hediye/`, `logo/`, `skor-tablosu/`
+- Oyun olmayan klasörler: `admin/`, `hediye/`, `logo/`, `skor-tablosu/`, `uzaygpt/`
 
 ## Değişmezler
 
@@ -34,6 +34,18 @@ Misafir hesabı kaydolurken şifre belirler: Firebase'de kullanıcı adı diye b
 Coin'i tarayıcı yazar (site statik, sunucu yok). Hile **imkansız değil, tavanlı**: tek ödül ≤ 250, iki ödül arası ≥ 10 sn, günlük toplam ≤ 1000, oyun başına günlük ≤ 500. Bu sayılar `hesap.js` ile `firebase-rules.json` içinde **iki yerde** durur; birini değiştirirsen diğerini de değiştir, yoksa yazımlar `PERMISSION_DENIED` alır.
 
 Ödül yazımı `users/$uid` üzerinde **tek bir `update()`** olmalı (coin + lastOdul + gün sayaçları birlikte) — kural bunları birbirine bağlı doğruluyor.
+
+## UzayGPT
+
+`uzaygpt/` — Claude API ile çalışan Türkçe sohbet asistanı (soru-cevap + görsel üretimi).
+
+Site statik olduğu için API anahtarı tarayıcıya konulamaz; araya bir **Cloudflare Worker** girer. `uzaygpt/worker.js` bu Worker'ın kaynak kopyasıdır — `firebase-rules.json` gibi, **Cloudflare paneline elle yapıştırılmadan geçerli olmaz**. Anahtar orada `ANTHROPIC_API_KEY` adlı Secret olarak durur. Kurulum ve sorun giderme: `uzaygpt/KURULUM.md`.
+
+- Model, hız sınırı, mesaj/token tavanları ve sistem talimatı `worker.js`'in en üstünde — tarayıcı bunları değiştiremez.
+- `IZINLI_ADRESLER` listesi CORS allowlist'i; yeni alan adı eklenirse Worker yeniden deploy edilmeli. `localhost` yerel test için otomatik izinli.
+- Sohbet Anthropic'in SSE akışını olduğu gibi tarayıcıya geçirir; `index.html` sadece `text_delta` parçalarını okur.
+- Görsel: Claude Türkçe isteği İngilizce bir prompt'a çevirir, görseli ücretsiz `image.pollinations.ai` üretir (anahtar gerektirmez). Pollinations'ın metin API'si ücretlidir, kullanılmıyor.
+- **Coin veremez ve bu kasıtlı**: sayfa `UzayHesap.odul()` çağrısı içermez, `hesap.js` yalnızca rozet için yüklenir. Model ne söylerse söylesin coin yazılmaz. Buraya bir ödül satırı eklenmemeli — sohbetle sınırsız coin üretilir.
 
 ## Test
 

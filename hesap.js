@@ -61,6 +61,7 @@ const ODUL = {
   'simya':              { coin: 100, esik: 5 },      // her 5 keşif
   'bilgisayar-toplama': { coin: 100, esik: 1 },
   'stickman-dovus':     { coin: 100, esik: 1 },
+  'yorunge-duellosu':   { coin: 100, esik: 1 },
   'super-sef':          { coin: 150, esik: 10 },     // her 10 sipariş
   'kule-yigini':        { coin: 150, esik: 12 },
   'helezon':            { coin: 150, esik: 8 },
@@ -68,6 +69,7 @@ const ODUL = {
   'yildiz-avcisi':      { coin: 200, esik: 1500 },
   'uzay-kacisi':        { coin: 200, esik: 3000 },
   'uzay-yolculugu':     { coin: 200, esik: 2500 },
+  'astro-blok':         { coin: 200, esik: 3000 },
   'mermi-kesici':       { coin: 250, esik: 600 }
 };
 
