@@ -347,6 +347,17 @@ function durumYaz(el, metin, sinif) {
   if (sinif) el.classList.add(sinif);
 }
 
+// Yazma hataları: PERMISSION_DENIED "biraz sonra dene" değil, ayar hatasıdır —
+// Firebase konsoluna firebase-rules.json yapıştırılmamış demektir. Genel bir
+// mesajın altında kaybolursa saatlerce yanlış yerde aranır.
+function yazmaHatasi(err, temel) {
+  const kod = String((err && (err.code || err.message)) || '');
+  if (kod.toUpperCase().includes('PERMISSION_DENIED')) {
+    return 'Sunucu izin vermedi — veritabanı kuralları güncel değil.';
+  }
+  return temel;
+}
+
 // Giriş gerektiren her eylem buradan geçer
 function girisGerek(el) {
   if (ben && ben.nick) return true;
@@ -452,7 +463,7 @@ $('liste').addEventListener('click', async e => {
       else await set(yol, deger);
     } catch (err) {
       console.warn('[sikayet] oy yazılamadı', err);
-      durumYaz($('sikayetDurum'), 'Oyun kaydedilemedi, tekrar dene.', 'hata');
+      durumYaz($('sikayetDurum'), yazmaHatasi(err, 'Oyun kaydedilemedi, tekrar dene.'), 'hata');
     }
     return;
   }
@@ -486,7 +497,7 @@ $('liste').addEventListener('click', async e => {
   } catch (err) {
     console.warn('[sikayet] yanıt yazılamadı', err);
     yanitBtn.disabled = false;
-    durumYaz(durumEl, 'Yanıt gönderilemedi, tekrar dene.', 'hata');
+    durumYaz(durumEl, yazmaHatasi(err, 'Yanıt gönderilemedi, tekrar dene.'), 'hata');
   }
 });
 
@@ -515,7 +526,7 @@ $('sikayetGonder').addEventListener('click', async () => {
     if (window.gtag) gtag('event', 'sikayet_gonder');
   } catch (err) {
     console.warn('[sikayet] yazılamadı', err);
-    durumYaz(durumEl, 'Gönderilemedi, biraz sonra tekrar dene.', 'hata');
+    durumYaz(durumEl, yazmaHatasi(err, 'Gönderilemedi, biraz sonra tekrar dene.'), 'hata');
   } finally {
     buton.disabled = false;
   }
@@ -569,7 +580,7 @@ $('puanYildizlar').addEventListener('click', async e => {
     durumYaz($('puanDurum'), 'Puanın kaydedildi, teşekkürler!', 'iyi');
   } catch (err) {
     console.warn('[sikayet] puan yazılamadı', err);
-    durumYaz($('puanDurum'), 'Puan kaydedilemedi, tekrar dene.', 'hata');
+    durumYaz($('puanDurum'), yazmaHatasi(err, 'Puan kaydedilemedi, tekrar dene.'), 'hata');
   }
 });
 
