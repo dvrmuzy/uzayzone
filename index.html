@@ -110,6 +110,48 @@ header {
   box-shadow: 0 0 26px rgba(180, 78, 255, 0.35);
 }
 
+/* Haberler: camgöbeği */
+.haber-link {
+  position: relative;
+  border-color: rgba(125, 249, 255, 0.4);
+  background: rgba(125, 249, 255, 0.09);
+  color: #7df9ff;
+}
+.haber-link:hover {
+  background: rgba(125, 249, 255, 0.22); color: #fff;
+  box-shadow: 0 0 26px rgba(125, 249, 255, 0.35);
+}
+
+/* Okunmamış haber varsa linkin köşesinde yanıp söner */
+.yeni-rozet {
+  position: absolute; top: -7px; right: -7px;
+  padding: 2px 7px; border-radius: 30px;
+  background: #ff4d6d; color: #fff;
+  font-size: 0.52rem; letter-spacing: 0.1em;
+  box-shadow: 0 0 12px rgba(255, 77, 109, 0.7);
+  animation: yeniNabiz 1.6s ease-in-out infinite;
+}
+
+@keyframes yeniNabiz {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.14); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yeni-rozet { animation: none; }
+}
+
+/* Şikayetler: pembe */
+.sikayet-link {
+  border-color: rgba(255, 143, 168, 0.4);
+  background: rgba(255, 143, 168, 0.09);
+  color: #ff8fa8;
+}
+.sikayet-link:hover {
+  background: rgba(255, 143, 168, 0.22); color: #fff;
+  box-shadow: 0 0 26px rgba(255, 143, 168, 0.35);
+}
+
 .search-wrap { display: flex; justify-content: center; margin-bottom: 10px; }
 
 .search-box { position: relative; width: 100%; max-width: 460px; }
@@ -586,8 +628,10 @@ footer {
     <img class="site-logo" src="logo/logo1-orbit-3d-header.svg" alt="Uzay Zone — Oyun Portalı">
     <h1 class="site-title-fallback">UZAY ZONE</h1>
     <div class="ust-linkler">
+      <a class="skor-link haber-link" href="haberler/">📡 HABERLER<span class="yeni-rozet" id="haberYeniRozet" style="display:none">YENİ</span></a>
       <a class="skor-link" href="skor-tablosu/">🏆 SKOR TABLOSU</a>
       <a class="skor-link gpt-link" href="uzaygpt/">🛰️ UZAYGPT</a>
+      <a class="skor-link sikayet-link" href="sikayetler/">💬 ŞİKAYET VE ÖNERİ</a>
     </div>
   </header>
   <div class="search-wrap">
@@ -1013,6 +1057,21 @@ const GAMES = [
       glow: 'rgba(34,232,245,0.18)',
       bar: 'linear-gradient(90deg, #22e8f5, #c084fc, #ffd93d)',
       border: 'rgba(34,232,245,0.20)'
+    }
+  },
+  {
+    title: 'Gezegen Yarışı',
+    genre: 'Strateji / Yarış',
+    desc: 'Zarı at, yakıtınla ayarla, solucan deliklerinden geç. 1-5 kişi, hedef gezegene ilk varan kazanır.',
+    href: 'gezegen-yarisi/',
+    tags: ['iki', 'tek', 'mobil'],
+    icon: '🛸',
+    colors: {
+      bg: 'linear-gradient(135deg, #05061a, #1b1b5c)',
+      accent: '#4de1ff',
+      glow: 'rgba(77,225,255,0.20)',
+      bar: 'linear-gradient(90deg, #4de1ff, #a78bfa, #ff5cf0)',
+      border: 'rgba(77,225,255,0.22)'
     }
   }
 ];
@@ -1811,6 +1870,26 @@ if (activeCategory === 'all') renderCards();
 else searchThenRender();
 animate();
 
+</script>
+
+<script type="module">
+// ─── Haberler linkindeki "YENİ" rozeti ───
+// En yeni haberin tarihi, haberler sayfasının bu tarayıcıda en son gördüğü
+// tarihten yeniyse rozet çıkar. Firebase yoksa (file:// ya da ağ kapalı)
+// rozet hiç görünmez — ana sayfa bundan etkilenmez.
+import { ref, query, orderByChild, limitToLast, get }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { db } from './firebase-init.js';
+
+try {
+  const anlik = await get(query(ref(db, 'haberler'), orderByChild('tarih'), limitToLast(1)));
+  let enYeni = 0;
+  anlik.forEach(c => { enYeni = Math.max(enYeni, c.val().tarih || 0); });
+  const gorulen = Number(localStorage.getItem('uz_haber_gorulen') || 0);
+  if (enYeni > gorulen) document.getElementById('haberYeniRozet').style.display = 'inline-block';
+} catch (e) {
+  console.warn('[haberler] rozet okunamadı', e);
+}
 </script>
 </body>
 </html>

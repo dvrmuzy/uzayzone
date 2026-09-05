@@ -11,7 +11,7 @@
 
           "size":  { ".validate": "newData.isNumber() && newData.val() >= 3 && newData.val() <= 11" },
           "board": { ".validate": "newData.isString() && newData.val().length <= 121" },
-          "turn":  { ".validate": "newData.isString() && newData.val().length == 1" },
+          "turn":  { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 4" },
           "round": { ".validate": "newData.isNumber()" },
           "createdAt": { ".validate": "newData.isNumber()" }
         }
@@ -85,6 +85,73 @@
             "$other": { ".validate": false }
           }
         }
+      }
+    },
+
+    "sikayetler": {
+      ".read": true,
+
+      "$id": {
+        ".write": "!data.exists() && newData.exists()",
+        ".validate": "newData.hasChildren(['metin', 'isim', 'tarih'])",
+
+        "metin": { ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 1000" },
+        "isim":  { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 24" },
+        "uid":   { ".validate": "auth != null && newData.val() === auth.uid" },
+        "tarih": { ".validate": "newData.val() == now" },
+
+        "oylar": {
+          "$oyveren": {
+            ".write":    "auth != null && auth.uid === $oyveren",
+            ".validate": "auth != null && auth.uid === $oyveren && newData.isNumber() && (newData.val() === 1 || newData.val() === -1)"
+          }
+        },
+
+        "yanitlar": {
+          "$yid": {
+            ".write": "auth != null && !data.exists() && newData.exists()",
+            ".validate": "newData.hasChildren(['uid', 'nick', 'metin', 'tarih'])",
+
+            "uid":   { ".validate": "auth != null && newData.val() === auth.uid" },
+            "nick":  { ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 16" },
+            "metin": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500" },
+            "tarih": { ".validate": "newData.val() == now" },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "$other": { ".validate": false }
+      }
+    },
+
+    "puanlar": {
+      ".read": true,
+      "$uid": {
+        ".write":    "auth != null && auth.uid === $uid",
+        ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 6"
+      }
+    },
+
+    "haberler": {
+      ".read": true,
+      ".indexOn": "tarih",
+
+      "$id": {
+        ".write": "auth != null && root.child('yoneticiler').child(auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['baslik', 'metin', 'durum', 'tarih'])",
+
+        "baslik": { ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 80" },
+        "metin":  { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 1500" },
+        "durum":  { ".validate": "newData.isString() && (newData.val() === 'geldi' || newData.val() === 'yapiliyor' || newData.val() === 'gelecek')" },
+        "tarih":  { ".validate": "newData.isNumber() && newData.val() > 0" },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "yoneticiler": {
+      "$uid": {
+        ".read":  true,
+        ".write": false
       }
     }
   }

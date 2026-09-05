@@ -8,7 +8,7 @@ Statik oyun portalı. GitHub Pages'ten yayınlanır (`CNAME`), build adımı yok
 - Ana sayfa `index.html` — oyun kartları içindeki `GAMES` array'inden üretilir
 - Paylaşılan kök dosyalar: `analytics.js` (GA4), `hesap.js` (giriş + Uzay Coin), `multiplayer.js` (oda kodlu çok oyunculu), `destek.js`
 - Firebase: `firebase-config.js` (anahtarlar) + `firebase-init.js` (tek `initializeApp` — `multiplayer.js` ve `hesap.js` ikisi de bunu import eder) + `firebase-rules.json` (kaynak kopya; **konsola elle yapıştırılmadan geçerli olmaz**)
-- Oyun olmayan klasörler: `admin/`, `hediye/`, `logo/`, `skor-tablosu/`, `uzaygpt/`
+- Oyun olmayan klasörler: `admin/`, `haberler/`, `hediye/`, `logo/`, `sikayetler/`, `skor-tablosu/`, `uzaygpt/`
 
 ## Değişmezler
 
@@ -34,6 +34,30 @@ Misafir hesabı kaydolurken şifre belirler: Firebase'de kullanıcı adı diye b
 Coin'i tarayıcı yazar (site statik, sunucu yok). Hile **imkansız değil, tavanlı**: tek ödül ≤ 250, iki ödül arası ≥ 10 sn, günlük toplam ≤ 1000, oyun başına günlük ≤ 500. Bu sayılar `hesap.js` ile `firebase-rules.json` içinde **iki yerde** durur; birini değiştirirsen diğerini de değiştir, yoksa yazımlar `PERMISSION_DENIED` alır.
 
 Ödül yazımı `users/$uid` üzerinde **tek bir `update()`** olmalı (coin + lastOdul + gün sayaçları birlikte) — kural bunları birbirine bağlı doğruluyor.
+
+## Haberler
+
+`haberler/` — siteye ne geldi / ne yapılıyor / sırada ne var duyuru akışı. Verisi Realtime Database'de:
+
+- `haberler/$id` = `{ baslik, metin, durum, tarih }` — `durum` yalnızca `geldi` | `yapiliyor` | `gelecek` olabilir (kural doğruluyor), sayfada ✅ YAYINDA / 🔧 YAPILIYOR / 🔭 YAKINDA rozetine dönüşür. Liste en yeniden eskiye, üstteki üç düğmeyle duruma göre süzülür.
+- `yoneticiler/$uid` = `true` — **haber yazma/düzenleme/silme hakkı yalnızca bu uid'lerde**. Düğüme yazma kurallarda kapalı (`".write": false`), yani tarayıcıdan kimse kendini yönetici yapamaz: **Firebase konsolundan elle** `yoneticiler/<uid> = true` eklemelisin. Kendi uid'ini konsolda `UzayHesap.kullanici().uid` ile öğren.
+
+Yönetici panosu (haber yazma formu) sadece o hesapta görünür; panoyu DevTools'la açmak işe yaramaz, kural aynı düğüme bakar. Düzenlemede `tarih` alanına dokunulmaz — haberin özgün yayın tarihi kalır. Okuma herkese açık, giriş istemez. Sayfa **coin vermez**.
+
+Ana sayfadaki `📡 HABERLER` linkinde okunmamış haber varsa "YENİ" rozeti yanar: haberler sayfası en yeni haberin `tarih`'ini `localStorage['uz_haber_gorulen']`'e yazar, ana sayfa da en yeni haberi (`limitToLast(1)`) bununla karşılaştırır.
+
+## Şikayetler ve Öneriler
+
+`sikayetler/` (sayfa adı "Şikayetler ve Öneriler") — herkese açık şikayet/öneri duvarı; oy, yanıt ve "Bizi puanla" bölümü. Verisi Realtime Database'de:
+
+- `sikayetler/$id` = `{ metin, isim, tarih, uid? }` — **yazmak giriş istemez**, isim boşsa "Anonim". Kural yalnızca var olmayan bir düğüme yazmaya izin verir: bir kez yazılan şikayet tarayıcıdan ne değiştirilebilir ne silinebilir. Uygunsuz kaydı **Firebase konsolundan** sil.
+- `sikayetler/$id/oylar/$uid` = `1` / `-1` — 👍/👎. Sayaç tutulmaz, oylar sayılarak hesaplanır; böylece kimse sayıyı şişiremez. Aynı düğmeye ikinci basış oyu geri çeker.
+- `sikayetler/$id/yanitlar/$yid` = `{ uid, nick, metin, tarih }`
+- `puanlar/$uid` = `1..6` — 6 yıldızlı puanlama, ortalama sayfada hesaplanır.
+
+Oy, yanıt ve puan **giriş ister** (`hesap.js`) — uid olmadan aynı kişinin tekrar tekrar oy vermesi engellenemezdi. `tarih` alanları `serverTimestamp()` ile yazılır, kural `newData.val() == now` diye doğrular.
+
+Yanıtlarda "GELİŞTİRİCİ" rozeti sayfanın başındaki `GELISTIRICI_UID` dizisindeki uid'lere çıkar; **varsayılan boştur**, kendi uid'ini konsolda `UzayHesap.kullanici().uid` ile öğrenip ekle. Sayfa coin vermez.
 
 ## UzayGPT
 

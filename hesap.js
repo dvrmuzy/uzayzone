@@ -62,6 +62,7 @@ const ODUL = {
   'bilgisayar-toplama': { coin: 100, esik: 1 },
   'stickman-dovus':     { coin: 100, esik: 1 },
   'yorunge-duellosu':   { coin: 100, esik: 1 },
+  'gezegen-yarisi':     { coin: 100, esik: 1 },
   'super-sef':          { coin: 150, esik: 10 },     // her 10 sipariş
   'kule-yigini':        { coin: 150, esik: 12 },
   'helezon':            { coin: 150, esik: 8 },

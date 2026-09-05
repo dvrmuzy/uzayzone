@@ -5,11 +5,17 @@
 //  Tüm oyunlar bu modülü paylaşır; oyuna özel hiçbir mantık
 //  burada yer almaz — sadece oda kur / katıl / durum senkronu.
 //
-//  Kullanım:
+//  Kullanım (iki kişilik — yuvalar 'X' ve 'O'):
 //    import * as Net from '../multiplayer.js';
 //    const kod = await Net.createRoom('xox', { size: 3, board: '---------' });
 //    Net.onRoom(oda => { ... });
 //    Net.patch({ board: yeniTahta, turn: 'O' });
+//
+//  Kullanım (ikiden fazla — yuvalar 'P1'..'P5'):
+//    const kod = await Net.createRoom('gezegen-yarisi', { ... }, { maxPlayers: 5 });
+//    await Net.joinRoom('gezegen-yarisi', 'ABCD');   // boş ilk yuvayı kapar
+//    Net.mySymbol()   // 'P3'
+//    Net.myIndex()    // 2   (X/O modunda X=0, O=1)
 // ═══════════════════════════════════════════════════════════
 
 import {
@@ -35,10 +41,24 @@ function randomCode() {
 
 const isStale = room => !room || (Date.now() - (room.createdAt || 0)) > ROOM_TTL;
 
+// Yuva adları. İki kişilik oyunlar tarihsel olarak 'X'/'O' kullanır ve öyle
+// kalmalı; daha kalabalık oyunlar 'P1'..'Pn' alır. Her iki şemada da yuva
+// sırası anahtarların alfabetik sırasıdır (RTDB çocukları böyle döndürür),
+// yani 'O' < 'X' — sıra indeksi için slotOrder kullan, Object.keys değil.
+const PAIR_SLOTS = ['X', 'O'];
+const slotsFor = n => Array.from({ length: n }, (_, i) => `P${i + 1}`);
+const slotOrder = players =>
+  players && players.P1 !== undefined
+    ? slotsFor(Object.keys(players).length)
+    : PAIR_SLOTS;
+
 // ── Oda kur ───────────────────────────────────────────────
 // initialState: oyuna özel başlangıç alanları (tahta, boyut, ...)
-// Dönüş: oda kodu. Kuran oyuncu her zaman 'X'.
-export async function createRoom(game, initialState = {}) {
+// opts.maxPlayers: 3+ verilirse yuvalar 'P1'..'Pn' olur (varsayılan 'X'/'O').
+// Dönüş: oda kodu. Kuran oyuncu her zaman ilk yuvadır ('X' veya 'P1').
+export async function createRoom(game, initialState = {}, opts = {}) {
+  const slots = opts.maxPlayers ? slotsFor(opts.maxPlayers) : PAIR_SLOTS;
+
   for (let attempt = 0; attempt < 8; attempt++) {
     const code = randomCode();
     const roomRef = ref(db, `rooms/${game}/${code}`);
@@ -46,15 +66,13 @@ export async function createRoom(game, initialState = {}) {
     // Transaction: aynı kodu iki kişinin aynı anda kapmasını engeller
     const res = await runTransaction(roomRef, current => {
       if (current && !isStale(current)) return;   // kod dolu → iptal, yeni kod dene
-      return {
-        ...initialState,
-        createdAt: Date.now(),
-        players: { X: true, O: false }
-      };
+      const players = {};
+      slots.forEach((s, i) => { players[s] = i === 0; });
+      return { ...initialState, createdAt: Date.now(), players };
     });
 
     if (res.committed) {
-      attach(game, code, 'X');
+      attach(game, code, slots[0]);
       return code;
     }
   }
@@ -62,7 +80,9 @@ export async function createRoom(game, initialState = {}) {
 }
 
 // ── Odaya katıl ───────────────────────────────────────────
-// Dönüş: odanın mevcut durumu. Katılan oyuncu her zaman 'O'.
+// Boş ilk yuvayı transaction ile kapar: üç kişi aynı anda katılsa bile
+// ikisi aynı yuvaya düşmez. Dönüş: odanın mevcut durumu.
+// Kapılan yuvayı Net.mySymbol() / Net.myIndex() ile öğren.
 export async function joinRoom(game, code) {
   code = String(code).trim().toUpperCase();
   if (code.length !== CODE_LEN) throw new Error(`Kod ${CODE_LEN} karakter olmalı.`);
@@ -72,12 +92,26 @@ export async function joinRoom(game, code) {
   if (!snap.exists()) throw new Error('Böyle bir oda yok. Kodu kontrol et.');
 
   const room = snap.val();
-  if (isStale(room))      throw new Error('Bu odanın süresi dolmuş.');
-  if (room.players?.O)    throw new Error('Bu oda dolu.');
+  if (isStale(room)) throw new Error('Bu odanın süresi dolmuş.');
 
-  await update(ref(db, `rooms/${game}/${code}/players`), { O: true });
-  attach(game, code, 'O');
-  return room;
+  const order = slotOrder(room.players);
+  let claimed = null;
+
+  const res = await runTransaction(
+    ref(db, `rooms/${game}/${code}/players`),
+    current => {
+      claimed = null;
+      if (!current) return;                                  // oda silinmiş → iptal
+      claimed = order.find(s => current[s] !== true) || null;
+      if (!claimed) return;                                  // boş yuva yok → iptal
+      return { ...current, [claimed]: true };
+    }
+  );
+
+  if (!res.committed || !claimed) throw new Error('Bu oda dolu.');
+
+  attach(game, code, claimed);
+  return { ...room, players: res.snapshot.val() };
 }
 
 // ── Bağlantı / varlık takibi ──────────────────────────────
@@ -124,7 +158,20 @@ export function setChild(path, value) {
 
 export const mySymbol = () => session?.symbol ?? null;
 export const roomCode = () => session?.code ?? null;
-export const isHost   = () => session?.symbol === 'X';
+
+// Oda kuran = ilk yuva. İki kişilikte 'X', kalabalık oyunlarda 'P1'.
+export const isHost = () => session?.symbol === 'X' || session?.symbol === 'P1';
+
+// Yuvanın sıra numarası: X/O → 0/1, P1..Pn → 0..n-1. Odadaki dizileri
+// (konumlar, puanlar) indekslemek için kullan.
+export const myIndex = () => {
+  const s = session?.symbol;
+  if (!s) return -1;
+  return s[0] === 'P' ? parseInt(s.slice(1), 10) - 1 : PAIR_SLOTS.indexOf(s);
+};
+
+// Odanın yuva adları, sıra numarası sırasında.
+export const slots = players => slotOrder(players);
 
 // ── Odadan ayrıl ──────────────────────────────────────────
 export async function leave() {
