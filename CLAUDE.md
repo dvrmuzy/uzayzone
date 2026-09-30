@@ -71,6 +71,23 @@ Site statik olduğu için API anahtarı tarayıcıya konulamaz; araya bir **Clou
 - Görsel: Claude Türkçe isteği İngilizce bir prompt'a çevirir, görseli ücretsiz `image.pollinations.ai` üretir (anahtar gerektirmez). Pollinations'ın metin API'si ücretlidir, kullanılmıyor.
 - **Coin veremez ve bu kasıtlı**: sayfa `UzayHesap.odul()` çağrısı içermez, `hesap.js` yalnızca rozet için yüklenir. Model ne söylerse söylesin coin yazılmaz. Buraya bir ödül satırı eklenmemeli — sohbetle sınırsız coin üretilir.
 
+## 3B modeller (bilgisayar-toplama)
+
+`bilgisayar-toplama/` tek oyun olarak hazır `.glb` kullanır; kasa, masa, monitör ve 12 donanım parçası **Blender'da üretilir**:
+
+- Kaynak: `bilgisayar-toplama/blender/model.py` — `firebase-rules.json` ve `uzaygpt/worker.js` gibi, **asıl gerçek budur**. `.glb`'yi elle düzenleme, script'i düzenleyip yeniden çalıştır:
+  `blender --background --python blender/model.py` (`-- --render` eklersen önizleme PNG'leri de çıkar).
+- Çıktı: `assets/parcalar.glb` (~2.8 MB, 12 parça, her biri `P_<id>` düğümü) + `assets/sahne.glb` (~0.8 MB).
+- Koordinat sözleşmesi ikisinde de aynı: kasanın iç tabanı y=0, iç hacim x∈[-6.5,6.5] z∈[-4.5,4.5], yükseklik 4.6. Her parçanın orijini **alt-orta**, böylece oyundaki `PARCALAR[].pos` doğrudan "tabanın oturacağı nokta"dır. Script oyun koordinatlarında yazılır, `GL()/GS()` Blender'a çevirir.
+- Oyunun isimle bulduğu düğümler: `P_*` (parçalar), `FAN_*` (dönen pervaneler, three.js `rotateY()` ile), `KASA`, `KAPAK`, `MASA`, `MONITOR`, `EKRAN`, `MON_LED`, `KLAVYE`, `FARE`, `VIDA`, `TORNAVIDA`, `FIRCA`, `MACUN`, `GUC_DUGMESI`, `GUC_ISIK`. Bu adları değiştirirsen `index.html`'i de değiştir.
+- Dokular (PCB, etiketler) `model.py` içinde numpy ile üretilir ve **JPEG olarak** gömülür; PNG yapınca dosya 5 MB'ı aşıyor.
+- Blender materyalleri glTF'e düz PBR olarak gider: prosedürel node'lar, masa ahşabı gibi, oyun tarafında canvas dokusuyla veriliyor.
+
+Tarayıcı eklentisi olmadan 3B oyunu doğrulamak için iki Node script'i var (ikisi de `npx serve -l 4177` açıkken çalışır, Edge'i headless sürer, `index.html`'in bir kopyasına test kancası enjekte eder — asıl dosyaya dokunmaz):
+
+- `node blender/oyna-test.mjs` — oyunu **baştan sona otomatik oynar** (4 vida, 12 parça temizle+tak, macun, 3 kablo, çalıştır) ve konsol hatalarını toplar. ~15 dk sürer: headless WebGL swiftshader ~1 fps, animasyonlar kare sayısına bağlı olduğu için yavaş akar.
+- `node blender/bak.mjs` — aşamalara atlayıp ekran görüntüsü alır; ışık/doku ayarı yaparken bunu kullan.
+
 ## Test
 
 Çok oyunculu oyunlar `multiplayer.js`'i, `hesap.js` de Firebase SDK'sını ES modülü olarak yükler; **`file://` ile açmak çalışmaz**, yerel sunucu gerekir (`npx serve` veya benzeri). `file://` ile açıldığında hesap rozeti hiç görünmez ve `UzayHesap` tanımsız kalır — oyun bundan etkilenmemeli. Tek bilgisayarda iki pencereyle test ederken pencereler yan yana ve tamamen görünür olmalı — arka plandaki sekmede Chrome `requestAnimationFrame`'i ~1 fps'e düşürür, bu ağ gecikmesi sanılır.
